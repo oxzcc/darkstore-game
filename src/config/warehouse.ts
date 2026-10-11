@@ -68,7 +68,7 @@ export const WAREHOUSE_VIEW = {
   floorThickness: 0.1,
   /** Сколько пикселей экрана по краям занимает интерфейс — склад вписывается в оставшееся место.
    *  Должно примерно совпадать с размерами панелей в src/ui/theme.css. */
-  screenInsets: { left: 362, right: 24, top: 24, bottom: 124 },
+  screenInsets: { left: 382, right: 24, top: 24, bottom: 124 },
 };
 
 /** Размеры разметки пола (в метрах). */

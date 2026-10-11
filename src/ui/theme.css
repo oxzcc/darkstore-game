@@ -73,17 +73,18 @@ button { font-family: inherit; }
 }
 
 /* ---------- панель заданий (слева, ui_01) ---------- */
-.task-panel { position: absolute; left: 16px; top: 16px; width: 330px; max-height: calc(100% - 190px); }
+.task-panel { position: absolute; left: 16px; top: 16px; width: 350px; max-height: calc(100% - 190px); }
 .task-panel > .vx-edge > .vx-body { display: flex; flex-direction: column; } /* только сама панель, не карточки внутри */
 .task-list { padding: 12px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
 .task-card { cursor: pointer; --cut: 8px; }
 .task-card > .vx-edge > .vx-body { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
 .task-card.selected > .vx-edge { background: var(--primary); }
 .task-card:hover > .vx-edge > .vx-body { background: #FFFDF6; }
-.task-icon { width: 46px; height: 46px; flex: none; display: grid; place-items: center; background: #fff; --cut: 6px; }
+.task-icon { width: 46px; height: 46px; flex: none; --cut: 6px; }
+.task-icon > .vx-edge > .vx-body { display: grid; place-items: center; background: #fff; }
 .task-main { flex: 1; min-width: 0; }
 .task-name { font-weight: 700; font-size: 18px; }
-.task-sub { font-size: 13px; color: var(--text-mute); margin-top: 2px; }
+.task-sub { font-size: 13px; color: var(--text-mute); margin-top: 2px; white-space: nowrap; }
 .reward { font-weight: 700; font-size: 15px; white-space: nowrap; }
 .empty { padding: 20px; text-align: center; color: var(--text-mute); }
 
