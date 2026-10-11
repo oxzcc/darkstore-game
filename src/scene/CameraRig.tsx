@@ -2,20 +2,23 @@
 // Во время мини-игры, когда игрок выбрал стеллаж, камера плавно летит к нему и встаёт спереди,
 // а «Назад к складу» возвращает её домой. Куда смотреть, решает сцена по store; это не игровое состояние.
 import { useRef } from 'react';
-import { OrthographicCamera, Vector3 } from 'three';
+import { Color, OrthographicCamera, Vector3 } from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { Rack, WarehouseMap } from '../model/warehouse';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { TSD } from '../config/balance';
+import { PALETTE } from '../config/palette';
 import { useGameStore } from '../store/gameStore';
 import { rackCenter, rackFront, rackWidth } from './rackGeometry';
 
 const ISO_ELEVATION = Math.atan(1 / Math.SQRT2); // ≈35,26° — классическая изометрия
 const SCREEN_FILL = 0.95;                         // доля свободного места, которую занимает склад в общем виде
 const DIST = 50;                                  // камера ортографическая: расстояние влияет только на отсечение
+const GRASS = new Color(PALETTE.grass);
+const BACKDROP = new Color(PALETTE.closeupBackdrop);
 
-/** Куда смотрит камера: точка, направление «от точки к камере», приближение и сколько отсекать спереди. */
-type Pose = { target: Vector3; dir: Vector3; zoom: number; clipAhead: number };
+/** Куда смотрит камера: точка, направление «от точки к камере», приближение и сколько видно перед целью и за ней. */
+type Pose = { target: Vector3; dir: Vector3; zoom: number; clipAhead: number; clipBehind: number };
 
 type Size = { width: number; height: number };
 
@@ -37,14 +40,15 @@ function homePose(map: WarehouseMap, size: Size): Pose {
     target: new Vector3(map.width / 2, WAREHOUSE_VIEW.wallHeight / 2, map.depth / 2),
     dir: new Vector3(1, 1, 1).normalize(),
     zoom: Math.min(w / diag, h / spanY) * SCREEN_FILL,
-    clipAhead: DIST, // ничего не отсекаем
+    clipAhead: DIST,  // ничего не отсекаем
+    clipBehind: 450,
   };
 }
 
 /** Вид стеллажа спереди (06, раздел 2.3). */
 function closePose(rack: Rack, size: Size): Pose {
   const { w, h } = freeArea(size);
-  const { elevationDeg, fill, clipAhead } = WAREHOUSE_VIEW.closeup;
+  const { elevationDeg, fill, clipAhead, clipBehind } = WAREHOUSE_VIEW.closeup;
   const [cx, , cz] = rackCenter(rack);
   const [fx, fz] = rackFront(rack);
   const el = (elevationDeg * Math.PI) / 180;
@@ -55,6 +59,7 @@ function closePose(rack: Rack, size: Size): Pose {
     dir: new Vector3(fx * Math.cos(el), Math.sin(el), fz * Math.cos(el)).normalize(),
     zoom: Math.min(w / spanX, h / spanY),
     clipAhead,
+    clipBehind,
   };
 }
 
@@ -69,6 +74,7 @@ function mix(a: Pose, b: Pose, t: number): Pose {
     zoom: a.zoom * Math.pow(b.zoom / a.zoom, t), // приближение растёт равномерно на глаз
     // отсечение включаем только в конце пути, чтобы по дороге ничего не пропадало
     clipAhead: a.clipAhead + (b.clipAhead - a.clipAhead) * Math.pow(t, 4),
+    clipBehind: a.clipBehind + (b.clipBehind - a.clipBehind) * Math.pow(t, 4),
   };
 }
 
@@ -87,15 +93,16 @@ function apply(camera: OrthographicCamera, pose: Pose) {
     .addScaledVector(right, -(ins.left - ins.right) / 2 / pose.zoom)
     .addScaledVector(up, -(ins.bottom - ins.top) / 2 / pose.zoom);
 
-  // Всё, что ближе к камере, чем clipAhead перед целью, не рисуется (ближний ряд стеллажей).
+  // Рисуется только то, что между clipAhead перед целью и clipBehind за ней (у стеллажа — только его ряд).
   camera.near = Math.max(0.1, DIST - pose.clipAhead);
-  camera.far = 500;
+  camera.far = DIST + pose.clipBehind;
   camera.updateProjectionMatrix();
 }
 
 export default function CameraRig({ map }: { map: WarehouseMap }) {
   const camera = useThree((s) => s.camera) as OrthographicCamera;
   const size = useThree((s) => s.size);
+  const scene = useThree((s) => s.scene);
   const focus = useGameStore((s) => (s.game.minigame?.atFocus ? s.game.minigame.focus : null));
 
   const progress = useRef(0);                 // 0 — дом, 1 — у стеллажа
@@ -112,6 +119,11 @@ export default function CameraRig({ map }: { map: WarehouseMap }) {
       ? mix(home, closePose(lastRack.current, size), smooth(progress.current))
       : home;
     apply(camera, pose);
+
+    // Фон: трава в общем виде, спокойный тёплый у стеллажа (там, где отсечено всё лишнее).
+    if (scene.background instanceof Color) {
+      scene.background.copy(GRASS).lerp(BACKDROP, Math.pow(smooth(progress.current), 2));
+    }
   });
 
   return null;
