@@ -18,7 +18,10 @@ export default function PickerPanel() {
           <Vx key={p.id} className="picker-card" style={{ '--pc': p.color } as CSSProperties}>
             <Avatar picker={p} />
             <div className="grow">
-              <div className="picker-name">{p.name}</div>
+              <div className="picker-name">
+                {p.name}
+                {p.state === 'playing' && <span className="tsd-tag">ТСД у вас</span>}
+              </div>
               <div className="picker-state">
                 <Icon name={line.icon} small />
                 {line.text}

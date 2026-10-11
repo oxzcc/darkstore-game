@@ -1,5 +1,6 @@
 // Состояние игры целиком (docs/09-architecture.md, раздел 4.6). Обычный JSON: без классов и функций.
 // Часть полей из 09 (кампания, поставки, паллеты) добавится на своих этапах.
+import type { MinigameSession, TsdOffer } from './minigame';
 import type { Picker } from './picker';
 import type { Product } from './product';
 import type { Stock } from './stock';
@@ -33,6 +34,9 @@ export type GameState = {
   stock: Stock;
   tasks: Record<string, Task>;
   pickers: Record<string, Picker>;
+
+  tsdOffer: TsdOffer | null;        // висит «Взять ТСД?» (одно за раз)
+  minigame: MinigameSession | null; // идёт личная мини-игра (одна за раз)
 
   shiftLog: ShiftEvent[];
 };

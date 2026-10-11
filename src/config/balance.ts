@@ -1,9 +1,23 @@
 // Числа баланса (docs/02-gameplay-loop.md, раздел 12; docs/04-tasks.md, раздел 9).
 // Всё здесь — стартовые значения, меняются без правки логики.
-import type { OutcomeChances } from '../model/task';
+import type { OutcomeChances, TaskType } from '../model/task';
 
 /** Версия формата GameState (09, раздел 12). */
-export const GAME_STATE_VERSION = 2;
+export const GAME_STATE_VERSION = 3;
+
+/**
+ * «Взять ТСД» (02, раздел 6; 06, разделы 2–3). Допущения из документов, автор их ещё не подтвердил.
+ * Обучающая смена со 100% на первое задание каждого типа — вместе с кампанией (M8).
+ */
+export const TSD: {
+  chance: Record<TaskType, number>;
+  offerSeconds: number;
+  worldSpeedDuringGame: number;
+} = {
+  chance: { order: 0.3, putaway: 0.3, receiving: 0.3, writeoff: 0.3 }, // шанс предложения при «Отправить»
+  offerSeconds: 8,           // таймер предложения, игровые секунды (на паузе стоит)
+  worldSpeedDuringGame: 0.2, // остальной мир во время мини-игры; свой сборщик идёт ×1
+};
 
 /**
  * Время работы сборщиков (утверждено автором для M4, формула исходов — отдельно).

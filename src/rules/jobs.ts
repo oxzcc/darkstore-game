@@ -40,6 +40,9 @@ export function pickerActivity(game: GameState, pickerId: string): PickerActivit
   const job = p?.job;
   const step = job?.steps[job.stepIndex];
   if (!p || !job || !step) return { kind: 'idle' };
+  if (p.state === 'waiting' && game.tsdOffer?.pickerId === p.id) {
+    return { kind: 'waitingTsd', secondsLeft: Math.max(0, game.tsdOffer.expiresAt - game.clock.time) };
+  }
   if (step.kind === 'walk') {
     const total = p.path.length;
     const left = Math.max(0, total - p.pathProgress);

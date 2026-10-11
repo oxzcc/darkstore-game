@@ -178,3 +178,22 @@ svg.i.sm { width: 18px; height: 18px; }
 .task-card.busy > .vx-edge > .vx-body { background: #F7F1E2; }
 .avatar.small { width: 40px; height: 40px; --cut: 6px; }
 .avatar.small > .vx-edge > .vx-body { font-size: 18px; }
+
+/* ---------- M5b: «Взять ТСД?» ---------- */
+/* плашка над карточками сборщиков, по центру; мир при этом идёт */
+.tsd-offer { position: absolute; left: 50%; bottom: 128px; transform: translateX(-50%); width: 460px; animation: pop 0.25s ease-out; }
+.tsd-offer > .vx-edge { background: var(--pc); } /* рамка в цвете сборщика: видно, за кого играть */
+.tsd-offer > .vx-edge > .vx-body { display: flex; flex-direction: column; }
+.tsd-offer-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.tsd-offer-head { display: flex; align-items: center; gap: 12px; }
+.tsd-offer-head .picker-state { margin-bottom: 0; }
+.tsd-offer-time { font-weight: 700; font-size: 24px; font-variant-numeric: tabular-nums; }
+.tsd-offer .note { margin-top: 0; }
+.progress.wide { width: 100%; }
+
+/* «мир замедлен» на панели скорости, пока игрок с ТСД (08, раздел 10.4) */
+.btn.sq.slow { width: 76px; }
+
+/* метка «ТСД у вас» на карточке сборщика, за которого играет игрок */
+.tsd-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; margin-left: 8px; vertical-align: middle;
+  background: var(--pc); color: #fff; font-size: 12px; letter-spacing: 0.06em; }

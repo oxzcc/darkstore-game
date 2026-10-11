@@ -23,6 +23,8 @@ export function createInitialGame(map: WarehouseMap, seed: number): GameState {
     stock: buildInitialStock(INITIAL_STOCK, PRODUCTS, map, CAMPAIGN_START_SHIFT),
     tasks: {},
     pickers: createPickers(STARTING_PICKERS, map),
+    tsdOffer: null,
+    minigame: null,
     shiftLog: [],
   };
   const rng = createRng(seed);

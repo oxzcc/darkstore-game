@@ -8,6 +8,7 @@ import type { Cell } from '../model/warehouse';
 import { secondsPerCell } from './time';
 import { createRng } from './random';
 import { outcomeChances, rollOutcome } from './outcome';
+import { declineTsd, worldSpeed, worldSpeedFor } from './tsd';
 
 /** Перейти к следующему шагу работы. Состояние сборщика — по виду шага. */
 function nextStep(p: Picker): Picker {
@@ -89,14 +90,19 @@ function advancePicker(map: WarehouseMap, blocked: Set<string>, picker: Picker, 
 
 const isJobDone = (p: Picker) => !!p.job && p.job.stepIndex >= p.job.steps.length;
 
+/**
+ * Продвинуть мир. `dt` — шаг обычного мира; во время личной мини-игры остальной мир (и часы смены)
+ * идут медленнее, а свой сборщик — в обычном темпе (02, раздел 2; 09, раздел 7.2).
+ */
 export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): { state: GameState; events: ShiftEvent[] } {
   if (dt <= 0) return { state, events: [] };
 
-  const time = state.clock.time + dt;
+  const time = state.clock.time + dt * worldSpeed(state);
   const blocked = blockedCells(map);
   const rng = createRng(state.rngSeed);
   const events: ShiftEvent[] = [];
   const pickers = { ...state.pickers };
+  let minigame = state.minigame;
   let tasks = state.tasks;
   const setTask = (id: string, patch: Partial<GameState['tasks'][string]>) => {
     tasks = { ...tasks, [id]: { ...tasks[id], ...patch } as GameState['tasks'][string] };
@@ -105,8 +111,10 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
   for (const id of Object.keys(pickers)) {
     const before = pickers[id];
     if (!before.job) continue;
+    if (before.state === 'waiting') continue; // висит «Взять ТСД?» — стоит и ждёт ответа
     const taken = new Set(Object.values(pickers).filter((o) => o.id !== id).map((o) => key(claimedCell(o))));
-    let p = advancePicker(map, blocked, before, dt, taken);
+    let p = advancePicker(map, blocked, before, dt * worldSpeedFor(state, id), taken);
+    if (before.state === 'playing') p = { ...p, state: 'playing' }; // пока идёт мини-игра — «играете за него»
     const task = tasks[p.job!.taskId];
 
     // первый отрезок пути пройден — сборщик на месте, задание «выполняется»
@@ -117,19 +125,22 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
       setTask(task.id, { status: 'done', outcome });
       events.push({ kind: 'taskDone', taskId: task.id, pickerId: p.id, outcome, at: time });
       p = { ...p, state: 'idle', taskId: null, job: null, path: [], pathProgress: 0 };
+      if (minigame?.taskId === task.id) minigame = null; // мини-игра закончилась вместе с заданием
     }
     pickers[id] = p;
   }
 
-  return {
-    state: {
-      ...state,
-      clock: { ...state.clock, time },
-      rngSeed: rng.seed(),
-      pickers,
-      tasks,
-      shiftLog: events.length ? [...state.shiftLog, ...events] : state.shiftLog,
-    },
-    events,
+  let next: GameState = {
+    ...state,
+    clock: { ...state.clock, time },
+    rngSeed: rng.seed(),
+    pickers,
+    tasks,
+    minigame,
+    shiftLog: events.length ? [...state.shiftLog, ...events] : state.shiftLog,
   };
+  // игрок не ответил на «Взять ТСД?» вовремя — сборщик работает сам
+  if (next.tsdOffer && time >= next.tsdOffer.expiresAt) next = declineTsd(next);
+
+  return { state: next, events };
 }

@@ -7,6 +7,7 @@ import { outcomeChances } from '../rules/outcome';
 import { canAssign } from '../rules/tasks/lifecycle';
 import { formatAddress } from '../rules/address';
 import { etaToTask, pickerActivity } from '../rules/jobs';
+import { tsdOfferSecondsLeft } from '../rules/tsd';
 import { WAREHOUSE_MAP } from './gameStore';
 
 /** Открытые задания по порядку появления. */
@@ -73,6 +74,13 @@ export function etaFor(game: GameState, pickerId: string, taskId: string): numbe
 export function clockText(seconds: number): string {
   const s = Math.max(0, Math.ceil(seconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+// ---------- «Взять ТСД» (M5b) ----------
+
+/** Сколько секунд осталось ответить на «Взять ТСД?». null — предложения нет. */
+export function tsdSecondsLeft(game: GameState): number | null {
+  return tsdOfferSecondsLeft(game);
 }
 
 /** Какой сборщик работает над заданием (для аватара на карточке задания). */
