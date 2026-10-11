@@ -4,9 +4,10 @@ import type { Picker as PickerData } from '../model/picker';
 import type { Cell } from '../model/warehouse';
 import { STARTING_PICKERS } from '../config/pickers';
 import { FLOOR_MARKINGS } from '../config/warehouse';
-import { useGameStore } from '../store/gameStore';
+import { useGameStore, WAREHOUSE_MAP } from '../store/gameStore';
 import { cellToWorld } from '../rules/warehouse';
 import PickerModel from './models/Picker';
+import { blocksCloseup } from './closeupView';
 
 const HOP_HEIGHT = 0.06;  // высота подскока при ходьбе
 const HOPS_PER_CELL = 2;  // два шажка на клетку
@@ -62,11 +63,15 @@ const lastFacing = new Map<string, number>();
 
 export default function Pickers() {
   const pickers = useGameStore((s) => s.game.pickers);
+  // В виде стеллажа вблизи сборщики между глазами и полками не рисуются — иначе загораживают товар.
+  const focus = useGameStore((s) => (s.game.minigame?.atFocus ? s.game.minigame.focus : null));
+  const focusRack = focus ? WAREHOUSE_MAP.racks.find((r) => r.aisle === focus.aisle && r.rack === focus.rack) : undefined;
   return (
     <group>
       {Object.values(pickers).map((p) => {
         const { pos, facing, hop } = placement(p);
         if (facing !== null) lastFacing.set(p.id, facing);
+        if (focusRack && blocksCloseup(focusRack, pos)) return null;
         return (
           <group key={p.id}>
             {p.path.length > 0 && <Route p={p} from={pos} />}
