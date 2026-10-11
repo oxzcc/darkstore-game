@@ -39,6 +39,7 @@ export function createPickers(templates: PickerTemplate[], map: WarehouseMap): R
       path: [],
       pathProgress: 0,
       workEndsAt: null,
+      job: null,
     };
   });
   return result;

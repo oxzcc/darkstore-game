@@ -1,8 +1,9 @@
-// Жизненный цикл задания (04, раздел 3): назначение и завершение.
-// В M3 поручённое задание завершается сразу случайным исходом: ходьбы и времени ещё нет (появятся в M4).
-import type { GameState, ShiftEvent } from '../../model/game';
+// Жизненный цикл задания (04, раздел 3): назначение. Дальше задание живёт в advanceWorld:
+// сборщик идёт, работает, и только по окончании работы бросается исход (rules/advance.ts).
+import type { GameState } from '../../model/game';
+import type { WarehouseMap } from '../../model/warehouse';
 import { createRng } from '../random';
-import { outcomeChances, rollOutcome } from '../outcome';
+import { buildOrderJob } from '../jobs';
 import { topUpOrders } from './generator';
 
 export type AssignCheck = { ok: true } | { ok: false; reason: string };
@@ -21,32 +22,35 @@ export function canAssign(state: GameState, taskId: string, pickerId: string): A
 /**
  * «Отправить»: назначить сборщика и поручить ему задание.
  * Назначение окончательное — отменить или передать нельзя (02, раздел 5).
- * M3: исход сразу бросается по outcomeChances, сборщик снова свободен, очередь заказов дополняется.
- * Деньги, рейтинг и остатки от исхода пока не меняются — это M6.
+ * Сборщик получает маршрут и сразу начинает идти; очередь заказов дополняется.
+ * M4: дойдя, сборщик работает сам (выбор «лично или поручить» — M5).
  */
-export function dispatchTask(
-  state: GameState,
-  taskId: string,
-  pickerId: string,
-  now: number,
-): { state: GameState; event: ShiftEvent } {
+export function dispatchTask(state: GameState, map: WarehouseMap, taskId: string, pickerId: string): GameState {
   const check = canAssign(state, taskId, pickerId);
   if (!check.ok) throw new Error(check.reason);
-
-  const rng = createRng(state.rngSeed);
   const task = state.tasks[taskId];
+  if (task.type !== 'order') throw new Error('Пока поддерживаются только заказы на сборку');
   const picker = state.pickers[pickerId];
-  const outcome = rollOutcome(outcomeChances(picker, task), rng);
 
-  const event: ShiftEvent = { kind: 'taskDone', taskId, pickerId, outcome };
   let next: GameState = {
     ...state,
     tasks: {
       ...state.tasks,
-      [taskId]: { ...task, status: 'done', assignedPickerId: pickerId, mode: 'delegated', outcome },
+      [taskId]: { ...task, status: 'pickerEnRoute', assignedPickerId: pickerId, mode: 'delegated' },
     },
-    shiftLog: [...state.shiftLog, event],
+    pickers: {
+      ...state.pickers,
+      [pickerId]: {
+        ...picker,
+        state: 'walking',
+        taskId,
+        job: buildOrderJob(map, picker, task),
+        path: [],
+        pathProgress: 0,
+      },
+    },
   };
-  next = topUpOrders(next, rng, now);
-  return { state: { ...next, rngSeed: rng.seed() }, event };
+  const rng = createRng(next.rngSeed);
+  next = topUpOrders(next, rng, state.clock.time);
+  return { ...next, rngSeed: rng.seed() };
 }

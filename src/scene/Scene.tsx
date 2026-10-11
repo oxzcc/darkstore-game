@@ -1,4 +1,4 @@
-// 3D-сцена: ортографическая изометрическая камера и склад (этап M1).
+// 3D-сцена: ортографическая изометрическая камера, склад и сборщики.
 // Сцена только рисует карту, которую ей передали.
 import { useLayoutEffect } from 'react';
 import { Vector3 } from 'three';
@@ -8,6 +8,7 @@ import type { Stock } from '../model/stock';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { PALETTE } from '../config/palette';
 import Warehouse from './Warehouse';
+import Pickers from './Pickers';
 
 type Props = { map: WarehouseMap; stock: Stock };
 
@@ -67,6 +68,7 @@ export default function Scene({ map, stock }: Props) {
       <directionalLight position={[10, 20, 6]} intensity={SUN_LIGHT} />
       <IsoCamera map={map} />
       <Warehouse map={map} stock={stock} />
+      <Pickers />
     </Canvas>
   );
 }

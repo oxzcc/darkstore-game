@@ -1,5 +1,5 @@
 // Состояние игры целиком (docs/09-architecture.md, раздел 4.6). Обычный JSON: без классов и функций.
-// Часть полей из 09 (время, кампания, поставки, паллеты) добавится на своих этапах.
+// Часть полей из 09 (кампания, поставки, паллеты) добавится на своих этапах.
 import type { Picker } from './picker';
 import type { Product } from './product';
 import type { Stock } from './stock';
@@ -11,6 +11,13 @@ export type ShiftEvent = {
   taskId: string;
   pickerId: string;
   outcome: Outcome;
+  at: number; // игровое время
+};
+
+export type GameClock = {
+  time: number;       // игровое время, секунды (на паузе не растёт)
+  paused: boolean;    // ручная пауза
+  playerSpeed: 1 | 2; // кнопка ×1 / ×2
 };
 
 export type GameState = {
@@ -18,6 +25,7 @@ export type GameState = {
   rngSeed: number;   // текущее состояние генератора случайностей
   nextId: number;    // счётчик для новых id
 
+  clock: GameClock;
   money: number;     // пока не меняется: деньги и рейтинг от исходов — M6
   rating: number;
 

@@ -10,6 +10,30 @@ export type PickerStats = {
   fatigue: number;  // 0–100 (%)
 };
 
+/** Один шаг работы над заданием: дойти до клетки, собрать позицию заказа или расфасовать. */
+export type JobStep =
+  // spots — куда можно встать (у стеллажа — любая из его клеток прохода, на фасовке — любая клетка зоны);
+  // в начале перехода выбирается ближайшее свободное место и записывается в `to`, чтобы сборщики не стояли друг в друге.
+  // label — куда идёт, для экрана: «к 2.3.2» или «на фасовку».
+  | { kind: 'walk'; to: Cell; spots: Cell[]; label: string }
+  | { kind: 'pick'; lineIndex: number; seconds: number }
+  | { kind: 'pack'; seconds: number };
+
+/** Текущая работа сборщика: список шагов и где он сейчас. */
+export type PickerJob = {
+  taskId: string;
+  steps: JobStep[];
+  stepIndex: number;   // какой шаг выполняется
+  stepElapsed: number; // сколько секунд прошло в текущем рабочем шаге (pick/pack)
+};
+
+/** Что сборщик делает сейчас — для карточек интерфейса (считает rules/jobs.ts). */
+export type PickerActivity =
+  | { kind: 'idle' }
+  | { kind: 'walking'; to: string; secondsLeft: number; progress: number }
+  | { kind: 'picking'; line: number; lines: number; progress: number }
+  | { kind: 'packing'; progress: number };
+
 export type Picker = {
   id: string;
   name: string;
@@ -19,10 +43,11 @@ export type Picker = {
   taskId: string | null;
   stats: PickerStats;
   specialization: Record<TaskType, { level: number; xp: number }>;
-  position: Cell;                // клетка, где стоит
-  path: Cell[];                  // маршрут, если идёт (M4)
-  pathProgress: number;          // сколько клеток пути пройдено
-  workEndsAt: number | null;     // когда закончит работу или перерыв
+  position: Cell;                // клетка, где стоит; во время ходьбы — откуда вышел на текущий отрезок
+  path: Cell[];                  // оставшийся маршрут текущего отрезка (без стартовой клетки)
+  pathProgress: number;          // сколько клеток пути пройдено (дробное — между клетками)
+  workEndsAt: number | null;     // для перерыва (M8); работа над заданием считается по job
+  job: PickerJob | null;
   // на будущее (05, раздел 2): пока не используются
   description?: string;
   traits?: string[];
