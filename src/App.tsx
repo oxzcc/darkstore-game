@@ -6,6 +6,7 @@ import TaskPanel from './ui/TaskPanel';
 import PickerPanel from './ui/PickerPanel';
 import AssignDialog from './ui/AssignDialog';
 import Toasts from './ui/Toasts';
+import TsdOffer from './ui/TsdOffer';
 import SpeedControls from './ui/SpeedControls';
 import './ui/theme.css';
 
@@ -19,6 +20,7 @@ export default function App() {
         <TaskPanel />
         <PickerPanel />
         <AssignDialog />
+        <TsdOffer />
         <SpeedControls />
         <Toasts />
       </div>

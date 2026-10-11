@@ -30,6 +30,7 @@ export type PickerJob = {
 /** Что сборщик делает сейчас — для карточек интерфейса (считает rules/jobs.ts). */
 export type PickerActivity =
   | { kind: 'idle' }
+  | { kind: 'waitingTsd'; secondsLeft: number } // висит «Взять ТСД?», сборщик стоит
   | { kind: 'walking'; to: string; secondsLeft: number; progress: number }
   | { kind: 'picking'; line: number; lines: number; progress: number }
   | { kind: 'packing'; progress: number };

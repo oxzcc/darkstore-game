@@ -6,7 +6,7 @@ import type { Outcome } from '../model/task';
 import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { buildWarehouseMap } from '../rules/warehouse';
 import { createInitialGame } from '../rules/game';
-import { dispatchTask } from '../rules/tasks/lifecycle';
+import { acceptTsd, declineTsd, sendPicker } from '../rules/tsd';
 import { advanceWorld } from '../rules/advance';
 import { worldDt } from '../rules/time';
 
@@ -30,6 +30,9 @@ type Store = {
   closeAssign: () => void;
   choosePicker: (pickerId: string) => void;
   sendChosenPicker: () => void;
+  /** «Взять ТСД» / «Пусть работает» на предложении (02, раздел 6). */
+  acceptTsd: () => void;
+  declineTsd: () => void;
   dismissToast: (id: number) => void;
   /** Вызывается каждый кадр из GameLoop: двигает игровое время. */
   tick: (realDt: number) => void;
@@ -53,10 +56,13 @@ export const useGameStore = create<Store>((set) => ({
       const { assignTaskId, chosenPickerId } = s.ui;
       if (!assignTaskId || !chosenPickerId) return s;
       return {
-        game: dispatchTask(s.game, WAREHOUSE_MAP, assignTaskId, chosenPickerId),
+        game: sendPicker(s.game, WAREHOUSE_MAP, assignTaskId, chosenPickerId),
         ui: { ...s.ui, assignTaskId: null, chosenPickerId: null },
       };
     }),
+
+  acceptTsd: () => set((s) => ({ game: acceptTsd(s.game) })),
+  declineTsd: () => set((s) => ({ game: declineTsd(s.game) })),
 
   tick: (realDt) =>
     set((s) => {
