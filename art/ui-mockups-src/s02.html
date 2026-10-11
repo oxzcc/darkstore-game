@@ -1,0 +1,35 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="ui.css">
+<style>.plate{position:absolute;transform:translate(-50%,-50%);background:var(--paper);border:2.5px solid var(--ink);font-weight:700;font-size:17px;padding:3px 8px;white-space:nowrap}
+.plate.on{background:var(--lucky);color:#fff}</style></head><body>
+<canvas id="world" width="1920" height="1080"></canvas><div id="ui"></div>
+<script src="icons.js"></script><script src="gl.js"></script><script src="world.js"></script><script src="common.js"></script><script>
+document.fonts.load('700 20px X5Sans').then(()=>document.fonts.load('500 20px X5Sans')).then(()=>{
+ const P=renderWorld({target:[17.6,1.0,4.3],zoom:3.5,az:45,el:38,shiftX:0.4},{floor:()=>{
+   B(16.98,WD.F+0.012,0.4,0.1,0.01,7.6,COL.yellow,{noAO:1}); B(18.3,WD.F+0.012,0.4,0.1,0.01,7.6,COL.yellow,{noAO:1});
+   for(let z=0.6;z<7.8;z+=0.9) B(17.6,WD.F+0.012,z,0.1,0.01,0.45,'#FFFFFF',{noAO:1,emit:1});
+ },extra:()=>{ dog(17.75,4.6,'lucky','S',{cart:1,ring:'#1F7BFF'}); dog(21.45,2.6,'korzh','S',{ring:'#FF8A00'}); }});
+ hudTop();
+ // address plates on aisle 3 front beams
+ const lv=[0.12,0.82,1.52];
+ [1.9,4.3,6.7].forEach((zc,k)=>lv.forEach((ly,l)=>{ const [x,y]=P(16.98,ly-0.02,zc); const on=k===1&&l===1;
+   add(`<div class="plate ${on?'on':''}" style="left:${x}px;top:${y}px">3.${k+1}.${l+1}</div>`);}));
+ // picker status
+ let [x,y]=P(17.75,2.1,4.6);
+ add(`<div class="pin c" style="left:${x+6}px;top:${y}px;--c:#1F7BFF"><div class="head" style="width:60px;height:60px">${ic('scan',34,'#fff')}</div><div class="stem"></div></div>`);
+ add(`<div class="abs panel" style="left:${x+90}px;top:${y-60}px;width:290px;padding:12px 14px">
+   <div style="display:flex;gap:12px;align-items:center">${portrait('lucky',58)}<div><div style="font-weight:700;font-size:20px;letter-spacing:.04em">ЛАКИ</div><div style="font-size:14px;font-weight:500;color:var(--ink2)">Сканирует 3.2.2</div></div></div>
+   <div style="display:flex;gap:10px;align-items:center;margin-top:10px">${PROD.bread()}<div style="flex:1;font-weight:500;font-size:15px">Хлеб пшеничный<br><b>×1</b> · позиция 3 из 4</div></div>
+   <div class="bar" style="margin-top:8px;--c:var(--lucky)"><b style="width:62%"></b></div></div>`);
+ // korzh small tag
+ [x,y]=P(21.45,2.1,2.6);
+ add(`<div class="pin c" style="left:${x}px;top:${y}px;--c:#FF8A00"><div class="head">${ic('wait',26,'#fff')}</div><div class="stem"></div></div>`);
+ // 1m cell label
+ // aisle sign
+ [x,y]=P(17.65,0,8.4);
+ add(`<div class="abs" style="left:${x}px;top:${y}px;transform:translate(-50%,-50%)"><div style="background:var(--ink);color:#fff;font-weight:700;font-size:30px;width:64px;height:64px;display:grid;place-items:center;border:3px solid #fff;box-shadow:0 0 0 3px var(--ink)">3</div></div>`);
+ add(`<div class="abs panel" style="left:16px;bottom:22px;width:420px;padding:14px 16px">
+   <div style="font-weight:700;font-size:18px;margin-bottom:10px">Как читать адрес</div>
+   <div style="display:flex;align-items:center;gap:12px"><span class="plate on" style="position:static;transform:none;font-size:26px">3.2.2</span>
+   <div style="font-weight:500;font-size:15px;line-height:1.35">аллея <b>3</b> · стеллаж <b>2</b> · полка <b>2</b><br>полки — снизу вверх</div></div></div>`);
+ voxify(); window.READY=true;});
+</script></body></html>

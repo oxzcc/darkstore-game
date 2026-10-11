@@ -1,0 +1,11 @@
+<!doctype html><html><body style="margin:0">
+<script src="gl.js"></script><script src="world.js"></script><script>
+window.OUT={};
+const off=document.createElement('canvas'); off.width=256; off.height=256;
+for (const [k,c] of [['lucky','#1F7BFF'],['korzh','#FF8A00'],['buran','#9B4DFF'],['bulya','#11B5A4']]) {
+  GL.clear(); dog(0,0,k,'S',{});
+  GL.render(off,{target:[0.05,WD.F+1.46,0.05],zoom:0.64,az:28,el:14},{bg:c,sceneCenter:[0,1,0],sceneRadius:3,light:[0.3,0.8,0.9]});
+  OUT[k]=off.toDataURL('image/png');
+}
+window.READY=true;
+</script></body></html>

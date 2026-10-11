@@ -1,0 +1,56 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="ui.css">
+<style>
+.pc { background: var(--paper); border: 2.5px solid var(--ink); box-shadow: 0 4px 8px rgba(0,0,0,.2); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.pc .nm { font-size: 22px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+.st { display: grid; grid-template-columns: 24px 1fr 150px; gap: 10px; align-items: center; font-size: 16px; font-weight: 500; }
+.stack { display: flex; height: 24px; }
+.stack i { display: block; height: 100%; box-shadow: inset 0 -5px 0 rgba(0,0,0,.18), inset 0 3px 0 rgba(255,255,255,.3); }
+.oc { display: flex; justify-content: space-between; margin-top: 8px; font-weight: 700; font-size: 18px; }
+.oc span { display: flex; gap: 6px; align-items: center; }
+</style></head><body>
+<canvas id="world" width="1920" height="1080"></canvas><div id="ui"></div>
+<script src="icons.js"></script><script src="gl.js"></script><script src="world.js"></script><script src="common.js"></script><script>
+document.fonts.load('700 20px X5Sans').then(()=>document.fonts.load('500 20px X5Sans')).then(()=>{
+ const P=renderWorld({target:[12.2,0,8.0],zoom:10.4,az:45,el:38,shiftX:2.6,shiftY:0.6},{sel:[1,0],selColor:'#FFC629',floor:()=>{
+   route([[12.9,10.4],[13.35,10.4],[13.35,9.2],[13.35,2.3]],'#1F7BFF',0.16,true);
+   route([[3.4,3.2],[5.6,3.0],[7.6,3.0],[7.6,9.2],[13.1,9.2],[13.1,2.3]],'#9B4DFF',0.16,true);
+   route([[21.45,5.0],[21.45,8.55],[13.75,8.55],[13.75,2.3]],'#FF8A00',0.24);
+   stop(13.55,1.9,'#FFC629');
+ },extra:()=>{ dog(12.6,10.6,'lucky','E',{ring:'#1F7BFF'}); dog(21.45,4.4,'korzh','S',{ring:'#FF8A00'}); dog(3.4,2.4,'buran','S',{ring:'#9B4DFF',cup:1}); }});
+ hudTop({paused:true});
+ let [x,y]=P(12.8,2.9,1.9);
+ add(`<div class="pin" style="left:${x}px;top:${y}px"><div class="head" style="width:60px;height:60px;background:var(--yellow);box-shadow:0 4px 8px rgba(0,0,0,.25)">${ic('pick',32,'var(--text)','#fff')}</div><div class="stem"></div></div>`);
+ const eta=(px,py,z,t,c,sel)=>{const [a,b]=P(px,py,z);add(`<div class="label" style="left:${a}px;top:${b}px;background:${sel?c:'var(--paper)'};${sel?'color:#fff':''}">${ic('walk',18,'var(--text)',sel?'#fff':c)} ${t}</div>`);};
+ eta(12.6,2.1,10.6,'0:24','#1F7BFF');
+ eta(21.45,2.1,4.4,'0:16','#FF8A00',true);
+ eta(3.4,2.1,2.4,'0:31','#9B4DFF');
+ const bar=(n,c)=>`<div class="bar" style="--c:${c||'var(--g)'};height:12px"><b style="width:${n*10}%"></b></div>`;
+ const card=(k,sel,t,sp,ac,fa,ch,warn)=>`<div class="pc" ${sel?'data-ring="#FF8A00"':''}>
+   <div style="display:flex;gap:12px;align-items:center">${portrait(k,60)}<div style="flex:1"><div class="nm">${PK[k].name}</div><div style="font-size:15px;font-weight:500;color:var(--ink2);display:flex;gap:6px;align-items:center;margin-top:3px">${ic('walk',16,'var(--text)',PK[k].hex)} ${t} до места</div></div>
+     <div style="width:130px;display:flex;flex-direction:column;gap:6px">
+       <div style="display:flex;gap:6px;align-items:center">${ic('speedStat',16)}<div style="flex:1">${bar(sp)}</div></div>
+       <div style="display:flex;gap:6px;align-items:center">${ic('acc',16)}<div style="flex:1">${bar(ac)}</div></div>
+       <div style="display:flex;gap:6px;align-items:center">${ic('fatigue',16)}<div style="flex:1">${bar(fa, fa>=7?'var(--red)':'#8C8270')}</div></div></div></div>
+   <div>
+     <div class="stack"><i style="width:${ch[0]}%;background:#5CB80F"></i><i style="width:${ch[1]}%;background:#FF9F1A"></i><i style="width:${ch[2]}%;background:#F0373B"></i></div>
+     <div class="oc"><span>${ic('perfect',20)}${ch[0]}%</span><span>${ic('errors',20)}${ch[1]}%</span><span>${ic('fail',20)}${ch[2]}%</span></div>
+     ${warn?`<div style="margin-top:4px;font-size:14px;font-weight:500;color:#C42A2D;text-align:center">${warn}</div>`:''}</div></div>`;
+ add(`<div class="abs panel" data-check style="right:16px;top:104px;width:500px;display:flex;flex-direction:column">
+  <div class="ph">Кого отправить? <span class="tag" style="position:absolute;right:14px;top:10px;display:flex;gap:6px">${ic('pause',14,'#fff')} пауза</span></div>
+  <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px;flex:1">
+   <div class="pc" style="background:#FFF3D1;flex-direction:row;align-items:center;gap:14px;padding:12px 14px">
+     <div style="width:60px;height:60px;border:2.5px solid var(--ink);background:var(--yellow);display:grid;place-items:center;flex:none">${ic('pick',34,'var(--text)','#fff')}</div>
+     <div style="flex:1"><div style="font-size:22px;font-weight:700">Сборка #1043</div><div style="font-size:15px;font-weight:500;color:var(--ink2)">4 товара · 3 аллеи</div></div>
+     <div style="text-align:right;font-weight:700;font-size:18px"><div style="display:flex;gap:5px;align-items:center;color:var(--red);justify-content:flex-end">${ic('clock',18)}1:40</div><div style="display:flex;gap:5px;align-items:center;justify-content:flex-end;margin-top:4px">${ic('coin',18)}+320</div></div>
+   </div>
+   ${card('lucky',0,'0:24',6,7,3,[55,35,10])}
+   ${card('korzh',1,'0:16',8,6,2,[68,26,6])}
+   ${card('buran',0,'0:31',7,8,7,[34,41,25],'Устал — шансы ниже')}
+   <div style="display:flex;gap:12px;margin-top:6px">
+    <div class="btn" style="height:60px;width:140px;font-size:18px">Отмена</div>
+    <div class="btn big primary" style="flex:1;height:60px;font-size:20px">Отправить</div>
+   </div>
+  </div>
+ </div>`);
+ voxify(); window.READY=true;});
+</script></body></html>

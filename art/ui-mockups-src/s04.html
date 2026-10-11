@@ -1,0 +1,70 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="ui.css">
+<style>
+canvas#world { filter: saturate(.35) brightness(.62); }
+.scr { position: absolute; background: #F5F7F0; overflow: hidden; display: flex; flex-direction: column; font-family: X5Sans; }
+.it { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-bottom: 2px solid var(--line); font-size: 15px; font-weight: 500; background: #fff; }
+.it .cb { width: 24px; height: 24px; border: 2.5px solid var(--ink); display: grid; place-items: center; background: #fff; flex: none; }
+.it.done { color: var(--mute); } .it.done .nm { text-decoration: line-through; }
+.it.done .cb { background: var(--g); }
+.it.cur { background: #E6F0FF; box-shadow: inset 6px 0 0 var(--lucky); }
+.cell { border: 2.5px solid var(--ink); background: #F3E3C6; display: grid; place-items: center; position: relative; }
+</style></head><body>
+<canvas id="world" width="1920" height="1080"></canvas><div id="ui"></div>
+<script src="icons.js"></script><script src="gl.js"></script><script src="world.js"></script><script src="common.js"></script><script>
+document.fonts.load('700 20px X5Sans').then(()=>document.fonts.load('500 20px X5Sans')).then(()=>{
+ renderWorld(CAM_MAIN,{extra:crew});
+ hudTop({time:'06:31'});
+ // PDT
+ const H=1010, sc=H/1815, W=867*sc, L=960-W/2, T=78;
+ add(`<img src="cut/PDT.png" class="abs" style="left:${L}px;top:${T}px;height:${H}px;filter:drop-shadow(0 10px 0 rgba(0,0,0,.35))">`);
+ const sx=L+108*sc, sy=T+170*sc, sw=(790-108)*sc, sh=(1508-170)*sc;
+ add(`<div class="scr" style="left:${sx}px;top:${sy}px;width:${sw}px;height:${sh}px">
+   <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 10px;background:var(--ink);color:#fff;font-size:12px;font-weight:700;letter-spacing:.08em"><span>ТСД-07 · ЛАКИ</span><span style="display:flex;gap:6px;align-items:center">14:32 <i style="width:22px;height:11px;border:2px solid #fff;display:inline-block;position:relative"><i style="position:absolute;left:1px;top:1px;bottom:1px;width:12px;background:var(--gHi)"></i></i></span></div>
+   <div style="background:var(--g);color:#fff;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:2.5px solid var(--line)">
+     <div><div style="font-size:11px;font-weight:700;letter-spacing:.14em;opacity:.85">СБОРКА</div><div style="font-size:22px;font-weight:700;letter-spacing:.04em;line-height:1">ЗАКАЗ #1042</div></div>
+     <div style="background:var(--red);border:2.5px solid var(--ink);padding:3px 8px;font-size:24px;font-weight:700;display:flex;gap:6px;align-items:center;box-shadow:0 3px 0 var(--ink)">${ic('clock',18,'var(--ink)','#fff')}00:47</div></div>
+   <div style="padding:8px 10px 0;display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px">2 / 4 <div style="flex:1;display:flex;gap:3px">${[1,1,0,0].map(o=>`<i style="flex:1;height:12px;border:2px solid var(--ink);background:${o?'var(--g)':'#fff'}"></i>`).join('')}</div></div>
+   <div style="margin:8px 10px;border:2.5px solid var(--ink);background:#fff;box-shadow:0 4px 0 var(--ink)">
+     <div style="background:var(--lucky);color:#fff;text-align:center;font-weight:700;font-size:13px;letter-spacing:.12em;padding:4px">ВОЗЬМИ И ОТСКАНИРУЙ</div>
+     <div style="display:flex;gap:10px;padding:10px;align-items:center">
+       <div style="width:96px;height:96px;border:2.5px solid var(--ink);display:grid;place-items:center;background:#FFF4DE">${PROD.bread().replace('width:44px;height:44px','width:84px;height:84px')}</div>
+       <div style="flex:1"><div style="font-size:18px;font-weight:700;line-height:1.1">Хлеб пшеничный</div><div style="font-size:12px;color:var(--mute);font-weight:500;margin-top:2px">штрихкод …4821</div>
+         <div style="display:flex;align-items:center;gap:8px;margin-top:8px"><span style="background:var(--lucky);color:#fff;border:2.5px solid var(--ink);font-size:26px;font-weight:700;padding:0 8px">3.2.2</span><b style="font-size:24px">×1</b></div></div></div>
+   </div>
+   <div style="margin:0 10px;border:2.5px solid var(--ink)">
+     <div class="it done"><div class="cb">${ic('check',16,'#fff')}</div>${PROD.milk().replace(/width:44px;height:44px/,'width:26px;height:26px')}<span class="nm" style="flex:1">Молоко 3,2%</span><span class="tag" style="height:22px;font-size:12px;background:var(--mute)">1.2.2</span><b>×2</b></div>
+     <div class="it done"><div class="cb">${ic('check',16,'#fff')}</div>${PROD.banana().replace(/width:44px;height:44px/,'width:26px;height:26px')}<span class="nm" style="flex:1">Бананы</span><span class="tag" style="height:22px;font-size:12px;background:var(--mute)">2.1.3</span><b>×1</b></div>
+     <div class="it cur"><div class="cb"></div>${PROD.bread().replace(/width:44px;height:44px/,'width:26px;height:26px')}<span class="nm" style="flex:1;font-weight:700">Хлеб пшеничный</span><span class="tag" style="height:22px;font-size:12px;background:var(--lucky)">3.2.2</span><b>×1</b></div>
+     <div class="it" style="border-bottom:none"><div class="cb"></div>${PROD.cheese().replace(/width:44px;height:44px/,'width:26px;height:26px')}<span class="nm" style="flex:1">Сыр «Гауда»</span><span class="tag" style="height:22px;font-size:12px">4.1.3</span><b>×1</b></div>
+   </div>
+   <div style="margin:10px 10px 0;border:3px dashed var(--ink);padding:8px 10px;display:flex;align-items:center;gap:10px;background:#fff">${ic('arrowR',20)}<div style="flex:1"><div class="kicker" style="font-size:10px">Дальше</div><b style="font-size:15px">Сыр «Гауда» · 12 м</b></div><span class="tag">4.1.3</span></div>
+   <div style="margin-top:auto;padding:10px;display:flex;gap:8px">
+     <div class="btn primary" style="flex:2;height:58px;font-size:22px">${ic('scan',26,'#fff')} Скан</div>
+     <div class="btn" style="flex:1;height:58px;font-size:13px;line-height:1.1;text-align:center">Нет<br>товара</div></div>
+ </div>`);
+ // left column
+ add(`<div class="abs" style="left:80px;top:150px;width:470px;display:flex;flex-direction:column;gap:18px">
+   <div class="panel" style="display:flex;align-items:center;gap:16px;padding:12px 16px;background:var(--yellow)">
+     <div style="font-size:46px;font-weight:700;line-height:1">×0,2</div><div><div style="font-weight:700;font-size:18px;letter-spacing:.06em">МИР ЗАМЕДЛЕН</div><div style="font-size:14px;font-weight:500">пока вы играете, остальные задания идут</div></div></div>
+   <div class="panel"><div class="ph">${ic('person',20)} Играете за</div>
+     <div style="display:flex;gap:14px;padding:14px;align-items:center">${portrait('lucky',76)}<div><div style="font-weight:700;font-size:24px;letter-spacing:.04em">ЛАКИ</div><div style="font-size:14px;font-weight:500;color:var(--ink2)">лабрадор · сборка 4</div>
+       <div style="display:flex;gap:8px;align-items:center;margin-top:6px">${ic('fatigue',18)}${seg(10,4,'var(--ink)')}<b style="font-size:13px">35%</b></div></div></div></div>
+ </div>`);
+ // right column: shelf front view
+ const cells=[
+  [['box','',0],['yogurt','',0],['water','',0]],
+  [['milk','',0],['bread','3.2.2',1],['apple','',0]],
+  [['eggs','',0],['cheese','',0],['box','',0]]];
+ add(`<div class="abs panel" data-check style="right:80px;top:150px;width:470px">
+   <div class="ph">${ic('layers',20)} Стеллаж 3.2 · вид спереди</div>
+   <div style="padding:16px 18px 10px;display:grid;grid-template-columns:44px 1fr;gap:10px 10px;align-items:stretch">
+     ${[3,2,1].map((lvl,r)=>`<div style="display:grid;place-items:center"><span class="tag" style="${lvl===2?'background:var(--lucky)':''}">${lvl}</span></div>
+       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:6px;background:#3A4048;border:2.5px solid var(--ink)">
+        ${cells[r].map(([p,a,on])=>`<div class="cell" style="height:96px;${on?'background:#CFE3FF;outline:5px solid var(--lucky);outline-offset:-2px':''}">${PROD[p]().replace('width:44px;height:44px','width:64px;height:64px')}${on?`<span class="tag" style="position:absolute;top:-14px;background:var(--lucky);border:2px solid var(--ink)">НУЖЕН</span>`:''}</div>`).join('')}</div>`).join('')}
+   </div>
+   <div style="padding:6px 18px 16px;font-size:14px;font-weight:500;color:var(--ink2);text-align:center">Нажмите на товар, затем «Скан». Не тот товар = ошибка.</div>
+ </div>
+ <div class="abs panel" style="right:80px;top:700px;width:470px;padding:14px 16px;display:flex;gap:12px;align-items:center">
+   ${ic('alert',34)}<div style="font-size:14px;font-weight:500;line-height:1.35"><b>Нет товара по адресу?</b> Нажмите «Нет товара»: позиция уйдёт как «не найдена», исход не выше «с ошибками».</div></div>`);
+ voxify(); window.READY=true;});
+</script></body></html>
