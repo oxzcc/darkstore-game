@@ -13,8 +13,9 @@ const ISO_ELEVATION = Math.atan(1 / Math.SQRT2); // ≈35,26° — класси�
 const SCREEN_FILL = 0.9;                          // склад занимает ~90% экрана (08, раздел 4)
 
 // Свет подобран так, чтобы верх объектов был ровно цвета палитры, а бока — темнее.
-const AMBIENT_LIGHT = 0.5;
-const SUN_LIGHT = 0.6;
+// Без обработки цветов (flat) Three.js делит свет на π, поэтому умножаем на π.
+const AMBIENT_LIGHT = 0.5 * Math.PI;
+const SUN_LIGHT = 0.6 * Math.PI;
 
 /** Ставит камеру в изометрию и подбирает приближение, чтобы весь склад влез в окно. */
 function IsoCamera({ map }: Props) {
