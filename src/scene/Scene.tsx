@@ -1,6 +1,7 @@
 // 3D-сцена: ортографическая изометрическая камера и склад (этап M1).
 // Сцена только рисует карту, которую ей передали.
 import { useLayoutEffect } from 'react';
+import { Vector3 } from 'three';
 import { Canvas, useThree } from '@react-three/fiber';
 import type { WarehouseMap } from '../model/warehouse';
 import type { Stock } from '../model/stock';
@@ -11,7 +12,7 @@ import Warehouse from './Warehouse';
 type Props = { map: WarehouseMap; stock: Stock };
 
 const ISO_ELEVATION = Math.atan(1 / Math.SQRT2); // ≈35,26° — классическая изометрия
-const SCREEN_FILL = 0.9;                          // склад занимает ~90% экрана (08, раздел 4)
+const SCREEN_FILL = 0.95;                         // доля свободного от интерфейса места, которую занимает склад
 
 // Свет подобран так, чтобы верх объектов был ровно цвета палитры, а бока — темнее.
 // Без обработки цветов (flat) Three.js делит свет на π, поэтому умножаем на π.
@@ -31,12 +32,26 @@ function IsoCamera({ map }: { map: WarehouseMap }) {
     const cy = WAREHOUSE_VIEW.wallHeight / 2;
     camera.position.set(cx + dist, cy + dist, cz + dist);
     camera.lookAt(cx, cy, cz);
+    camera.updateMatrixWorld();
+
+    // Место на экране без панелей интерфейса (08, раздел 4: склад — большая часть экрана, UI по краям).
+    const ins = WAREHOUSE_VIEW.screenInsets;
+    const freeW = Math.max(100, size.width - ins.left - ins.right);
+    const freeH = Math.max(100, size.height - ins.top - ins.bottom);
 
     // Сколько метров склада видно по горизонтали и вертикали под этим углом.
     const diag = (map.width + map.depth) / Math.SQRT2;
     const spanX = diag;
     const spanY = diag * Math.sin(ISO_ELEVATION) + WAREHOUSE_VIEW.wallHeight * Math.cos(ISO_ELEVATION);
-    camera.zoom = Math.min(size.width / spanX, size.height / spanY) * SCREEN_FILL;
+    const zoom = Math.min(freeW / spanX, freeH / spanY) * SCREEN_FILL;
+    camera.zoom = zoom;
+
+    // Сдвигаем камеру, чтобы центр склада оказался в центре свободного места, а не всего экрана.
+    const shiftRight = (ins.left - ins.right) / 2 / zoom;
+    const shiftUp = (ins.bottom - ins.top) / 2 / zoom;
+    const right = new Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+    const up = new Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+    camera.position.addScaledVector(right, -shiftRight).addScaledVector(up, -shiftUp);
     camera.updateProjectionMatrix();
   }, [camera, size, map]);
 
