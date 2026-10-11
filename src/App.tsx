@@ -1,15 +1,23 @@
-// Собирает экран игры. Карту склада и начальный запас строим здесь один раз и передаём сцене.
-// В M3 они переедут в store (09, раздел 14), сцена от этого не изменится.
+// Собирает экран игры: 3D-сцена и интерфейс поверх неё.
 import Scene from './scene/Scene';
-import { WAREHOUSE_LAYOUT } from './config/warehouse';
-import { PRODUCTS } from './config/products';
-import { CAMPAIGN_START_SHIFT, INITIAL_STOCK } from './config/initialStock';
-import { buildWarehouseMap } from './rules/warehouse';
-import { buildInitialStock } from './rules/stock';
-
-const WAREHOUSE_MAP = buildWarehouseMap(WAREHOUSE_LAYOUT);
-const STOCK = buildInitialStock(INITIAL_STOCK, PRODUCTS, WAREHOUSE_MAP, CAMPAIGN_START_SHIFT);
+import { useGameStore, WAREHOUSE_MAP } from './store/gameStore';
+import TaskPanel from './ui/TaskPanel';
+import PickerPanel from './ui/PickerPanel';
+import AssignDialog from './ui/AssignDialog';
+import Toasts from './ui/Toasts';
+import './ui/theme.css';
 
 export default function App() {
-  return <Scene map={WAREHOUSE_MAP} stock={STOCK} />;
+  const stock = useGameStore((s) => s.game.stock);
+  return (
+    <>
+      <Scene map={WAREHOUSE_MAP} stock={stock} />
+      <div className="hud">
+        <TaskPanel />
+        <PickerPanel />
+        <AssignDialog />
+        <Toasts />
+      </div>
+    </>
+  );
 }
