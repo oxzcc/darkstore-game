@@ -10,6 +10,8 @@ const PATHS = {
   errors: '<rect x="2" y="2" width="20" height="20" fill="var(--f,#FF9F1A)" stroke="currentColor" stroke-width="2.5"/><rect x="10" y="5" width="4" height="9" fill="currentColor"/><rect x="10" y="16" width="4" height="4" fill="currentColor"/>',
   fail: '<rect x="2" y="2" width="20" height="20" fill="var(--f,#F0373B)" stroke="currentColor" stroke-width="2.5"/><path d="M7 7l10 10M17 7L7 17" stroke="currentColor" stroke-width="3.5"/>',
   coin: '<path d="M7 2h10l5 5v10l-5 5H7l-5-5V7z" fill="#FFC629" stroke="currentColor" stroke-width="2.5"/><path d="M9 7h5a3 3 0 010 6H9V7zM9 13v5M7 15h6" fill="none" stroke="currentColor" stroke-width="2.5"/>',
+  pause: '<rect x="5" y="4" width="5" height="16" fill="currentColor"/><rect x="14" y="4" width="5" height="16" fill="currentColor"/>',
+  walk: '<path d="M3 10h11V5l8 7-8 7v-5H3z" fill="var(--f,#fff)" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter"/>',
   check: '<path d="M3 12l6 6L21 6" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="miter"/>',
   work: '<rect x="3" y="3" width="18" height="18" fill="var(--f,#fff)" stroke="currentColor" stroke-width="2.5"/><path d="M7 7v10M10 7v10M13 7v10M17 7v10" stroke="currentColor" stroke-width="2"/>',
 } as const;

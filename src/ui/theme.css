@@ -106,7 +106,7 @@ button { font-family: inherit; }
 .seg i.on { background: var(--seg-color, var(--failed)); }
 
 /* ---------- окно назначения (справа, ui_03) ---------- */
-.assign { position: absolute; right: 16px; top: 16px; width: 440px; max-height: calc(100% - 32px); }
+.assign { position: absolute; right: 16px; top: 96px; width: 440px; max-height: calc(100% - 112px); }
 .assign > .vx-edge > .vx-body { display: flex; flex-direction: column; } /* только само окно */
 .assign-scroll { padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
 .order-lines { display: flex; flex-direction: column; gap: 6px; padding: 4px 4px 0; }
@@ -151,3 +151,30 @@ button { font-family: inherit; }
 
 svg.i { width: 24px; height: 24px; display: block; flex: none; color: var(--text); }
 svg.i.sm { width: 18px; height: 18px; }
+
+/* ---------- M4: время и работа ---------- */
+.grow { flex: 1; min-width: 0; }
+
+/* пауза / ×1 / ×2 справа сверху (ui_01) */
+.speed { position: absolute; right: 16px; top: 16px; display: flex; gap: 8px; }
+.btn.sq { flex: none; width: 64px; height: 60px; }
+.btn.sq > .vx > .vx-edge > .vx-body { font-size: 20px; letter-spacing: 0; text-transform: none; }
+.btn.sq.on > .vx > .vx-edge { background: var(--primary-lo); }
+.btn.sq.on > .vx > .vx-edge > .vx-body { background: var(--primary); color: #fff; }
+.btn.sq.on svg.i { color: #fff; }
+.btn.sq:disabled { opacity: 1; cursor: default; }
+
+/* плашка «пауза» в заголовке окна назначения (ui_03) */
+.pause-tag { position: absolute; right: 12px; display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px;
+  background: var(--tag); color: #fff; font-size: 13px; letter-spacing: 0.06em; }
+.pause-tag svg.i { color: #fff; width: 12px; height: 12px; }
+
+/* прогресс текущего шага сборщика — в его цвете */
+.progress { height: 10px; background: var(--track); position: relative; width: 160px; }
+.progress > b { position: absolute; inset: 0 auto 0 0; background: var(--pc, var(--primary)); }
+
+/* задание в работе: не кликается, аватар сборщика справа */
+.task-card.busy { cursor: default; }
+.task-card.busy > .vx-edge > .vx-body { background: #F7F1E2; }
+.avatar.small { width: 40px; height: 40px; --cut: 6px; }
+.avatar.small > .vx-edge > .vx-body { font-size: 18px; }

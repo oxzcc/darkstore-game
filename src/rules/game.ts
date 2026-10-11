@@ -16,6 +16,7 @@ export function createInitialGame(map: WarehouseMap, seed: number): GameState {
     version: GAME_STATE_VERSION,
     rngSeed: seed,
     nextId: 1,
+    clock: { time: 0, paused: false, playerSpeed: 1 },
     money: START_MONEY,
     rating: START_RATING,
     products: PRODUCTS,

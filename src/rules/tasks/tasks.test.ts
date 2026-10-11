@@ -56,46 +56,38 @@ describe('назначение', () => {
     expect(canAssign(g, task.id, 'lucky').ok).toBe(true);
   });
 
-  it('нельзя назначить занятого сборщика или на уже выполненное задание', () => {
+  it('нельзя назначить занятого сборщика или на уже назначенное задание', () => {
     const g = newGame();
-    const task = openTasks(g)[0];
-    const busy: GameState = { ...g, pickers: { ...g.pickers, lucky: { ...g.pickers.lucky, state: 'working' } } };
-    expect(canAssign(busy, task.id, 'lucky').ok).toBe(false);
-    const after = dispatchTask(g, task.id, 'korzh', 0).state;
-    expect(canAssign(after, task.id, 'buran').ok).toBe(false);
-    expect(() => dispatchTask(after, task.id, 'buran', 0)).toThrow();
+    const [t1, t2] = openTasks(g);
+    const after = dispatchTask(g, map, t1.id, 'korzh');
+    expect(canAssign(after, t1.id, 'buran').ok).toBe(false); // задание уже назначено
+    expect(canAssign(after, t2.id, 'korzh').ok).toBe(false); // Коржик занят
+    expect(() => dispatchTask(after, map, t1.id, 'buran')).toThrow();
   });
 
-  it('«Отправить»: задание выполнено с исходом, сборщик свободен, очередь дополнена', () => {
+  it('«Отправить»: сборщик получает маршрут и идёт, исхода ещё нет, очередь дополнена', () => {
     const g = newGame();
     const task = openTasks(g)[0];
-    const { state, event } = dispatchTask(g, task.id, 'buran', 0);
-    const done = state.tasks[task.id];
-    expect(done.status).toBe('done');
-    expect(done.assignedPickerId).toBe('buran');
-    expect(done.mode).toBe('delegated');
-    expect(['perfect', 'withErrors', 'failed'].includes(done.outcome!)).toBe(true);
-    expect(event.outcome).toBe(done.outcome);
-    expect(state.pickers.buran.state).toBe('idle');
-    expect(openTasks(state)).toHaveLength(ORDER.openOrdersTarget);
-    expect(state.shiftLog).toHaveLength(1);
-    expect(state.rngSeed === g.rngSeed).toBe(false);
+    const s = dispatchTask(g, map, task.id, 'buran');
+    const t = s.tasks[task.id];
+    expect(t.status).toBe('pickerEnRoute');
+    expect(t.assignedPickerId).toBe('buran');
+    expect(t.outcome).toBe(null);
+    const p = s.pickers.buran;
+    expect(p.state).toBe('walking');
+    expect(p.taskId).toBe(task.id);
+    const lines = task.type === 'order' ? task.payload.lines.length : 0;
+    expect(p.job!.steps).toHaveLength(lines * 2 + 2); // к каждому адресу + сбор, потом фасовка
+    expect(openTasks(s)).toHaveLength(ORDER.openOrdersTarget);
   });
 
-  it('остатки, деньги и рейтинг в M3 не меняются, исходное состояние не портится', () => {
+  it('назначение не меняет остатки, деньги и рейтинг и не портит исходное состояние', () => {
     const g = newGame();
     const before = JSON.stringify(g);
-    const task = openTasks(g)[0];
-    const { state } = dispatchTask(g, task.id, 'lucky', 0);
+    const s = dispatchTask(g, map, openTasks(g)[0].id, 'lucky');
     expect(JSON.stringify(g)).toBe(before);
-    expect(state.stock).toEqual(g.stock);
-    expect(state.money).toBe(g.money);
-    expect(state.rating).toBe(g.rating);
-  });
-
-  it('одно зерно — один и тот же исход', () => {
-    const a = newGame(77), b = newGame(77);
-    const t = openTasks(a)[0];
-    expect(dispatchTask(a, t.id, 'lucky', 0).event.outcome).toBe(dispatchTask(b, t.id, 'lucky', 0).event.outcome);
+    expect(s.stock).toEqual(g.stock);
+    expect(s.money).toBe(g.money);
+    expect(s.rating).toBe(g.rating);
   });
 });

@@ -294,7 +294,8 @@ export type Picker = {
   position: Cell;                // клетка склада, где стоит (свободный стоит там, где закончил, 07, раздел 2)
   path: Cell[];                  // маршрут, если идёт
   pathProgress: number;          // сколько клеток пути пройдено (может быть дробным)
-  workEndsAt: number | null;     // когда закончит поручённую работу или перерыв
+  workEndsAt: number | null;     // когда закончит перерыв (M8)
+  job: PickerJob | null;         // текущая работа: шаги «идти → собрать → … → фасовать» и где он сейчас (M4)
   // на будущее (05-pickers.md, раздел 2): пока не используются
   description?: string;
   traits?: string[];

@@ -7,6 +7,8 @@ import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { buildWarehouseMap } from '../rules/warehouse';
 import { createInitialGame } from '../rules/game';
 import { dispatchTask } from '../rules/tasks/lifecycle';
+import { advanceWorld } from '../rules/advance';
+import { worldDt } from '../rules/time';
 
 /** Карта не меняется во время игры, поэтому строится один раз и не хранится в состоянии (09, 4.1а). */
 export const WAREHOUSE_MAP = buildWarehouseMap(WAREHOUSE_LAYOUT);
@@ -29,6 +31,10 @@ type Store = {
   choosePicker: (pickerId: string) => void;
   sendChosenPicker: () => void;
   dismissToast: (id: number) => void;
+  /** Вызывается каждый кадр из GameLoop: двигает игровое время. */
+  tick: (realDt: number) => void;
+  togglePause: () => void;
+  setPlayerSpeed: (speed: 1 | 2) => void;
 };
 
 /** Случайное зерно для новой игры. Math.random можно здесь, но не в rules (09, раздел 5.2). */
@@ -46,25 +52,33 @@ export const useGameStore = create<Store>((set) => ({
     set((s) => {
       const { assignTaskId, chosenPickerId } = s.ui;
       if (!assignTaskId || !chosenPickerId) return s;
-      const task = s.game.tasks[assignTaskId];
-      const { state, event } = dispatchTask(s.game, assignTaskId, chosenPickerId, 0);
-      const toast: Toast = {
-        id: s.ui.nextToastId,
-        taskNumber: task.number,
-        pickerName: state.pickers[event.pickerId].name,
-        outcome: event.outcome,
-      };
       return {
-        game: state,
-        ui: {
-          ...s.ui,
-          assignTaskId: null,
-          chosenPickerId: null,
-          toasts: [...s.ui.toasts, toast],
-          nextToastId: s.ui.nextToastId + 1,
-        },
+        game: dispatchTask(s.game, WAREHOUSE_MAP, assignTaskId, chosenPickerId),
+        ui: { ...s.ui, assignTaskId: null, chosenPickerId: null },
       };
     }),
+
+  tick: (realDt) =>
+    set((s) => {
+      // автопауза, пока открыто окно «Кого отправить?» (02, раздел 2)
+      const dt = worldDt(s.game.clock, realDt, s.ui.assignTaskId !== null);
+      if (dt === 0) return s;
+      const { state, events } = advanceWorld(s.game, WAREHOUSE_MAP, dt);
+      if (events.length === 0) return { game: state };
+      let nextToastId = s.ui.nextToastId;
+      const toasts: Toast[] = events.map((e) => ({
+        id: nextToastId++,
+        taskNumber: state.tasks[e.taskId].number,
+        pickerName: state.pickers[e.pickerId].name,
+        outcome: e.outcome,
+      }));
+      return { game: state, ui: { ...s.ui, toasts: [...s.ui.toasts, ...toasts], nextToastId } };
+    }),
+
+  togglePause: () =>
+    set((s) => ({ game: { ...s.game, clock: { ...s.game.clock, paused: !s.game.clock.paused } } })),
+  setPlayerSpeed: (speed) =>
+    set((s) => ({ game: { ...s.game, clock: { ...s.game.clock, playerSpeed: speed, paused: false } } })),
 
   dismissToast: (id) => set((s) => ({ ui: { ...s.ui, toasts: s.ui.toasts.filter((t) => t.id !== id) } })),
 }));

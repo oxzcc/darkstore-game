@@ -2,7 +2,7 @@
 // Все числа — из selectors (а те — из rules); окно само ничего не считает.
 import type { CSSProperties } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { addressText, assignCheck, chancesFor, money, orderSummary, pickerList } from '../store/selectors';
+import { addressText, assignCheck, chancesFor, clockText, etaFor, money, orderSummary, pickerList } from '../store/selectors';
 import { OUTCOME_LOOK, OUTCOMES_ORDER } from './labels';
 import { Avatar, StatBars } from './PickerBits';
 import Vx from './Vx';
@@ -19,7 +19,10 @@ export default function AssignDialog() {
 
   return (
     <Vx className="assign" bodyClass="window">
-      <div className="panel-title">Кого отправить?</div>
+      <div className="panel-title">
+        Кого отправить?
+        <span className="pause-tag"><Icon name="pause" small /> пауза</span>
+      </div>
       <div className="assign-scroll">
         {/* задание */}
         <Vx className="task-card">
@@ -45,6 +48,7 @@ export default function AssignDialog() {
           const check = assignCheck(game, task.id, p.id);
           const chances = chancesFor(game, p.id, task.id);
           const chosen = p.id === chosenId;
+          const eta = check.ok ? etaFor(game, p.id, task.id) : null;
           return (
             <Vx
               key={p.id}
@@ -56,7 +60,11 @@ export default function AssignDialog() {
                 <Avatar picker={p} />
                 <div className="grow">
                   <div className="picker-name">{p.name}</div>
-                  <div className="picker-state">{check.ok ? p.breed : check.reason}</div>
+                  <div className="picker-state">
+                    {check.ok
+                      ? <><Icon name="walk" small />{eta === null ? 'не дойти' : `${clockText(eta)} до места`}</>
+                      : check.reason}
+                  </div>
                 </div>
                 <StatBars picker={p} />
               </div>

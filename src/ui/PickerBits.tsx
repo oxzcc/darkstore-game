@@ -6,9 +6,9 @@ import Vx from './Vx';
 import Icon from './icons';
 
 /** Аватар: рамка в цвете сборщика. Пока буква — морды из макетов подключим, когда решим их роль. */
-export function Avatar({ picker }: { picker: Picker }) {
+export function Avatar({ picker, small }: { picker: Picker; small?: boolean }) {
   return (
-    <Vx className="avatar" style={{ '--pc': picker.color } as CSSProperties}>
+    <Vx className={`avatar${small ? ' small' : ''}`} style={{ '--pc': picker.color } as CSSProperties}>
       {picker.name[0]}
     </Vx>
   );
