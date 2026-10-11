@@ -3,11 +3,12 @@
 import { useLayoutEffect } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import type { WarehouseMap } from '../model/warehouse';
+import type { Stock } from '../model/stock';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { PALETTE } from '../config/palette';
 import Warehouse from './Warehouse';
 
-type Props = { map: WarehouseMap };
+type Props = { map: WarehouseMap; stock: Stock };
 
 const ISO_ELEVATION = Math.atan(1 / Math.SQRT2); // ≈35,26° — классическая изометрия
 const SCREEN_FILL = 0.9;                          // склад занимает ~90% экрана (08, раздел 4)
@@ -18,7 +19,7 @@ const AMBIENT_LIGHT = 0.5 * Math.PI;
 const SUN_LIGHT = 0.6 * Math.PI;
 
 /** Ставит камеру в изометрию и подбирает приближение, чтобы весь склад влез в окно. */
-function IsoCamera({ map }: Props) {
+function IsoCamera({ map }: { map: WarehouseMap }) {
   const camera = useThree((s) => s.camera);
   const size = useThree((s) => s.size);
 
@@ -42,7 +43,7 @@ function IsoCamera({ map }: Props) {
   return null;
 }
 
-export default function Scene({ map }: Props) {
+export default function Scene({ map, stock }: Props) {
   // flat — без «киношной» обработки цветов, чтобы они совпадали с палитрой из 08.
   return (
     <Canvas flat orthographic camera={{ near: 0.1, far: 500 }}>
@@ -50,7 +51,7 @@ export default function Scene({ map }: Props) {
       <ambientLight intensity={AMBIENT_LIGHT} />
       <directionalLight position={[10, 20, 6]} intensity={SUN_LIGHT} />
       <IsoCamera map={map} />
-      <Warehouse map={map} />
+      <Warehouse map={map} stock={stock} />
     </Canvas>
   );
 }

@@ -9,6 +9,7 @@ export const PALETTE = {
   wall: '#B7B6B8',
   wallPillar: '#428C00',
   wood: '#C8A97B',
+  box: '#E9CB98',       // картонная коробка с товаром (светлее дерева полок)
   metal: '#554B4E',
   road: '#656971',
 };
