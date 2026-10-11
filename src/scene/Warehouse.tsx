@@ -1,9 +1,10 @@
 // Склад: пол, зоны, стены, стеллажи. Только отрисовка карты, никаких решений (09, раздел 9).
 import type { WallOpening, WallSide, WarehouseMap } from '../model/warehouse';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
-import { PALETTE, ZONE_FLOOR_COLORS } from '../config/palette';
+import { PALETTE } from '../config/palette';
 import { cellToWorld } from '../rules/warehouse';
 import Rack from './models/Rack';
+import FloorMarkings from './FloorMarkings';
 
 type Props = { map: WarehouseMap };
 
@@ -82,27 +83,26 @@ export default function Warehouse({ map }: Props) {
         <meshStandardMaterial color={PALETTE.floor} />
       </mesh>
 
-      {/* Зоны — подкрашенный пол */}
-      {map.zones.map((z) => {
-        const w = z.to.x - z.from.x + 1;
-        const d = z.to.z - z.from.z + 1;
-        return (
-          <mesh key={z.type} position={[z.from.x + w / 2, 0.005, z.from.z + d / 2]}>
-            <boxGeometry args={[w, 0.01, d]} />
-            <meshStandardMaterial color={ZONE_FLOOR_COLORS[z.type]} />
-          </mesh>
-        );
-      })}
+      <FloorMarkings map={map} />
 
       {(['north', 'south', 'west', 'east'] as WallSide[]).map((side) => (
         <Wall key={side} side={side} map={map} />
       ))}
 
       {map.racks.map((r) => {
-        const [x, , z] = cellToWorld(r.cell);
-        // Стеллаж длиной в несколько клеток: центр сдвигается вдоль аллеи.
-        const cx = x + (r.length - 1) / 2;
-        return <Rack key={`${r.aisle}.${r.rack}`} position={[cx, 0, z]} length={r.length} shelves={r.shelves} />;
+        // Центр стеллажа — середина его клеток; длинная сторона вдоль оси аллеи.
+        const pts = r.cells.map(cellToWorld);
+        const cx = pts.reduce((sum, p) => sum + p[0], 0) / pts.length;
+        const cz = pts.reduce((sum, p) => sum + p[2], 0) / pts.length;
+        return (
+          <Rack
+            key={`${r.aisle}.${r.rack}`}
+            position={[cx, 0, cz]}
+            rotationY={r.axis === 'z' ? Math.PI / 2 : 0}
+            length={r.cells.length}
+            shelves={r.shelves}
+          />
+        );
       })}
     </group>
   );

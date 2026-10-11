@@ -1,35 +1,46 @@
 import { describe, expect, it } from 'vitest';
+import type { Cell, WarehouseMap } from '../model/warehouse';
 import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { buildWarehouseMap, cellToWorld, generateRacks } from './warehouse';
 
+const key = (c: Cell) => `${c.x},${c.z}`;
+const inside = (map: WarehouseMap, c: Cell) => c.x >= 0 && c.x < map.width && c.z >= 0 && c.z < map.depth;
+
 describe('карта склада', () => {
+  const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
+  const rackCells = new Set(map.racks.flatMap((r) => r.cells.map(key)));
+
   it('строит 4 × 6 = 24 стеллажа с уникальными номерами', () => {
-    const racks = generateRacks(WAREHOUSE_LAYOUT);
-    expect(racks).toHaveLength(24);
-    const keys = new Set(racks.map((r) => `${r.aisle}.${r.rack}`));
-    expect(keys.size).toBe(24);
+    expect(map.racks).toHaveLength(24);
+    expect(new Set(map.racks.map((r) => `${r.aisle}.${r.rack}`)).size).toBe(24);
   });
 
-  it('все стеллажи и клетки подхода внутри склада, подход не занят стеллажом', () => {
-    const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
-    const occupied = new Set<string>();
-    for (const r of map.racks) {
-      for (let i = 0; i < r.length; i++) occupied.add(`${r.cell.x + i},${r.cell.z}`);
+  it('стеллажи не налезают друг на друга и стоят внутри склада', () => {
+    const all = map.racks.flatMap((r) => r.cells);
+    expect(new Set(all.map(key)).size).toBe(all.length);
+    for (const c of all) expect(inside(map, c)).toBe(true);
+  });
+
+  it('клетки подхода внутри склада и свободны', () => {
+    const accesses = [...map.racks.map((r) => r.access), ...map.zones.map((z) => z.access)];
+    for (const c of accesses) {
+      expect(inside(map, c)).toBe(true);
+      expect(rackCells.has(key(c))).toBe(false);
     }
-    for (const r of map.racks) {
-      for (const c of [r.cell, r.access]) {
-        expect(c.x).toBeGreaterThanOrEqual(0);
-        expect(c.x).toBeLessThan(map.width);
-        expect(c.z).toBeGreaterThanOrEqual(0);
-        expect(c.z).toBeLessThan(map.depth);
+  });
+
+  it('зоны не пересекаются со стеллажами', () => {
+    for (const z of map.zones) {
+      for (let x = z.from.x; x <= z.to.x; x++) {
+        for (let zz = z.from.z; zz <= z.to.z; zz++) expect(rackCells.has(`${x},${zz}`)).toBe(false);
       }
-      expect(occupied.has(`${r.access.x},${r.access.z}`)).toBe(false);
     }
   });
 
-  it('длина стеллажа 2 сдвигает стеллажи вдоль аллеи', () => {
-    const racks = generateRacks({ ...WAREHOUSE_LAYOUT, rackLength: 2 });
-    expect(racks[1].cell.x - racks[0].cell.x).toBe(2);
+  it('длина стеллажа — одна настройка', () => {
+    const racks = generateRacks({ ...WAREHOUSE_LAYOUT.racks, rackLength: 1 });
+    expect(racks[0].cells).toHaveLength(1);
+    expect(racks[1].cell.z - racks[0].cell.z).toBe(-1);
   });
 
   it('cellToWorld ставит центр клетки', () => {

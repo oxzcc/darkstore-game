@@ -70,10 +70,10 @@
 
 ## Текущий статус
 
-Этап: **M1 — изометрическая камера и склад с зонами** (написано, ждёт проверки запуском).
+Этап: **M1 — изометрическая камера и склад с зонами** (планировка как на ui_01 и разметка пола — ждут проверки запуском).
 
 - M0 готов: Vite + React + R3F запускаются (проверено в Codespaces).
-- M1: типы карты `src/model/warehouse.ts`, планировка `src/config/warehouse.ts` (4 аллеи × 6 стеллажей × 4 полки, размер стеллажа — настройка `rackLength`, сейчас 1 клетка), цвета `src/config/palette.ts`, правила карты и тесты `src/rules/warehouse.ts`, сцена `src/scene/Scene.tsx`, `Warehouse.tsx`, `models/Rack.tsx` (заглушки из кубов).
+- M1: типы карты `src/model/warehouse.ts`, планировка `src/config/warehouse.ts` (как на ui_01: склад 20×18, 4 аллеи × 6 стеллажей 1×2 × 4 полки, длина стеллажа — настройка `rackLength`), цвета `src/config/palette.ts`, правила карты и тесты `src/rules/warehouse.ts`, сцена `src/scene/Scene.tsx`, `Warehouse.tsx`, `FloorMarkings.tsx` (разметка пола по 08), `models/Rack.tsx` (заглушки из кубов). Схема склада в `docs/07-warehouse-map.md` обновлена.
 - Дальше — M2: модель данных (товары, адреса, остатки, сборщики).
 
 План этапов:

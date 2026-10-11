@@ -13,10 +13,14 @@ export type Rack = {
   aisle: number;   // номер аллеи
   rack: number;    // номер стеллажа в аллее
   shelves: number; // сколько полок
-  cell: Cell;      // первая клетка, где стоит стеллаж
-  length: number;  // сколько клеток стеллаж занимает вдоль аллеи (настройка из config)
+  cell: Cell;      // первая клетка стеллажа (со стороны главного прохода)
+  cells: Cell[];   // все клетки, которые стеллаж занимает (их число — настройка rackLength)
+  axis: 'x' | 'z'; // вдоль какой оси вытянут стеллаж
   access: Cell;    // клетка прохода перед стеллажом, куда подходит сборщик
 };
+
+/** Главный проход: полоса клеток, размечается жёлтыми линиями (08, раздел 6). */
+export type Passage = { from: Cell; to: Cell };
 
 /** Сторона склада, на которой стоит стена. */
 export type WallSide = 'north' | 'south' | 'west' | 'east';
@@ -29,5 +33,6 @@ export type WarehouseMap = {
   depth: number;   // клеток по z
   racks: Rack[];
   zones: Zone[];
+  passages: Passage[];
   openings: WallOpening[];
 };

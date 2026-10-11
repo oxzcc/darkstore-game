@@ -5,6 +5,7 @@ import { PALETTE } from '../../config/palette';
 
 type Props = {
   position: [number, number, number]; // центр основания стеллажа
+  rotationY: number;                  // поворот: стеллаж вдоль x (0) или вдоль z (90°)
   length: number;                     // длина вдоль аллеи, в метрах
   shelves: number;
 };
@@ -12,7 +13,7 @@ type Props = {
 const POST = 0.06;  // толщина стойки
 const BOARD = 0.05; // толщина полки
 
-export default function Rack({ position, length, shelves }: Props) {
+export default function Rack({ position, rotationY, length, shelves }: Props) {
   const h = WAREHOUSE_VIEW.rackHeight;
   const d = WAREHOUSE_VIEW.rackDepth;
   const w = length * 0.92; // небольшой зазор между соседними стеллажами
@@ -24,7 +25,7 @@ export default function Rack({ position, length, shelves }: Props) {
   const shelfY = Array.from({ length: shelves }, (_, i) => 0.15 + (i * (h - 0.25)) / (shelves - 1 || 1));
 
   return (
-    <group position={position}>
+    <group position={position} rotation={[0, rotationY, 0]}>
       {posts.map(([x, z], i) => (
         <mesh key={`p${i}`} position={[x, h / 2, z]}>
           <boxGeometry args={[POST, h, POST]} />

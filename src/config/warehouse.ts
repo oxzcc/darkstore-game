@@ -1,41 +1,59 @@
 // Планировка склада — данные, а не код сцены (docs/07-warehouse-map.md).
-// Все числа — стартовые допущения из 07, разделы 3, 4 и 9. Меняются здесь, без правки логики.
-import type { Cell, WallOpening, Zone } from '../model/warehouse';
+// Расстановка повторяет макет ui_01: приёмка и ворота слева внизу, стеллажи справа,
+// фасовка вдоль нижней стены, дверь выдачи справа внизу, отдых и брак у левой стены.
+// Все числа — стартовые; меняются здесь, без правки логики.
+import type { Cell, Passage, WallOpening, Zone } from '../model/warehouse';
+
+export type RackLayout = {
+  aisles: number;
+  racksPerAisle: number;
+  shelvesPerRack: number;
+  /** Сколько клеток занимает один стеллаж вдоль аллеи (08: 1×2). */
+  rackLength: number;
+  /** Первая клетка стеллажа 1.1 — у главного прохода, ближе всех к приёмке. */
+  firstRack: Cell;
+  /** Куда идут следующие стеллажи внутри аллеи (на одну клетку). */
+  alongAisle: Cell;
+  /** Сдвиг от одной аллеи к следующей. */
+  nextAisle: Cell;
+  /** С какой стороны стеллажа проход, откуда к нему подходят. */
+  accessSide: Cell;
+};
 
 export type WarehouseLayout = {
   width: number;
   depth: number;
-  aisles: number;
-  racksPerAisle: number;
-  shelvesPerRack: number;
-  /** Сколько клеток занимает один стеллаж вдоль аллеи. Сейчас 1 (07), позже можно 2 (08). */
-  rackLength: number;
-  /** Клетка первого стеллажа первой аллеи. */
-  firstRack: Cell;
-  /** Шаг между аллеями по z: ряд стеллажей + проход. */
-  aisleStep: number;
+  racks: RackLayout;
   zones: Zone[];
+  passages: Passage[];
   openings: WallOpening[];
 };
 
 export const WAREHOUSE_LAYOUT: WarehouseLayout = {
-  width: 16,
-  depth: 13,
-  aisles: 4,
-  racksPerAisle: 6,
-  shelvesPerRack: 4,
-  rackLength: 1,
-  firstRack: { x: 1, z: 3 },
-  aisleStep: 2,
+  width: 20,
+  depth: 18,
+  racks: {
+    aisles: 4,
+    racksPerAisle: 6,
+    shelvesPerRack: 4,
+    rackLength: 2,
+    firstRack: { x: 8, z: 12 },
+    alongAisle: { x: 0, z: -1 }, // вглубь склада, от главного прохода к дальней стене
+    nextAisle: { x: 3, z: 0 },   // ряд стеллажей + проход в 2 клетки
+    accessSide: { x: 1, z: 0 },
+  },
   zones: [
-    { type: 'receiving', from: { x: 0, z: 0 },  to: { x: 3, z: 1 },  access: { x: 2, z: 2 } },
-    { type: 'scrap',     from: { x: 12, z: 0 }, to: { x: 13, z: 1 }, access: { x: 12, z: 2 } },
-    { type: 'rest',      from: { x: 10, z: 6 }, to: { x: 11, z: 7 }, access: { x: 10, z: 8 } },
-    { type: 'packing',   from: { x: 7, z: 11 }, to: { x: 10, z: 12 }, access: { x: 8, z: 10 } },
+    { type: 'rest',      from: { x: 0, z: 2 },  to: { x: 2, z: 5 },   access: { x: 3, z: 3 } },
+    { type: 'scrap',     from: { x: 0, z: 8 },  to: { x: 2, z: 10 },  access: { x: 3, z: 9 } },
+    { type: 'receiving', from: { x: 0, z: 14 }, to: { x: 5, z: 17 },  access: { x: 6, z: 15 } },
+    { type: 'packing',   from: { x: 9, z: 15 }, to: { x: 16, z: 16 }, access: { x: 12, z: 14 } },
+  ],
+  passages: [
+    { from: { x: 0, z: 13 }, to: { x: 19, z: 13 } }, // главный проход между стеллажами и выдачей
   ],
   openings: [
-    { kind: 'gate', side: 'north', from: 0, to: 3 },  // ворота приёмки, 4 м (08, раздел 7)
-    { kind: 'door', side: 'south', from: 7, to: 10 }, // дверь выдачи
+    { kind: 'gate', side: 'south', from: 1, to: 4 },  // ворота приёмки, 4 м (08, раздел 7)
+    { kind: 'door', side: 'east', from: 14, to: 16 }, // дверь выдачи, к курьерам
   ],
 };
 
@@ -48,4 +66,12 @@ export const WAREHOUSE_VIEW = {
   rackHeight: 2,       // стеллаж выше сборщика (~1,5 м)
   rackDepth: 0.6,
   floorThickness: 0.1,
+};
+
+/** Размеры разметки пола (в метрах). */
+export const FLOOR_MARKINGS = {
+  lineWidth: 0.08,     // ширина линий разметки
+  dash: 0.4,           // длина штриха пунктира
+  gap: 0.25,           // промежуток пунктира
+  inset: 0.12,         // отступ пунктира от края зоны
 };
