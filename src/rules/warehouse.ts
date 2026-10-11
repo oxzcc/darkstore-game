@@ -104,6 +104,44 @@ export function accessForAddress(map: WarehouseMap, address: Address): Cell {
   return rack.access;
 }
 
+/** Все клетки прохода вдоль стеллажа: к стеллажу 1×2 можно подойти с любой из двух клеток. Первая — основная. */
+export function accessSpotsForAddress(map: WarehouseMap, address: Address): Cell[] {
+  const rack = rackAt(map, address);
+  if (!rack) throw new Error(`Нет стеллажа для адреса ${address.aisle}.${address.rack}.${address.shelf}`);
+  const dx = rack.access.x - rack.cell.x, dz = rack.access.z - rack.cell.z;
+  return rack.cells.map((c) => ({ x: c.x + dx, z: c.z + dz }));
+}
+
+/** Все клетки зоны, где можно стоять (например, места за столами фасовки). */
+export function zoneCells(map: WarehouseMap, type: ZoneType, blocked = blockedCells(map)): Cell[] {
+  const zone = map.zones.find((z) => z.type === type);
+  if (!zone) throw new Error(`На карте нет зоны ${type}`);
+  const cells: Cell[] = [];
+  for (let z = zone.from.z; z <= zone.to.z; z++) {
+    for (let x = zone.from.x; x <= zone.to.x; x++) if (!blocked.has(`${x},${z}`)) cells.push({ x, z });
+  }
+  return cells;
+}
+
+/** Расстояние в шагах от клетки до всех достижимых клеток (поиск в ширину). */
+export function distancesFrom(map: WarehouseMap, from: Cell, blocked = blockedCells(map)): Map<string, number> {
+  const dist = new Map<string, number>([[cellKey(from), 0]]);
+  const queue: Cell[] = [from];
+  const steps: Cell[] = [{ x: 1, z: 0 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 0, z: -1 }];
+  while (queue.length) {
+    const cur = queue.shift()!;
+    const d = dist.get(cellKey(cur))!;
+    for (const s of steps) {
+      const n = { x: cur.x + s.x, z: cur.z + s.z };
+      const k = cellKey(n);
+      if (n.x < 0 || n.z < 0 || n.x >= map.width || n.z >= map.depth || blocked.has(k) || dist.has(k)) continue;
+      dist.set(k, d + 1);
+      queue.push(n);
+    }
+  }
+  return dist;
+}
+
 /** Клетка подхода к зоне. */
 export function zoneAccess(map: WarehouseMap, type: ZoneType): Cell {
   const zone = map.zones.find((z) => z.type === type);

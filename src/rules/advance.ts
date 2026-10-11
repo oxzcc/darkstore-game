@@ -3,7 +3,8 @@
 import type { GameState, ShiftEvent } from '../model/game';
 import type { Picker } from '../model/picker';
 import type { WarehouseMap } from '../model/warehouse';
-import { blockedCells, findPath } from './warehouse';
+import { blockedCells, distancesFrom, findPath } from './warehouse';
+import type { Cell } from '../model/warehouse';
 import { secondsPerCell } from './time';
 import { createRng } from './random';
 import { outcomeChances, rollOutcome } from './outcome';
@@ -20,8 +21,32 @@ function nextStep(p: Picker): Picker {
   };
 }
 
-/** Продвинуть одного сборщика на dt. Если за кадр успевает закончить несколько шагов — проходит их все. */
-function advancePicker(map: WarehouseMap, blocked: Set<string>, picker: Picker, dt: number): Picker {
+const key = (c: Cell) => `${c.x},${c.z}`;
+
+/** Где сборщик стоит или куда уже идёт — это место занято для остальных. */
+function claimedCell(p: Picker): Cell {
+  return p.path.length > 0 ? p.path[p.path.length - 1] : p.position;
+}
+
+/**
+ * Выбрать, куда встать: ближайшее свободное место из списка.
+ * Если всё занято — основное место (пусть лучше постоят рядом, чем задание зависнет).
+ */
+function chooseSpot(map: WarehouseMap, blocked: Set<string>, from: Cell, spots: Cell[], taken: Set<string>): Cell {
+  const dist = distancesFrom(map, from, blocked);
+  let best: Cell | null = null;
+  let bestD = Infinity;
+  for (const s of spots) {
+    const d = dist.get(key(s));
+    if (d === undefined || taken.has(key(s))) continue;
+    if (d < bestD) { best = s; bestD = d; }
+  }
+  return best ?? spots[0];
+}
+
+/** Продвинуть одного сборщика на dt. Если за кадр успевает закончить несколько шагов — проходит их все.
+ *  `taken` — клетки, занятые остальными сборщиками. */
+function advancePicker(map: WarehouseMap, blocked: Set<string>, picker: Picker, dt: number, taken: Set<string>): Picker {
   let p = picker;
   let left = dt;
   while (left > 0 && p.job) {
@@ -31,8 +56,11 @@ function advancePicker(map: WarehouseMap, blocked: Set<string>, picker: Picker, 
 
     if (step.kind === 'walk') {
       if (p.path.length === 0) {
-        // начало отрезка: строим путь от текущей клетки
-        const path = findPath(map, p.position, step.to, blocked) ?? [];
+        // начало отрезка: выбираем свободное место и строим к нему путь от текущей клетки
+        const to = chooseSpot(map, blocked, p.position, step.spots, taken);
+        const steps = job.steps.map((s, i) => (i === job.stepIndex ? { ...step, to } : s));
+        p = { ...p, job: { ...job, steps } };
+        const path = findPath(map, p.position, to, blocked) ?? [];
         if (path.length === 0) { p = nextStep(p); continue; } // уже на месте (или дойти нельзя)
         p = { ...p, path, pathProgress: 0, state: 'walking' };
       }
@@ -77,7 +105,8 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
   for (const id of Object.keys(pickers)) {
     const before = pickers[id];
     if (!before.job) continue;
-    let p = advancePicker(map, blocked, before, dt);
+    const taken = new Set(Object.values(pickers).filter((o) => o.id !== id).map((o) => key(claimedCell(o))));
+    let p = advancePicker(map, blocked, before, dt, taken);
     const task = tasks[p.job!.taskId];
 
     // первый отрезок пути пройден — сборщик на месте, задание «выполняется»

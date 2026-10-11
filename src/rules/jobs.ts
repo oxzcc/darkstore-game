@@ -4,7 +4,7 @@ import type { OrderTask } from '../model/task';
 import type { GameState } from '../model/game';
 import type { WarehouseMap } from '../model/warehouse';
 import { formatAddress } from './address';
-import { accessForAddress, findPath, zoneAccess } from './warehouse';
+import { accessSpotsForAddress, distancesFrom, zoneAccess, zoneCells } from './warehouse';
 import { packSeconds, pickSeconds, secondsPerCell, travelSeconds } from './time';
 
 /**
@@ -14,20 +14,24 @@ import { packSeconds, pickSeconds, secondsPerCell, travelSeconds } from './time'
 export function buildOrderJob(map: WarehouseMap, picker: Picker, task: OrderTask): PickerJob {
   const steps: PickerJob['steps'] = [];
   task.payload.lines.forEach((line, i) => {
-    steps.push({ kind: 'walk', to: accessForAddress(map, line.address), label: `к ${formatAddress(line.address)}` });
+    const spots = accessSpotsForAddress(map, line.address);
+    steps.push({ kind: 'walk', to: spots[0], spots, label: `к ${formatAddress(line.address)}` });
     steps.push({ kind: 'pick', lineIndex: i, seconds: pickSeconds(picker) });
   });
-  steps.push({ kind: 'walk', to: zoneAccess(map, 'packing'), label: 'на фасовку' });
+  steps.push({ kind: 'walk', to: zoneAccess(map, 'packing'), spots: zoneCells(map, 'packing'), label: 'на фасовку' });
   steps.push({ kind: 'pack', seconds: packSeconds() });
   return { taskId: task.id, steps, stepIndex: 0, stepElapsed: 0 };
 }
 
-/** Время до первой точки задания из того места, где сборщик стоит. null — дойти нельзя. */
+/** Время до первой точки задания (ближайшего места у стеллажа) из того места, где сборщик стоит. null — дойти нельзя. */
 export function etaToTask(map: WarehouseMap, picker: Picker, task: OrderTask): number | null {
   const first = task.payload.lines[0];
   if (!first) return 0;
-  const path = findPath(map, picker.position, accessForAddress(map, first.address));
-  return path ? travelSeconds(picker, path.length) : null;
+  const dist = distancesFrom(map, picker.position);
+  const cells = accessSpotsForAddress(map, first.address)
+    .map((c) => dist.get(`${c.x},${c.z}`))
+    .filter((d): d is number => d !== undefined);
+  return cells.length ? travelSeconds(picker, Math.min(...cells)) : null;
 }
 
 /** Что сборщик делает сейчас — для карточки в интерфейсе. Без текстов: подписи собирает UI. */

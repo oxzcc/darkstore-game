@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GameState } from '../model/game';
 import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { TIMING } from '../config/balance';
-import { buildWarehouseMap, zoneAccess } from './warehouse';
+import { buildWarehouseMap, zoneCells } from './warehouse';
 import { createInitialGame } from './game';
 import { openTasks } from './tasks/generator';
 import { dispatchTask } from './tasks/lifecycle';
@@ -74,11 +74,11 @@ describe('выполнение задания', () => {
     expect(['perfect', 'withErrors', 'failed'].includes(t.outcome!)).toBe(true);
     expect(events).toHaveLength(1);
     expect(events[0].outcome).toBe(t.outcome);
-    // свободен и стоит у фасовки — там, где закончил (07, раздел 2)
+    // свободен и стоит в зоне фасовки — там, где закончил (07, раздел 2)
     const p = s3.pickers.lucky;
     expect(p.state).toBe('idle');
     expect(p.job).toBe(null);
-    expect(p.position).toEqual(zoneAccess(map, 'packing'));
+    expect(zoneCells(map, 'packing').some((c) => c.x === p.position.x && c.z === p.position.z)).toBe(true);
     expect(s3.clock.time > s0.clock.time).toBe(true);
   });
 
@@ -116,5 +116,28 @@ describe('выполнение задания', () => {
     const before = JSON.stringify(s);
     advanceWorld(s, map, 5);
     expect(JSON.stringify(s)).toBe(before);
+  });
+
+  it('сборщики не встают друг в друга: на фасовке у каждого своё место', () => {
+    for (const seed of [1, 2, 3, 4, 5]) {
+      let s = createInitialGame(map, seed);
+      for (const pid of ['lucky', 'korzh', 'buran']) s = dispatchTask(s, map, openTasks(s)[0].id, pid);
+      const allIdle = (x: GameState) => Object.values(x.pickers).every((p) => p.state === 'idle');
+      s = runUntil(s, allIdle).s;
+      expect(allIdle(s)).toBe(true);
+      const spots = Object.values(s.pickers).map((p) => `${p.position.x},${p.position.z}`);
+      expect(new Set(spots).size).toBe(3);
+    }
+  });
+
+  it('пока работают, двое не стоят в одной клетке', () => {
+    let s = createInitialGame(map, 11);
+    for (const pid of ['lucky', 'korzh', 'buran']) s = dispatchTask(s, map, openTasks(s)[0].id, pid);
+    for (let t = 0; t < 300; t += 0.1) {
+      s = advanceWorld(s, map, 0.1).state;
+      const standing = Object.values(s.pickers).filter((p) => p.path.length === 0);
+      const cells = standing.map((p) => `${p.position.x},${p.position.z}`);
+      expect(new Set(cells).size).toBe(cells.length);
+    }
   });
 });
