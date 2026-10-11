@@ -1,12 +1,14 @@
 // Склад: пол, зоны, стены, стеллажи. Только отрисовка карты, никаких решений (09, раздел 9).
 import type { WallOpening, WallSide, WarehouseMap } from '../model/warehouse';
+import type { Stock } from '../model/stock';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { PALETTE } from '../config/palette';
 import { cellToWorld } from '../rules/warehouse';
 import Rack from './models/Rack';
 import FloorMarkings from './FloorMarkings';
+import ShelfGoods from './ShelfGoods';
 
-type Props = { map: WarehouseMap };
+type Props = { map: WarehouseMap; stock: Stock };
 
 // Дальние от камеры стены высокие, ближние — низкие, чтобы не закрывать склад (как на ui_01).
 const FAR_SIDES: WallSide[] = ['north', 'west'];
@@ -66,7 +68,7 @@ function Wall({ side, map }: { side: WallSide; map: WarehouseMap }) {
   );
 }
 
-export default function Warehouse({ map }: Props) {
+export default function Warehouse({ map, stock }: Props) {
   const { floorThickness: ft } = WAREHOUSE_VIEW;
 
   return (
@@ -104,6 +106,8 @@ export default function Warehouse({ map }: Props) {
           />
         );
       })}
+
+      <ShelfGoods map={map} stock={stock} />
     </group>
   );
 }
