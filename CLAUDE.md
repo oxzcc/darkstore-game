@@ -70,9 +70,11 @@
 
 ## Текущий статус
 
-Этап: **M0 — каркас проекта** (файлы написаны, ждёт первой проверки запуском).
+Этап: **M1 готов** (проверено в Codespaces). Следующий — **M2**.
 
-Сделано в M0: `package.json` с согласованными библиотеками, `index.html`, `vite.config.ts`, `tsconfig.json`, `src/main.tsx`, `src/App.tsx`, `src/scene/Scene.tsx` (вращающийся зелёный куб). Дальше — M1.
+- M0 готов: Vite + React + R3F запускаются (проверено в Codespaces).
+- M1: типы карты `src/model/warehouse.ts`, планировка `src/config/warehouse.ts` (как на ui_01: склад 20×18, 4 аллеи × 6 стеллажей 1×2 × 4 полки, длина стеллажа — настройка `rackLength`), цвета `src/config/palette.ts`, правила карты и тесты `src/rules/warehouse.ts`, сцена `src/scene/Scene.tsx`, `Warehouse.tsx`, `FloorMarkings.tsx` (разметка пола по 08), `models/Rack.tsx` (заглушки из кубов). Схема склада в `docs/07-warehouse-map.md` обновлена.
+- Дальше — M2: модель данных (товары, адреса, остатки, сборщики).
 
 План этапов:
 
