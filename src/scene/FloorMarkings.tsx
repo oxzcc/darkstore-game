@@ -44,13 +44,13 @@ function dashedFrame(z: Zone): Strip[] {
   ];
 }
 
-/** Диагональная штриховка: по полоске на клетку, соседние полоски сливаются в линии. */
+/** Штриховка брака: частые полосы вдоль x. В изометрии они идут наискосок, параллельно стене (как на ui_01). */
 function hatch(z: Zone): Strip[] {
+  const { hatchStep, inset, lineWidth } = FLOOR_MARKINGS;
+  const x0 = z.from.x + inset, x1 = z.to.x + 1 - inset;
   const out: Strip[] = [];
-  for (let x = z.from.x; x <= z.to.x; x++) {
-    for (let zz = z.from.z; zz <= z.to.z; zz++) {
-      out.push({ pos: [x + 0.5, Y_MARK, zz + 0.5], size: [Math.SQRT2, MARK_THICK, FLOOR_MARKINGS.lineWidth], rotY: Math.PI / 4 });
-    }
+  for (let zz = z.from.z + hatchStep / 2; zz < z.to.z + 1; zz += hatchStep) {
+    out.push({ pos: [(x0 + x1) / 2, Y_MARK, zz], size: [x1 - x0, MARK_THICK, lineWidth] });
   }
   return out;
 }
