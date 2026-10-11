@@ -36,6 +36,8 @@ button { font-family: inherit; }
 
 /* ---------- скошенная подложка: тень → аутлайн → тело ---------- */
 .vx { filter: var(--shadow); }
+.vx > .vx-edge { height: 100%; } /* подложка заполняет весь блок, если у него задан размер */
+.btn > .vx { height: 100%; }
 .vx-edge {
   background: var(--outline);
   padding: var(--edge);
@@ -72,12 +74,12 @@ button { font-family: inherit; }
 
 /* ---------- панель заданий (слева, ui_01) ---------- */
 .task-panel { position: absolute; left: 16px; top: 16px; width: 330px; max-height: calc(100% - 190px); }
-.task-panel .vx-body { display: flex; flex-direction: column; }
+.task-panel > .vx-edge > .vx-body { display: flex; flex-direction: column; } /* только сама панель, не карточки внутри */
 .task-list { padding: 12px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
 .task-card { cursor: pointer; --cut: 8px; }
-.task-card .vx-body { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
-.task-card.selected .vx-edge { background: var(--primary); }
-.task-card:hover .vx-body { background: #FFFDF6; }
+.task-card > .vx-edge > .vx-body { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
+.task-card.selected > .vx-edge { background: var(--primary); }
+.task-card:hover > .vx-edge > .vx-body { background: #FFFDF6; }
 .task-icon { width: 46px; height: 46px; flex: none; display: grid; place-items: center; background: #fff; --cut: 6px; }
 .task-main { flex: 1; min-width: 0; }
 .task-name { font-weight: 700; font-size: 18px; }
@@ -88,7 +90,7 @@ button { font-family: inherit; }
 /* ---------- сборщики (снизу, ui_01) ---------- */
 .picker-bar { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; gap: 16px; }
 .picker-card { width: 300px; }
-.picker-card .vx-body { display: flex; gap: 12px; align-items: center; padding: 10px 12px; }
+.picker-card > .vx-edge > .vx-body { display: flex; gap: 12px; align-items: center; padding: 10px 12px; }
 .picker-name { font-weight: 700; font-size: 20px; text-transform: uppercase; letter-spacing: 0.03em; }
 .picker-state { font-size: 14px; color: var(--text-mute); display: flex; align-items: center; gap: 6px; margin: 2px 0 6px; }
 
@@ -104,7 +106,7 @@ button { font-family: inherit; }
 
 /* ---------- окно назначения (справа, ui_03) ---------- */
 .assign { position: absolute; right: 16px; top: 16px; width: 440px; max-height: calc(100% - 32px); }
-.assign .vx-body { display: flex; flex-direction: column; }
+.assign > .vx-edge > .vx-body { display: flex; flex-direction: column; } /* только само окно */
 .assign-scroll { padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
 .order-lines { display: flex; flex-direction: column; gap: 6px; padding: 4px 4px 0; }
 .order-line { display: flex; align-items: center; gap: 8px; font-size: 15px; }
@@ -113,8 +115,8 @@ button { font-family: inherit; }
   font-size: 14px; font-weight: 700; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
 
 .choice { cursor: pointer; --cut: 8px; }
-.choice .vx-body { padding: 12px; }
-.choice.chosen .vx-edge { background: var(--pc); padding: 4px; }
+.choice > .vx-edge > .vx-body { padding: 12px; }
+.choice.chosen > .vx-edge { background: var(--pc); padding: 4px; }
 .choice.disabled { cursor: not-allowed; opacity: 0.55; }
 .choice-head { display: flex; gap: 12px; align-items: center; }
 .choice-head .grow { flex: 1; }
@@ -132,17 +134,17 @@ button { font-family: inherit; }
 
 .buttons { display: flex; gap: 12px; padding: 0 14px 14px; }
 .btn { flex: 1; height: 52px; border: 0; padding: 0; background: none; cursor: pointer; --cut: 8px; }
-.btn .vx-body { display: grid; place-items: center; font-weight: 700; font-size: 18px; letter-spacing: 0.06em; text-transform: uppercase; }
+.btn > .vx > .vx-edge > .vx-body { display: grid; place-items: center; font-weight: 700; font-size: 18px; letter-spacing: 0.06em; text-transform: uppercase; }
 .btn.primary { flex: 2; }
-.btn.primary .vx-edge { background: var(--primary-lo); }
-.btn.primary .vx-body { background: var(--primary); color: #fff; }
+.btn.primary > .vx > .vx-edge { background: var(--primary-lo); }
+.btn.primary > .vx > .vx-edge > .vx-body { background: var(--primary); color: #fff; }
 .btn:disabled { cursor: not-allowed; opacity: 0.5; }
 
 /* ---------- всплывающие сообщения об исходе ---------- */
 .toasts { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 10px; align-items: center; }
 .toast { --cut: 8px; animation: pop 0.25s ease-out; }
-.toast .vx-edge { background: var(--oc); }
-.toast .vx-body { display: flex; align-items: center; gap: 10px; padding: 10px 16px; font-size: 16px; }
+.toast > .vx-edge { background: var(--oc); }
+.toast > .vx-edge > .vx-body { display: flex; align-items: center; gap: 10px; padding: 10px 16px; font-size: 16px; }
 .toast b { font-weight: 700; }
 @keyframes pop { from { transform: translateY(-8px) scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
 
