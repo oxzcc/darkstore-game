@@ -7,6 +7,7 @@ import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { buildWarehouseMap } from '../rules/warehouse';
 import { createInitialGame } from '../rules/game';
 import { acceptTsd, declineTsd, sendPicker } from '../rules/tsd';
+import { chooseRack, leaveRack } from '../rules/minigames/picking';
 import { advanceWorld } from '../rules/advance';
 import { worldDt } from '../rules/time';
 
@@ -33,6 +34,9 @@ type Store = {
   /** «Взять ТСД» / «Пусть работает» на предложении (02, раздел 6). */
   acceptTsd: () => void;
   declineTsd: () => void;
+  /** Мини-игра: клик по стеллажу на сцене и «Назад к складу» (06, раздел 2). */
+  chooseRack: (aisle: number, rack: number) => void;
+  leaveRack: () => void;
   dismissToast: (id: number) => void;
   /** Вызывается каждый кадр из GameLoop: двигает игровое время. */
   tick: (realDt: number) => void;
@@ -63,6 +67,8 @@ export const useGameStore = create<Store>((set) => ({
 
   acceptTsd: () => set((s) => ({ game: acceptTsd(s.game) })),
   declineTsd: () => set((s) => ({ game: declineTsd(s.game) })),
+  chooseRack: (aisle, rack) => set((s) => ({ game: chooseRack(s.game, WAREHOUSE_MAP, aisle, rack) })),
+  leaveRack: () => set((s) => ({ game: leaveRack(s.game) })),
 
   tick: (realDt) =>
     set((s) => {

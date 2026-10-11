@@ -197,3 +197,16 @@ svg.i.sm { width: 18px; height: 18px; }
 /* метка «ТСД у вас» на карточке сборщика, за которого играет игрок */
 .tsd-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; margin-left: 8px; vertical-align: middle;
   background: var(--pc); color: #fff; font-size: 12px; letter-spacing: 0.06em; }
+
+/* ---------- M5c: выбор стеллажа и вид вблизи ---------- */
+/* подсказка / «Назад к складу» над карточками сборщиков, по центру */
+.tsd-hint { position: absolute; left: 50%; bottom: 128px; transform: translateX(-50%); display: flex; justify-content: center; }
+.tsd-hint .btn { flex: none; width: 320px; }
+.tsd-hint-card { --cut: 8px; animation: pop 0.25s ease-out; }
+.tsd-hint-card > .vx-edge { background: var(--pc); }
+.tsd-hint-card > .vx-edge > .vx-body { padding: 10px 16px; font-size: 16px; text-align: center; }
+.tsd-hint-card .note { margin-top: 4px; }
+
+/* подпись стеллажа при наведении: тёмная плашка адреса (08, раздел 7) */
+.rack-label { pointer-events: none; white-space: nowrap; padding: 2px 8px; background: var(--tag); color: #fff;
+  font-family: 'X5 Sans', system-ui, sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.04em; }

@@ -13,10 +13,12 @@ export const TSD: {
   chance: Record<TaskType, number>;
   offerSeconds: number;
   worldSpeedDuringGame: number;
+  cameraFlySeconds: number;
 } = {
   chance: { order: 0.3, putaway: 0.3, receiving: 0.3, writeoff: 0.3 }, // шанс предложения при «Отправить»
   offerSeconds: 8,           // таймер предложения, игровые секунды (на паузе стоит)
   worldSpeedDuringGame: 0.2, // остальной мир во время мини-игры; свой сборщик идёт ×1
+  cameraFlySeconds: 0.6,     // перелёт камеры к стеллажу и обратно, реальные секунды (06, раздел 2.3)
 };
 
 /**

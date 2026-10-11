@@ -70,7 +70,7 @@ export function acceptTsd(state: GameState): GameState {
   return {
     ...state,
     tsdOffer: null,
-    minigame: { taskId: task.id, pickerId: picker.id, startedAt: state.clock.time },
+    minigame: { taskId: task.id, pickerId: picker.id, startedAt: state.clock.time, focus: null, atFocus: false },
     tasks: { ...state.tasks, [task.id]: { ...task, status: 'pickerEnRoute', mode: 'personal' } },
     pickers: { ...state.pickers, [picker.id]: { ...picker, state: 'playing' } },
   };
