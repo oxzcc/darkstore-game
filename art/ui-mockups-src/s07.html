@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="ui.css">
+<style>
+body { background: #F6EEDD; background-image: linear-gradient(#EADFC9 2px, transparent 2px), linear-gradient(90deg, #EADFC9 2px, transparent 2px); background-size: 40px 40px; }
+.grp { background: #fff; border: 2.5px solid var(--ink); box-shadow: 0 6px 0 var(--ink); }
+.grp .ph { font-size: 18px; }
+.tiles { display: flex; gap: 18px; padding: 20px; justify-content: center; }
+.tile { width: 132px; text-align: center; }
+.tile .b { width: 132px; height: 112px; border: 2.5px solid var(--ink); display: grid; place-items: center; background: #fff; box-shadow: 0 4px 0 var(--ink); }
+.tile .n { margin-top: 10px; font-weight: 700; font-size: 15px; letter-spacing: .05em; text-transform: uppercase; }
+.tile .sm { display: flex; justify-content: center; gap: 8px; margin-top: 8px; align-items: center; }
+</style></head><body><div id="ui"></div>
+<script src="icons.js"></script><script src="common.js"></script><script>
+document.fonts.load('700 20px X5Sans').then(()=>document.fonts.load('500 20px X5Sans')).then(()=>{
+ const t=(icon,name,fill,bg)=>`<div class="tile"><div class="b" style="${bg?`background:${bg}`:''}">${ic(icon,64,'var(--ink)',fill)}</div><div class="n">${name}</div>
+   <div class="sm"><span style="width:34px;height:34px;border:2.5px solid var(--ink);display:grid;place-items:center;background:#fff">${ic(icon,20,'var(--ink)',fill)}</span><span style="width:34px;height:34px;border:2.5px solid var(--ink);display:grid;place-items:center;background:var(--lucky)">${ic(icon,20,'var(--ink)',fill)}</span></div></div>`;
+ add(`<div class="abs" style="left:0;right:0;top:34px;text-align:center"><div style="display:inline-block;background:var(--g);color:#fff;border:2.5px solid var(--ink);box-shadow:0 6px 0 var(--ink);padding:12px 30px;font-size:30px;font-weight:700;letter-spacing:.1em;text-shadow:0 2px 0 var(--gLo)">НАБОР ИКОНОК</div>
+   <div style="margin-top:16px;font-size:16px;font-weight:500;color:var(--ink2)">Сетка 24 · обводка 2,5 · скошенные углы · цвет только у исходов и сборщиков</div></div>
+ <div class="abs" style="left:60px;right:60px;top:170px;display:grid;grid-template-columns:1fr 1fr;gap:34px">
+   <div class="grp" data-check><div class="ph">Типы заданий</div><div class="tiles">${t('pick','Сборка')}${t('putaway','Выкладка')}${t('receive','Приёмка')}${t('writeoff','Списание')}</div></div>
+   <div class="grp" data-check><div class="ph">Исходы</div><div class="tiles">${t('perfect','Идеально')}${t('errors','С ошибками')}${t('fail','Провал')}${t('late','Просрочено')}</div></div>
+   <div class="grp" data-check><div class="ph">Состояния сборщика</div><div class="tiles">${t('walk','Идёт','#9CC4FF')}${t('wait','Ждёт','#FFC629')}${t('scan','Работает')}${t('rest','Отдыхает')}</div></div>
+   <div class="grp" data-check><div class="ph">Характеристики</div><div class="tiles">${t('speedStat','Скорость')}${t('acc','Точность')}${t('fatigue','Усталость')}${t('pick','Специализ.','#fff')}</div></div>
+ </div>
+ <div class="abs" style="left:60px;right:60px;top:800px;display:flex;justify-content:center;gap:60px;align-items:flex-end">
+   <span class="kicker" style="align-self:center">Метки на карте</span>
+   <div style="text-align:center"><div class="pin" style="position:relative;transform:none"><div class="head" style="width:64px;height:64px">${ic('receive',34)}</div><div class="stem"></div></div><div class="kicker" style="margin-top:8px">не назначено</div></div>
+   <div style="text-align:center"><div class="pin c" style="position:relative;transform:none;--c:#1F7BFF"><div class="head" style="width:64px;height:64px">${ic('pick',34,'#fff','#1F7BFF')}</div><div class="stem"></div></div><div class="kicker" style="margin-top:8px">назначено · цвет сборщика</div></div>
+   <div style="text-align:center"><div class="pin" style="position:relative;transform:none"><div class="tag" style="background:var(--red);margin-bottom:6px">СРОЧНО · 01:12</div><div class="head" style="width:64px;height:64px;background:var(--yellow)">${ic('pick',34)}</div><div class="stem"></div></div><div class="kicker" style="margin-top:8px">новое срочное</div></div>
+   <div style="text-align:center"><div style="display:flex;gap:6px;align-items:center;height:94px"><i style="width:60px;height:12px;background:var(--lucky);border:2.5px solid var(--ink)"></i><i style="width:26px;height:26px;border:4px solid var(--ink);border-radius:50%;background:#fff"></i><i style="width:60px;height:12px;background:var(--lucky);border:2.5px solid var(--ink)"></i></div><div class="kicker" style="margin-top:8px">маршрут и остановка</div></div>
+ </div>
+ <div class="abs" style="left:60px;right:60px;bottom:40px;display:flex;justify-content:center;gap:16px;align-items:center">
+   <span class="kicker" style="margin-right:6px">Служебные</span>
+   ${['clock','coin','star','pause','speed','plus','minus','rot','home','layers','list','alert','check','arrowR','settings','person','hand'].map(n=>`<span style="width:56px;height:56px;border:2.5px solid var(--ink);display:grid;place-items:center;background:#fff;box-shadow:0 3px 0 var(--ink)">${ic(n,30)}</span>`).join('')}
+ </div>`);
+ voxify(); window.READY=true;});
+</script></body></html>

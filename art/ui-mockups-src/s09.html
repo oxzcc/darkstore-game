@@ -1,0 +1,43 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="ui.css">
+<style>
+.opt { width: 470px; background: #fff; border: 2.5px solid var(--ink); box-shadow: 0 6px 0 var(--ink); }
+.opt .hd { height: 76px; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 30px; font-weight: 700; letter-spacing: .08em; border-bottom: 2.5px solid var(--ink); }
+.opt .bd { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.ln { display: flex; gap: 10px; align-items: center; font-size: 16px; font-weight: 500; }
+.ln b { font-weight: 700; }
+</style></head><body>
+<canvas id="world" width="1920" height="1080"></canvas><div id="ui"></div>
+<script src="icons.js"></script><script src="gl.js"></script><script src="world.js"></script><script src="common.js"></script><script>
+document.fonts.load('700 20px X5Sans').then(()=>document.fonts.load('500 20px X5Sans')).then(()=>{
+ const P=renderWorld({target:[21.0,1.0,4.6],zoom:3.8,az:45,el:38,shiftY:-1.3},{extra:()=>{ dog(21.45,4.4,'korzh','S',{ring:'#FF8A00'}); dog(17.75,6.0,'lucky','S',{cart:1,ring:'#1F7BFF'}); }});
+ dim(.2);
+ hudTop({paused:false});
+ let [x,y]=P(21.45,2.1,4.4);
+ add(`<div class="pin c" style="left:${x}px;top:${y}px;--c:#FF8A00"><div class="t tag" style="background:var(--ink)">4.2.3 · НА МЕСТЕ</div><div class="head" style="width:62px;height:62px">${ic('writeoff',34,'#fff')}</div><div class="stem"></div></div>`);
+ // header strip
+ add(`<div class="abs panel" style="left:50%;top:612px;transform:translateX(-50%);display:flex;align-items:center;gap:16px;padding:12px 20px">
+   ${portrait('korzh',60)}<div><div class="kicker">Коржик дошёл · списание 4.2.3</div><div style="font-size:26px;font-weight:700;letter-spacing:.04em">КАК ВЫПОЛНИТЬ?</div></div>
+   <div style="margin-left:18px;border-left:3px solid var(--line);padding-left:18px"><div class="kicker">Срок</div><div style="font-size:24px;font-weight:700">05:10</div></div></div>`);
+ // two options
+ add(`<div class="abs" style="left:50%;bottom:40px;transform:translateX(-50%);display:flex;gap:40px;align-items:flex-end">
+  <div class="opt">
+    <div class="hd" style="background:var(--g);color:#fff;text-shadow:0 2px 0 var(--gLo)">${ic('hand',34,'var(--ink)','#fff')} ЛИЧНО</div>
+    <div class="bd">
+      <div class="ln">${ic('scan',24)}<span>Мини-игра <b>«Списание»</b> на ТСД</span></div>
+      <div class="ln">${ic('speed',24)}<span>Мир замедлен <b>×0,2</b></span></div>
+      <div class="ln">${ic('perfect',24)}<span><b>«Идеально»</b> зависит от вашей игры</span></div>
+      <div class="btn big primary" style="margin-top:6px;width:100%">Играть · Q</div>
+    </div></div>
+  <div style="align-self:center;width:72px;height:72px;border:2.5px solid var(--ink);background:#fff;display:grid;place-items:center;font-weight:700;font-size:22px;box-shadow:0 5px 0 var(--ink)">ИЛИ</div>
+  <div class="opt">
+    <div class="hd" style="background:var(--korzh);color:#fff;text-shadow:0 2px 0 #B85E00">${ic('person',34,'var(--ink)','#fff')} ПОРУЧИТЬ</div>
+    <div class="bd">
+      <div class="ln">${ic('play',24)}<span>Мир идёт как обычно</span></div>
+      <div class="ln">${ic('acc',24)}<span>Решат навыки Коржика</span></div>
+      <div><div style="display:flex;height:22px;border:2.5px solid var(--ink)"><i style="width:68%;background:#5CB80F;border-right:2.5px solid var(--line)"></i><i style="width:26%;background:#FF9F1A;border-right:2.5px solid var(--line)"></i><i style="width:6%;background:#F0373B"></i></div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px;font-weight:700"><span style="display:flex;gap:5px;align-items:center">${ic('perfect',20)}68%</span><span style="display:flex;gap:5px;align-items:center">${ic('errors',20)}26%</span><span style="display:flex;gap:5px;align-items:center">${ic('fail',20)}6%</span></div></div>
+      <div class="btn big" style="margin-top:2px;width:100%">Поручить · E</div>
+    </div></div>
+ </div>`);
+ voxify(); window.READY=true;});
+</script></body></html>

@@ -1,0 +1,72 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="ui.css">
+<style>
+.task { background: var(--paper); border: 2.5px solid var(--ink); box-shadow: 0 4px 8px rgba(0,0,0,.2); padding: 12px 14px; display: flex; gap: 12px; align-items: center; }
+.task .tile { width: 58px; height: 58px; border: 2.5px solid var(--ink); display: grid; place-items: center; background: var(--paper2); flex: none; }
+.task h3 { font-size: 19px; font-weight: 700; letter-spacing: .02em; line-height: 1.1; }
+.task .row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.task .tm { font-weight: 700; font-size: 18px; width: 52px; text-align: right; }
+.who { width: 44px; height: 44px; border: 2.5px solid var(--ink); overflow: hidden; position: relative; flex: none; }
+.who img { position: absolute; width: 130%; left: -15%; top: 2%; }
+.pk { background: var(--paper); border: 2.5px solid var(--ink); box-shadow: 0 4px 8px rgba(0,0,0,.2); padding: 12px 16px 12px 12px; display: flex; gap: 14px; align-items: center; }
+.pk h4 { font-size: 22px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; line-height: 1; }
+.pk .st { display: flex; gap: 6px; align-items: center; margin-top: 7px; font-weight: 500; font-size: 16px; }
+.inv { display: flex; align-items: center; gap: 10px; padding: 9px 14px; font-size: 16px; font-weight: 500; }
+</style></head><body>
+<canvas id="world" width="1920" height="1080"></canvas><div id="ui"></div>
+<script src="icons.js"></script><script src="gl.js"></script><script src="world.js"></script><script src="common.js"></script><script>
+document.fonts.load('700 20px X5Sans').then(()=>document.fonts.load('500 20px X5Sans')).then(()=>{
+ const P=renderWorld({target:[12.2,0,8.0],zoom:10.9,az:45,el:38,shiftY:0.35,shiftX:-1.3},{sel:[2,1],selColor:'#FFC629',floor:()=>{
+   route([[17.6,5.6],[17.6,8.55],[21.45,8.55],[21.45,2.0]],'#1F7BFF'); stop(21.45,2.0,'#1F7BFF');
+ },extra:()=>{
+   dog(17.6,5.0,'lucky','S',{cart:1,ring:'#1F7BFF',walk:1});
+   dog(21.45,4.4,'korzh','S',{ring:'#FF8A00'});
+   dog(3.4,2.4,'buran','S',{ring:'#9B4DFF',cup:1});
+   dog(26.3,9.8,'bulya','W',{});
+ }});
+ hudTop();
+ const pin=(x,y,z,icon,c,txt)=>{const [a,b]=P(x,y,z);add(`<div class="pin ${c?'c':''}" style="left:${a}px;top:${b}px;--c:${c||'#FFF9EC'}">${txt?`<div class="t tag" style="${c?`background:${c}`:''}">${txt}</div>`:''}<div class="head" style="box-shadow:0 4px 8px rgba(0,0,0,.25)">${ic(icon,28,'var(--text)',c?'#fff':'#FFF9EC')}</div><div class="stem"></div></div>`);};
+ pin(16.6,2.75,4.3,'pick','#1F7BFF','3.2.2');
+ pin(21.45,2.2,4.4,'wait','#FF8A00','');
+ pin(2.3,1.1,11.6,'receive',null,'');
+ pin(3.4,2.2,2.4,'rest','#9B4DFF','');
+ // ---- tasks ----
+ const task=(icon,title,tc,pct,time,who,c,urgent)=>`<div class="task">
+   <div class="tile" style="${c?`background:${c}`:''}">${ic(icon,32,'var(--text)',c?'#fff':'#FFF9EC')}</div>
+   <div style="flex:1"><div style="display:flex;align-items:center;gap:8px"><h3>${title}</h3>${urgent?`<span class="tag" style="background:var(--red);height:22px;font-size:13px">срочно</span>`:''}</div>
+     <div class="row"><div class="bar" style="flex:1;--c:${tc}"><b style="width:${pct}%"></b></div><div class="tm" style="${urgent?'color:var(--red)':''}">${time}</div></div></div>
+   ${who?portrait(who,48):`<div class="btn sm primary" style="width:44px;padding:0">${ic('plus',20,'#fff')}</div>`}
+ </div>`;
+ add(`<div class="abs panel" data-check style="left:16px;top:104px;width:340px">
+  <div class="ph">Задания <span class="count">4</span></div>
+  <div style="padding:14px;display:flex;flex-direction:column;gap:14px">
+   ${task('pick','Сборка','var(--red)',22,'1:12','lucky','var(--lucky)',true)}
+   ${task('writeoff','Списание','var(--g)',64,'5:10','korzh','var(--korzh)')}
+   ${task('receive','Приёмка','var(--g)',80,'6:00')}
+   ${task('putaway','Выкладка','var(--g)',58,'4:30')}
+  </div></div>`);
+ // ---- inspector ----
+ add(`<div class="abs panel" data-check style="right:16px;top:104px;width:300px">
+  <div class="ph">Стеллаж 3.2</div>
+  <div style="padding:6px 0 8px">
+   <div class="inv"><span class="tag">3.2.3</span>${PROD.milk()}<span style="flex:1">Молоко</span><b>12</b></div>
+   <div class="inv" style="background:#E3EEFF"><span class="tag" style="background:var(--lucky)">3.2.2</span>${PROD.bread()}<span style="flex:1">Хлеб</span><b>8</b></div>
+   <div class="inv"><span class="tag">3.2.1</span>${PROD.yogurt()}<span style="flex:1">Йогурт</span><b style="color:var(--red);display:flex;gap:4px;white-space:nowrap">${ic('alert',18)}5</b></div>
+  </div></div>`);
+ // ---- pickers ----
+ const fat=(n)=>{let s='<div class="seg">';for(let i=0;i<10;i++)s+=`<i class="${i<n?'on':''}" style="${i<n?`background:${n>=7?'var(--red)':'#8C8270'}`:''}"></i>`;return s+'</div>';};
+ add(`<div class="abs" style="left:50%;transform:translateX(-50%);bottom:22px;display:flex;gap:18px;align-items:flex-end">
+   <div class="pk" data-ring="#1F7BFF" style="width:330px">${portrait('lucky',80)}
+     <div style="flex:1"><h4>Лаки</h4><div class="st">${ic('walk',20,'var(--text)','#9CC4FF')} Идёт · 0:18</div>
+     <div style="display:flex;align-items:center;gap:8px;margin-top:8px">${ic('fatigue',18)}${fat(4)}</div></div></div>
+   <div class="pk" style="width:360px">${portrait('korzh',80)}
+     <div style="flex:1"><h4>Коржик</h4><div class="st">${ic('wait',20,'var(--text)','#FFC629')} Ждёт решения</div>
+     <div style="display:flex;gap:8px;margin-top:8px"><div class="btn sm primary" style="flex:1">Лично</div><div class="btn sm" style="flex:1">Поручить</div></div></div></div>
+   <div class="pk" style="width:330px">${portrait('buran',80)}
+     <div style="flex:1"><h4>Буран</h4><div class="st">${ic('rest',20)} Отдыхает · 0:40</div>
+     <div style="display:flex;align-items:center;gap:8px;margin-top:8px">${ic('fatigue',18)}${fat(7)}</div></div></div>
+ </div>
+ <div class="abs" style="right:16px;bottom:22px;display:flex;flex-direction:column;gap:12px">
+   ${['plus','minus','home'].map(n=>`<div class="panel" style="width:56px;height:56px;display:grid;place-items:center">${ic(n,22)}</div>`).join('')}
+ </div>`);
+ voxify(); window.READY=true;});
+</script></body></html>

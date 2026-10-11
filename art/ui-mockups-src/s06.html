@@ -1,0 +1,39 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="ui.css">
+<style>html,body{background:#F6EEDD!important}canvas#world{display:none}.lb{position:absolute;transform:translate(-50%,0);text-align:center;white-space:nowrap}
+.lb b{display:block;font-size:16px;letter-spacing:.03em;text-transform:uppercase}.lb span{font-size:13px;font-weight:500;color:var(--ink2)}</style></head><body>
+<canvas id="world" width="1920" height="1080"></canvas><div id="ui"></div>
+<script src="icons.js"></script><script src="gl.js"></script><script src="world.js"></script><script src="common.js"></script><script>
+document.fonts.load('700 20px X5Sans').then(()=>document.fonts.load('500 20px X5Sans')).then(()=>{
+ const A=[
+  ['Лаки','спереди · 1×1',()=>dog(0,0,'lucky','S',{ring:'#1F7BFF'}),[0,0.9,0],1.25],
+  ['Лаки','сбоку',()=>dog(0,0,'lucky','E',{}),[0,0.9,0],1.25],
+  ['Лаки','сзади',()=>dog(0,0,'lucky','N',{}),[0,0.9,0],1.25],
+  ['Коржик','корги',()=>dog(0,0,'korzh','S',{ring:'#FF8A00'}),[0,0.9,0],1.25],
+  ['Буран','хаски',()=>dog(0,0,'buran','S',{ring:'#9B4DFF'}),[0,0.9,0],1.25],
+  ['Буля','бульдог',()=>dog(0,0,'bulya','S',{ring:'#11B5A4'}),[0,0.9,0],1.25],
+  ['С тележкой','идёт · 1×2',()=>dog(0,-0.3,'lucky','S',{cart:1,walk:1}),[0,0.8,0.2],1.4],
+  ['Стеллаж','4 полки × 3 ячейки · 1×2',()=>shelf(-0.37,-1.1,2.2,0.75,2.2,5),[0,1.1,0],1.9],
+  ['Паллета','с коробками · 1×1',()=>pallet(-0.6,-0.56,2),[0,0.5,0],1.15],
+  ['Стол фасовки','2×1',()=>table(-1.2,-0.45,2.4,0.9),[0,0.5,0],1.6],
+  ['Ворота дока','проём 4 м',()=>gate(-2,0,4.0),[0,1.7,0.3],2.9],
+  ['Стена','h 3 м · модуль 3 м',()=>wallX(-1.5,1.5,-0.15,WD.H,0.3,{pil:1}),[0,1.5,0],2.3],
+  ['Грузовик','поставка · 2×5',()=>truck(-1.15,-2.4),[0,1.6,0.2],3.6],
+  ['Электровелосипед','курьеры',()=>bike(-0.75,0),[0,0.6,0],1.15],
+  ['Ограждение брака','сетка h 1,1 м',()=>{for(let x=-1.5;x<=1.5;x+=0.55) B(x,WD.F,0,0.06,1.1,0.06,COL.dark); B(-1.5,WD.F+1.05,0,3.06,0.06,0.06,COL.dark); B(-1.5,WD.F+0.5,0,3.06,0.03,0.03,COL.dark); B(-0.5,WD.F,-0.9,0.9,0.8,0.7,COL.red);},[0,0.6,0],1.9],
+  ['Зона отдыха','диван, кулер',()=>{sofa(-1.3,-0.6,2.2);cooler(1.0,0.4);},[0,0.6,0],1.7],
+  ['Дерево','декор',()=>tree(0,0,1),[0,1.5,0],1.9],
+  ['Куст','декор',()=>bush(0,0,1.2),[0,0.4,0],1.0],
+ ];
+ add(`<div class="abs" id="grid" style="left:24px;right:24px;top:104px;display:grid;grid-template-columns:repeat(6,1fr);gap:18px"></div>`);
+ const grid=document.getElementById('grid'); const off=document.createElement('canvas'); off.width=290; off.height=210;
+ A.forEach(([n,sub,fn,tg,zm],i)=>{
+   grid.insertAdjacentHTML('beforeend',`<div class="panel" style="padding:0;box-shadow:0 4px 8px rgba(0,0,0,.18)"><canvas id="c${i}" width="290" height="210" style="display:block;width:100%"></canvas><div style="padding:6px 12px 12px;text-align:center"><div style="font-weight:700;font-size:16px;text-transform:uppercase;letter-spacing:.03em">${n}</div><div style="font-size:13px;font-weight:500;color:var(--ink2)">${sub}</div></div></div>`);
+   GL.clear();
+   for(let x=-3;x<3;x++)for(let z=-3;z<3;z++) B(x,0,z,1,WD.F,1,(x+z+8)%2?'#FBF5E8':'#F1E7D3',{noAO:1});
+   fn();
+   GL.render(off,{target:tg,zoom:zm,az:45,el:38},{bg:'#FFF9EC',sceneCenter:[0,0,0],sceneRadius:5}); document.getElementById('c'+i).getContext('2d').drawImage(off,0,0);
+ });
+ add(`<div class="abs" style="left:24px;top:22px;display:flex;align-items:center;gap:18px"><div class="btn primary" style="height:56px;font-size:24px;padding:0 26px">Лист ассетов</div>
+   <div style="font-size:15px;font-weight:500;color:var(--ink2);line-height:1.4">Всё собрано из вокселей в 3D · клетка = 1 м<br>Цвет сборщика — только кольцо под ногами и маршрут</div></div>`);
+ voxify(); window.READY=true;});
+</script></body></html>

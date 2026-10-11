@@ -1,0 +1,32 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="ui.css">
+<style>
+.oc { width: 500px; background: #fff; border: 2.5px solid var(--ink); box-shadow: 0 8px 0 var(--ink); text-align: center; position: relative; }
+.oc .burst { height: 190px; display: grid; place-items: center; border-bottom: 2.5px solid var(--ink); position: relative; overflow: hidden; }
+.oc .burst::before { content: ''; position: absolute; inset: -50%; background: repeating-conic-gradient(from 0deg, rgba(255,255,255,.22) 0 10deg, transparent 10deg 20deg); }
+.oc h2 { font-size: 44px; font-weight: 700; letter-spacing: .06em; margin: 18px 0 2px; }
+.oc .sub { font-size: 16px; font-weight: 500; color: var(--ink2); }
+.rw { display: flex; justify-content: center; gap: 12px; margin: 18px 0; }
+.rw .r { border: 2.5px solid var(--ink); padding: 8px 14px; font-size: 24px; font-weight: 700; display: flex; gap: 8px; align-items: center; box-shadow: 0 4px 0 var(--ink); }
+.note { margin: 0 20px 16px; border: 3px dashed var(--ink); padding: 10px; font-size: 14px; font-weight: 500; text-align: left; display: flex; gap: 10px; align-items: center; }
+.cap { position: absolute; top: -40px; left: 50%; transform: translateX(-50%); }
+</style></head><body>
+<canvas id="world" width="1920" height="1080"></canvas><div id="ui"></div>
+<script src="icons.js"></script><script src="gl.js"></script><script src="world.js"></script><script src="common.js"></script><script>
+document.fonts.load('700 20px X5Sans').then(()=>document.fonts.load('500 20px X5Sans')).then(()=>{
+ renderWorld(CAM_MAIN,{extra:crew});
+ dim(.55);
+ hudTop();
+ const big=(icon,size)=>ic(icon,size,'var(--ink)');
+ const card=(bg,icon,title,sub,rewards,note,cls='')=>`<div class="oc ${cls}" data-check>
+   <div class="burst" style="background:${bg}"><div style="position:relative;width:130px;height:130px;background:#fff;border:4px solid var(--ink);box-shadow:0 6px 0 var(--ink);display:grid;place-items:center">${big(icon,90)}</div></div>
+   <h2>${title}</h2><div class="sub">${sub}</div>
+   <div class="rw">${rewards}</div>${note}
+   <div style="padding:0 20px 20px"><div class="btn primary" style="width:100%;height:56px;font-size:20px">Отлично</div></div></div>`;
+ const r=(icon,t,bg)=>`<div class="r" style="background:${bg}">${ic(icon,26)}${t}</div>`;
+ add(`<div class="abs" style="left:0;right:0;top:150px;display:flex;justify-content:center;gap:40px;align-items:flex-start">
+  <div style="position:relative;transform:scale(.9);transform-origin:top center;margin-top:40px">${card('#FF9F1A','errors','С ОШИБКАМИ','Списание · 4.2.3 · Коржик',r('coin','+70 ₽','#FFF4CF')+r('star','+0,0','#fff'),`<div class="note">${ic('alert',26)}<span>Снято 5 из 6 — один просроченный товар остался на полке</span></div>`).replace('Отлично','Понятно')}</div>
+  <div style="position:relative">${card('#5CB80F','perfect','ИДЕАЛЬНО!','Сборка #1042 · Лаки · 1:58',r('coin','+320 ₽','#FFF4CF')+r('star','+0,2','#FFF4CF'),`<div class="note" style="border-style:solid;background:var(--gTint)">${portrait('lucky',40)}<span><b>Лаки:</b> Сборка 4 → 5 · усталость +8%</span></div>`)}</div>
+  <div style="position:relative;transform:scale(.9);transform-origin:top center;margin-top:40px">${card('#F0373B','fail','ПРОВАЛ','Приёмка поставки · Буран',r('coin','−150 ₽','#FFD5D5')+r('star','−0,2','#FFD5D5'),`<div class="note">${ic('alert',26)}<span>Принято 3 SKU, которых не было — позже их не найдут при сборке</span></div>`).replace('Отлично','Понятно')}</div>
+ </div>`);
+ voxify(); window.READY=true;});
+</script></body></html>
