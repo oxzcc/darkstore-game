@@ -24,8 +24,9 @@ const FOG = new Color(PALETTE.closeupFog);
 type Insets = { left: number; right: number; top: number; bottom: number };
 type Size = { width: number; height: number };
 
-/** Куда смотрит камера: цель, направление «от цели к камере», расстояние, угол обзора и поля интерфейса. */
-type Pose = { target: Vector3; dir: Vector3; dist: number; fovDeg: number; insets: Insets };
+/** Куда смотрит камера: цель, направление «от цели к камере», расстояние, угол обзора, поля интерфейса
+ *  и сколько метров перед камерой не рисовать. */
+type Pose = { target: Vector3; dir: Vector3; dist: number; fovDeg: number; insets: Insets; clipNear: number };
 
 const rad = (deg: number) => (deg * Math.PI) / 180;
 
@@ -46,6 +47,7 @@ function homePose(map: WarehouseMap, size: Size): Pose {
     dist: visibleH / 2 / Math.tan(rad(fovDeg) / 2),
     fovDeg,
     insets: ins,
+    clipNear: 0,
   };
 }
 
@@ -60,6 +62,7 @@ function closePose(rack: Rack): Pose {
     dist: toEye.length(),
     fovDeg: WAREHOUSE_VIEW.closeup.fovDeg,
     insets: WAREHOUSE_VIEW.closeup.screenInsets,
+    clipNear: WAREHOUSE_VIEW.closeup.clipNear,
   };
 }
 
@@ -74,6 +77,8 @@ function mix(a: Pose, b: Pose, t: number): Pose {
     target: a.target.clone().lerp(b.target, t),
     dir: a.dir.clone().lerp(b.dir, t).normalize(),
     dist: logLerp(a.dist, b.dist, t),
+    // отсечение растёт к концу перелёта — противоположный ряд пропадает, когда камера «проходит» сквозь него
+    clipNear: lerp(a.clipNear, b.clipNear, Math.pow(t, 3)),
     fovDeg: logLerp(a.fovDeg, b.fovDeg, t),
     insets: {
       left: lerp(a.insets.left, b.insets.left, t),
@@ -99,7 +104,7 @@ function apply(camera: PerspectiveCamera, pose: Pose, size: Size) {
     .addScaledVector(right, (-(pose.insets.left - pose.insets.right) / 2) * mPerPx)
     .addScaledVector(up, (-(pose.insets.bottom - pose.insets.top) / 2) * mPerPx);
 
-  camera.near = Math.max(0.05, pose.dist - DEPTH);
+  camera.near = Math.max(0.05, pose.dist - DEPTH, pose.clipNear);
   camera.far = pose.dist + DEPTH;
   camera.updateProjectionMatrix();
 }
