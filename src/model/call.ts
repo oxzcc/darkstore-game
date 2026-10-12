@@ -1,4 +1,5 @@
 // Развилки (docs/10-minigames-concept.md, раздел 3): сборщик упирается в ситуацию и зовёт диспетчера.
+import type { Outcome } from './task';
 
 /** Риск варианта. Игрок видит только слово (решение автора 12.10), шансы осложнения — в config. */
 export type RiskLevel = 'low' | 'medium' | 'high';
@@ -20,4 +21,22 @@ export type CallAnswer = {
   optionId: string;
   risk: RiskLevel; // уже с учётом «решил сам» (на ступень выше)
   auto: boolean;   // true — игрок не ответил, решил сборщик
+};
+
+/** Раскрытие одной развилки в конце заказа: выпало ли осложнение и каким стал исход. */
+export type CallReveal = CallAnswer & {
+  chance: number;      // шанс осложнения по риску (для ширины зоны на полосе; игрок видит только полосу)
+  roll: number;        // куда «упал маркер», 0…1: меньше chance — осложнение
+  complication: boolean;
+  capped: boolean;     // сработало ограничение варианта («исход не выше с ошибками»)
+  after: Outcome;      // исход после этой развилки
+};
+
+/** Раскрытие исхода заказа (как «шарик» в Dispatch): бросок по характеристикам, потом развилки по очереди. */
+export type OutcomeReveal = {
+  chances: Record<Outcome, number>; // ширины зон «идеально / с ошибками / провал»
+  roll: number;                     // куда упал маркер на основной полосе, 0…1
+  base: Outcome;                    // исход по характеристикам
+  calls: CallReveal[];
+  final: Outcome;
 };

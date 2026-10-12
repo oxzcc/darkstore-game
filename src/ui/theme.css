@@ -304,3 +304,34 @@ svg.i.sm { width: 18px; height: 18px; }
 /* «!» над сборщиком, который зовёт диспетчера */
 .call-bang { pointer-events: none; width: 26px; height: 26px; display: grid; place-items: center; background: var(--pc); color: #fff;
   font-family: 'X5 Sans', system-ui, sans-serif; font-weight: 700; font-size: 18px; outline: 2.5px solid #fff; animation: pop 0.25s ease-out; }
+
+/* ---------- N1, 13.10: вызов после ответа и закрытые варианты ---------- */
+.call.decided { animation: none; }
+.call-option:disabled { cursor: default; }
+.call-option.locked { opacity: 0.45; background: transparent; border-style: dashed; }
+.call-option.dim { opacity: 0.35; }
+.call-option.chosen { border-color: var(--pc); border-width: 3px; background: var(--card); opacity: 1; }
+
+/* ---------- N1, 13.10: окно результата — раскрытие исхода, как в Dispatch ---------- */
+.result { position: absolute; left: 50%; top: 96px; transform: translateX(-50%); width: 460px; --cut: 10px; cursor: pointer;
+  animation: pop 0.25s ease-out; }
+.result > .vx-edge { background: var(--pc); padding: 3px; }
+.result > .vx-edge > .vx-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+.result-row { opacity: 0; animation: fade-in 0.2s ease-out both; animation-delay: var(--d); }
+.result-row-head { font-size: 15px; margin-bottom: 6px; }
+.reveal-bar { position: relative; display: flex; height: 18px; background: var(--track); }
+.reveal-bar.small { height: 12px; }
+.reveal-bar .zone { display: block; height: 100%; }
+.reveal-bar .zone.ok { background: var(--perfect); }
+.reveal-bar .zone.bad { background: var(--errors); }
+.reveal-bar .marker { position: absolute; top: -5px; bottom: -5px; width: 6px; margin-left: -3px; background: var(--tag);
+  outline: 2px solid #fff; left: 0; animation: marker-run 0.9s cubic-bezier(.3,1.4,.5,1) both; animation-delay: var(--d); }
+.result-text { margin-top: 6px; font-size: 14px; font-weight: 700; }
+.result-text.ok { color: var(--primary); }
+.result-text.bad { color: #B86A00; }
+.result-final { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 10px; background: var(--oc); color: #fff;
+  font-weight: 700; font-size: 22px; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0;
+  animation: pop 0.3s ease-out both; animation-delay: var(--d); }
+.result-final svg.i { color: #fff; }
+@keyframes marker-run { from { left: 0; } to { left: var(--to); } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }

@@ -10,7 +10,7 @@ import { dispatchTask } from './tasks/lifecycle';
 import { advanceWorld } from './advance';
 import { pickerActivity } from './jobs';
 import { createRng, type Rng } from './random';
-import { answerCall, applyCalls, callText, optionsFor, planCall, raiseRisk } from './calls';
+import { answerCall, applyCalls, callText, optionsFor, planCall, raiseRisk, revealCalls } from './calls';
 
 const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
 
@@ -102,15 +102,22 @@ describe('развилки: ответ', () => {
     expect(answerCall(queued, queued.calls[0].id, 'search')).toBe(queued);
   });
 
-  it('не ответил — сборщик решает сам, риск на ступень выше', () => {
+  it('не ответил — сборщик решает сам, риск на ступень выше; событие говорит, что он выбрал', () => {
     const { s, taskId } = sentWithCall();
     const at = runUntil(s, (x) => x.calls.length > 0);
-    const after = runUntil(at, (x) => x.calls.length === 0);
+    let after = at;
+    const answered: string[] = [];
+    for (let i = 0; i < 500 && after.calls.length > 0; i++) {
+      const r = advanceWorld(after, map, 0.1);
+      after = r.state;
+      for (const e of r.events) if (e.kind === 'callAnswered') answered.push(e.optionId);
+    }
     const log = after.tasks[taskId].callLog!;
     expect(log).toHaveLength(1);
     expect(log[0].auto).toBe(true);
     const base = SITUATION_BY_ID.notVisible.options.find((o) => o.id === log[0].optionId)!.risk;
     expect(log[0].risk).toBe(raiseRisk(base));
+    expect(answered).toEqual([log[0].optionId]);
   });
 
   it('на экране не больше трёх вызовов: четвёртый ждёт в очереди без таймера', () => {
@@ -140,5 +147,39 @@ describe('развилки: влияние на исход', () => {
   it('риск на ступень выше не выходит за «высокий»', () => {
     expect(raiseRisk('low')).toBe('medium');
     expect(raiseRisk('high')).toBe('high');
+  });
+
+  it('раскрытие: что выпало по каждой развилке и каким стал исход', () => {
+    const r = revealCalls('perfect', [ans('search', 'medium'), ans('skip', 'low')], fixed(0.1, 0.9));
+    expect(r.calls.map((c) => [c.complication, c.capped, c.after])).toEqual([[true, false, 'withErrors'], [false, false, 'withErrors']]);
+    expect(r.final).toBe('withErrors');
+    expect(r.calls[0].chance).toBe(CALLS.complication.medium);
+  });
+});
+
+describe('развилки: окно результата', () => {
+  it('заказ с развилкой заканчивается событием с раскрытием исхода; без развилки — без него', () => {
+    const { s, taskId } = sentWithCall();
+    const at = runUntil(s, (x) => x.calls.length > 0);
+    let x = answerCall(at, at.calls[0].id, 'search');
+    let reveal: unknown = null;
+    for (let i = 0; i < 5000 && x.tasks[taskId].status !== 'done'; i++) {
+      const r = advanceWorld(x, map, 0.1);
+      x = r.state;
+      for (const e of r.events) if (e.kind === 'taskDone' && e.taskId === taskId) reveal = e.reveal;
+    }
+    expect(reveal).toMatchObject({ final: x.tasks[taskId].outcome });
+
+    const g = createInitialGame(map, 1);
+    const t = openTasks(g)[0];
+    const sent = dispatchTask(g, map, t.id, 'lucky');
+    let y: GameState = { ...sent, pickers: { ...sent.pickers, lucky: { ...sent.pickers.lucky, job: { ...sent.pickers.lucky.job!, call: undefined } } } };
+    let plain: unknown = 'нет события';
+    for (let i = 0; i < 5000 && y.tasks[t.id].status !== 'done'; i++) {
+      const r = advanceWorld(y, map, 0.1);
+      y = r.state;
+      for (const e of r.events) if (e.kind === 'taskDone') plain = e.reveal;
+    }
+    expect(plain).toBeUndefined();
   });
 });

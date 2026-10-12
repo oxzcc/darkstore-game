@@ -7,9 +7,9 @@ import { blockedCells, distancesFrom, findPath } from './warehouse';
 import type { Cell } from '../model/warehouse';
 import { secondsPerCell } from './time';
 import { createRng } from './random';
-import { outcomeChances, rollOutcome } from './outcome';
+import { outcomeAt, outcomeChances } from './outcome';
 import { declineTsd, worldSpeed, worldSpeedFor } from './tsd';
-import { applyCalls, expireCalls, raiseCall, showQueuedCalls } from './calls';
+import { expireCalls, raiseCall, revealCalls, showQueuedCalls } from './calls';
 
 /** Перейти к следующему шагу работы. Состояние сборщика — по виду шага. */
 function nextStep(p: Picker): Picker {
@@ -145,9 +145,14 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
 
     if (isJobDone(p) && task) {
       // исход по характеристикам, потом — осложнения от ответов в развилках (10, раздел 3)
-      const outcome = applyCalls(rollOutcome(outcomeChances(p, task), rng), task.callLog, rng);
+      const chances = outcomeChances(p, task);
+      const roll = rng.next();
+      const base = outcomeAt(chances, roll);
+      const { calls, final: outcome } = revealCalls(base, task.callLog, rng);
       setTask(task.id, { status: 'done', outcome });
-      events.push({ kind: 'taskDone', taskId: task.id, pickerId: p.id, outcome, at: time });
+      // была развилка — окно результата с раскрытием исхода; иначе обычная всплывашка
+      const reveal = calls.length > 0 ? { chances, roll, base, calls, final: outcome } : undefined;
+      events.push({ kind: 'taskDone', taskId: task.id, pickerId: p.id, outcome, at: time, ...(reveal ? { reveal } : {}) });
       p = { ...p, state: 'idle', taskId: null, job: null, path: [], pathProgress: 0 };
     }
     pickers[id] = p;
@@ -168,7 +173,17 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
 
   // развилки: новые вызовы в очередь, первые на экране получают таймер, просроченные решает сборщик
   for (const id of newCallers) next = raiseCall(next, id);
-  next = expireCalls(showQueuedCalls(next));
+  next = showQueuedCalls(next);
+  const due = next.calls.filter((c) => c.expiresAt !== null && time >= c.expiresAt);
+  if (due.length > 0) {
+    next = expireCalls(next);
+    // что выбрал сборщик — окно вызова подсветит это (решение автора 13.10)
+    for (const c of due) {
+      const answer = next.tasks[c.taskId]?.callLog?.at(-1);
+      if (answer) events.push({ kind: 'callAnswered', call: c, optionId: answer.optionId, at: time });
+    }
+    next = { ...next, shiftLog: [...state.shiftLog, ...events] };
+  }
 
   return { state: next, events };
 }

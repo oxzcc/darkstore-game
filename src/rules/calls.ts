@@ -2,7 +2,7 @@
 // Сборщик работает сам, но на одной из позиций заказа может остановиться и позвать диспетчера.
 // Всё здесь — чистые функции: план развилки при отправке, вызов, ответ игрока, ответ сборщика по таймеру, влияние на исход.
 import type { GameState } from '../model/game';
-import type { Call, CallAnswer, RiskLevel } from '../model/call';
+import type { Call, CallAnswer, CallReveal, RiskLevel } from '../model/call';
 import type { Picker, PickerJob } from '../model/picker';
 import type { Outcome, Task } from '../model/task';
 import { CALLS, SITUATION_BY_ID, SITUATIONS, type CallOption, type Situation } from '../config/calls';
@@ -139,17 +139,30 @@ export function expireCalls(state: GameState): GameState {
 }
 
 /**
- * Исход с учётом развилок: по каждому ответу — бросок осложнения по риску (CALLS.complication),
+ * Раскрытие развилок в конце заказа: по каждому ответу — бросок осложнения по риску (CALLS.complication),
  * осложнение ухудшает исход на ступень; потом ограничение варианта (cap), например «не выше с ошибками».
+ * Всё, что выпало, записывается — окно результата показывает это игроку (решение автора 13.10).
  */
-export function applyCalls(outcome: Outcome, log: CallAnswer[] | undefined, rng: Rng): Outcome {
+export function revealCalls(outcome: Outcome, log: CallAnswer[] | undefined, rng: Rng): { calls: CallReveal[]; final: Outcome } {
   let idx = OUTCOME_ORDER.indexOf(outcome);
+  const calls: CallReveal[] = [];
   for (const a of log ?? []) {
-    if (rng.next() < CALLS.complication[a.risk]) idx = Math.min(OUTCOME_ORDER.length - 1, idx + 1);
+    const chance = CALLS.complication[a.risk];
+    const roll = rng.next();
+    const complication = roll < chance;
+    if (complication) idx = Math.min(OUTCOME_ORDER.length - 1, idx + 1);
     const cap = SITUATION_BY_ID[a.situationId]?.options.find((o) => o.id === a.optionId)?.cap;
-    if (cap) idx = Math.max(idx, OUTCOME_ORDER.indexOf(cap));
+    const capIdx = cap ? OUTCOME_ORDER.indexOf(cap) : -1;
+    const capped = capIdx > idx;
+    if (capped) idx = capIdx;
+    calls.push({ ...a, chance, roll, complication, capped, after: OUTCOME_ORDER[idx] });
   }
-  return OUTCOME_ORDER[idx];
+  return { calls, final: OUTCOME_ORDER[idx] };
+}
+
+/** Только итоговый исход с учётом развилок. */
+export function applyCalls(outcome: Outcome, log: CallAnswer[] | undefined, rng: Rng): Outcome {
+  return revealCalls(outcome, log, rng).final;
 }
 
 /** Текст ситуации для экрана: подставить адрес, товар и аллею позиции. */

@@ -80,7 +80,7 @@ describe('выполнение задания', () => {
     expect(t.status).toBe('done');
     expect(['perfect', 'withErrors', 'failed'].includes(t.outcome!)).toBe(true);
     expect(events).toHaveLength(1);
-    expect(events[0].outcome).toBe(t.outcome);
+    expect(events[0].kind === 'taskDone' && events[0].outcome).toBe(t.outcome);
     // свободен и стоит в зоне фасовки — там, где закончил (07, раздел 2)
     const p = s3.pickers.lucky;
     expect(p.state).toBe('idle');
