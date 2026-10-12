@@ -77,11 +77,11 @@ export default function RackCloseup({ map }: { map: WarehouseMap }) {
   return (
     // всё рисуется в координатах стеллажа: x — вдоль, z — поперёк, лицо со стороны frontSign
     <group position={origin} rotation={[0, rot, 0]}>
-      {/* этикетки адресов на лицевом краю каждой полки, полка 1 — нижняя (08, раздел 7) */}
+      {/* этикетки адресов — наклейка на лицевом краю доски своей полки, вровень с ней, полка 1 — нижняя (08, раздел 7) */}
       {Array.from({ length: rack.shelves }, (_, i) => i + 1).map((shelf) => (
         <Html
           key={`l${shelf}`}
-          position={[-w / 2 + 0.16, shelfY(shelf, rack.shelves) - 0.06, frontSign * (d / 2 + 0.01)]}
+          position={[-w / 2 + 0.16, shelfY(shelf, rack.shelves), frontSign * (d / 2 + 0.01)]}
           center
           className="shelf-label"
         >
