@@ -13,13 +13,15 @@ import './ui/theme.css';
 
 export default function App() {
   const stock = useGameStore((s) => s.game.stock);
+  // У стеллажа вид во весь экран (06, раздел 2.3): список заданий и карточки сборщиков прячутся.
+  const closeup = useGameStore((s) => s.game.minigame?.atFocus ?? false);
   return (
     <>
       <GameLoop />
       <Scene map={WAREHOUSE_MAP} stock={stock} />
       <div className="hud">
-        <TaskPanel />
-        <PickerPanel />
+        {!closeup && <TaskPanel />}
+        {!closeup && <PickerPanel />}
         <AssignDialog />
         <TsdOffer />
         <TsdHint />

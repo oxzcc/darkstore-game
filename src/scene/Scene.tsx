@@ -1,4 +1,4 @@
-// 3D-сцена: ортографическая изометрическая камера (CameraRig), склад, сборщики и выбор стеллажа в мини-игре.
+// 3D-сцена: камера (CameraRig: изометрия и вид «глазами сборщика»), склад, сборщики и выбор стеллажа в мини-игре.
 // Сцена только рисует карту, которую ей передали.
 import { Canvas } from '@react-three/fiber';
 import type { WarehouseMap } from '../model/warehouse';
@@ -19,7 +19,8 @@ const SUN_LIGHT = 0.6 * Math.PI;
 export default function Scene({ map, stock }: Props) {
   // flat — без «киношной» обработки цветов, чтобы они совпадали с палитрой из 08.
   return (
-    <Canvas flat orthographic camera={{ near: 0.1, far: 500 }}>
+    // Камера перспективная, но дома смотрит издалека с узким углом — выглядит как изометрия (CameraRig).
+    <Canvas flat camera={{ fov: 1.5, near: 1, far: 5000, position: [100, 100, 100] }}>
       <color attach="background" args={[PALETTE.grass]} />
       <ambientLight intensity={AMBIENT_LIGHT} />
       <directionalLight position={[10, 20, 6]} intensity={SUN_LIGHT} />

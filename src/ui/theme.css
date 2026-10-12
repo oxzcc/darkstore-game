@@ -210,3 +210,13 @@ svg.i.sm { width: 18px; height: 18px; }
 /* подпись стеллажа при наведении: тёмная плашка адреса (08, раздел 7) */
 .rack-label { pointer-events: none; white-space: nowrap; padding: 2px 8px; background: var(--tag); color: #fff;
   font-family: 'X5 Sans', system-ui, sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.04em; }
+
+/* вид стеллажа во весь экран: слева сверху «← Склад» и где ты (пример автора 12.10) */
+.tsd-hint.top { left: 16px; top: 16px; bottom: auto; transform: none; }
+.closeup-bar { display: flex; gap: 10px; align-items: stretch; }
+.closeup-bar .btn { width: auto; height: 56px; }
+.closeup-bar .btn > .vx > .vx-edge > .vx-body { padding: 0 18px; }
+.closeup-place { --cut: 8px; }
+.closeup-place > .vx-edge > .vx-body { display: flex; align-items: center; gap: 10px; padding: 6px 16px 6px 8px; height: 100%; }
+.closeup-title { font-weight: 700; font-size: 18px; text-transform: uppercase; letter-spacing: 0.03em; }
+.closeup-sub { font-size: 13px; color: var(--text-mute); }
