@@ -274,9 +274,10 @@ svg.i.sm { width: 18px; height: 18px; }
 .tsd-msg.mute { color: var(--text-mute); }
 
 /* ---------- N1: развилки — окна-вызовы справа (10, раздел 3) ---------- */
-.calls { position: absolute; right: 16px; top: 88px; width: 420px; display: flex; flex-direction: column; gap: 12px;
-  max-height: calc(100% - 104px); overflow-y: auto; }
-.calls.beside-tsd { right: 392px; } /* во время мини-игры справа стоит панель ТСД */
+.call-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 460px; z-index: 30; } /* по центру экрана (13.10) */
+.call-close { flex: none; width: 34px; height: 34px; border: 2px solid var(--outline); background: #fff; cursor: pointer;
+  font-family: inherit; font-size: 22px; line-height: 1; color: var(--text); }
+.call-close:hover { border-color: var(--pc); }
 .call { --cut: 10px; animation: pop 0.25s ease-out; }
 .call > .vx-edge { background: var(--pc); padding: 3px; } /* рамка в цвете сборщика: видно, кто зовёт */
 .call > .vx-edge > .vx-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -301,9 +302,18 @@ svg.i.sm { width: 18px; height: 18px; }
 .call .note { margin-top: 0; text-align: left; }
 .call-queue > .vx-edge > .vx-body { padding: 8px 14px; font-size: 14px; text-align: center; }
 
-/* «!» над сборщиком, который зовёт диспетчера */
-.call-bang { pointer-events: none; width: 26px; height: 26px; display: grid; place-items: center; background: var(--pc); color: #fff;
-  font-family: 'X5 Sans', system-ui, sans-serif; font-weight: 700; font-size: 18px; outline: 2.5px solid #fff; animation: pop 0.25s ease-out; }
+/* «!» над сборщиком, которому нужна помощь: красный, на 50% больше прежнего (26 → 39 px), таймер по контуру (13.10) */
+.call-bang { position: relative; width: 39px; height: 39px; padding: 0; border: 0; cursor: pointer; display: grid; place-items: center;
+  background: #E5383B; color: #fff; font-family: 'X5 Sans', system-ui, sans-serif; font-weight: 700; font-size: 26px; line-height: 1;
+  animation: pop 0.25s ease-out; filter: drop-shadow(0 3px 4px rgba(80, 30, 20, 0.35)); }
+.call-bang:hover { background: #F04F52; }
+.call-bang span { position: relative; z-index: 1; }
+.call-bang { outline: 2px solid #fff; }
+/* таймер — красная обводка снаружи квадрата: убывает по контуру за 15 с; бледная дорожка — сколько уже прошло */
+.call-bang-timer { position: absolute; inset: -8px; width: calc(100% + 16px); height: calc(100% + 16px); pointer-events: none; overflow: visible; }
+.call-bang-timer rect { fill: none; stroke-width: 4; }
+.call-bang-timer .track { stroke: rgba(229, 56, 59, 0.22); }
+.call-bang-timer .left { stroke: #E5383B; stroke-dasharray: 100 100; }
 
 /* ---------- N1, 13.10: вызов после ответа и закрытые варианты ---------- */
 .call.decided { animation: none; }

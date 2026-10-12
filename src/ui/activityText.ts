@@ -9,7 +9,7 @@ export function activityLine(a: PickerActivity): { text: string; icon: IconName;
     case 'waitingTsd': return { text: `Ждёт: взять ТСД? · ${clockText(a.secondsLeft)}`, icon: 'pause', progress: null };
     case 'atRack': return { text: 'Ждёт указаний с ТСД', icon: 'pause', progress: null };
     case 'calling': return {
-      text: a.secondsLeft === null ? 'Зовёт диспетчера · в очереди' : `Зовёт диспетчера · ${clockText(a.secondsLeft)}`,
+      text: a.secondsLeft === null ? 'Нужна помощь' : `Нужна помощь · ${clockText(a.secondsLeft)}`,
       icon: 'pause', progress: null,
     };
     case 'busy': return { text: a.label, icon: 'work', progress: a.progress };

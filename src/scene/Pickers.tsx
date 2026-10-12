@@ -3,6 +3,7 @@
 import type { Picker as PickerData } from '../model/picker';
 import type { Cell } from '../model/warehouse';
 import { STARTING_PICKERS } from '../config/pickers';
+import { CALLS } from '../config/calls';
 import { FLOOR_MARKINGS } from '../config/warehouse';
 import { useGameStore, WAREHOUSE_MAP } from '../store/gameStore';
 import { cellToWorld } from '../rules/warehouse';
@@ -60,6 +61,26 @@ function Route({ p, from }: { p: PickerData; from: [number, number, number] }) {
   );
 }
 
+/** Красный «!» над сборщиком, которому нужна помощь: по контуру убывает таймер, клик открывает окно развилки. */
+function CallBang({ pickerId, pos }: { pickerId: string; pos: [number, number, number] }) {
+  const call = useGameStore((s) => s.game.calls.find((c) => c.pickerId === pickerId));
+  const time = useGameStore((s) => s.game.clock.time);
+  const openCall = useGameStore((s) => s.openCall);
+  if (!call) return null;
+  const left = call.expiresAt === null ? 1 : Math.max(0, call.expiresAt - time) / CALLS.answerSeconds;
+  return (
+    <Html position={[pos[0], 2.1, pos[2]]} center zIndexRange={[20, 0]}>
+      <button className="call-bang" title="Нужна помощь — нажмите" onClick={() => openCall(call.id)}>
+        <svg viewBox="0 0 44 44" className="call-bang-timer" aria-hidden>
+          <rect x="2" y="2" width="40" height="40" pathLength={100} className="track" />
+          <rect x="2" y="2" width="40" height="40" pathLength={100} className="left" style={{ strokeDashoffset: 100 * (1 - left) } as CSSProperties} />
+        </svg>
+        <span>!</span>
+      </button>
+    </Html>
+  );
+}
+
 // Последнее направление взгляда каждого сборщика, чтобы стоящий не разворачивался «по умолчанию».
 const lastFacing = new Map<string, number>();
 
@@ -78,10 +99,8 @@ export default function Pickers() {
           <group key={p.id}>
             {p.path.length > 0 && <Route p={p} from={pos} />}
             <PickerModel position={pos} facing={lastFacing.get(p.id) ?? Math.PI / 4} hop={hop} fur={furOf(p.id)} ringColor={p.color} />
-            {/* зовёт диспетчера (развилка) — «!» над головой в цвете сборщика */}
-            {p.state === 'calling' && (
-              <Html position={[pos[0], 2.1, pos[2]]} center className="call-bang" style={{ '--pc': p.color } as CSSProperties}>!</Html>
-            )}
+            {/* нужна помощь (развилка) — красный «!» над головой с таймером по контуру; клик — окно (решение автора 13.10) */}
+            {p.state === 'calling' && <CallBang pickerId={p.id} pos={pos} />}
           </group>
         );
       })}

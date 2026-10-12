@@ -19,8 +19,9 @@ export const WAREHOUSE_MAP = buildWarehouseMap(WAREHOUSE_LAYOUT);
 
 export type Toast = { id: number; taskNumber: number; pickerName: string; outcome: Outcome };
 
-/** Окно вызова после ответа: ~2 с подсвечен выбранный вариант — «Ваше решение» или «Лаки решил сам» (13.10). */
-export type CallFlash = { id: number; call: Call; text: string; optionId: string; auto: boolean };
+/** Окно вызова после ответа: ~1,5 с подсвечен выбранный вариант — «Ваше решение» или «Лаки решил сам» (13.10).
+ *  chain — после него открыть следующую развилку, если она ждёт (решение автора 13.10). */
+export type CallFlash = { id: number; call: Call; text: string; optionId: string; auto: boolean; chain: boolean };
 
 /** Окно результата после заказа с развилкой: раскрытие исхода (13.10; 10, раздел 3). */
 export type ResultCard = { id: number; taskNumber: number; pickerId: string; reveal: OutcomeReveal };
@@ -32,6 +33,7 @@ export type UiState = {
   toasts: Toast[];
   nextToastId: number;          // общий счётчик id для всплывашек, вспышек и окон результата
   callFlashes: CallFlash[];
+  openCallId: string | null;    // открыто окно развилки (по клику на «!»): мир на паузе
   results: ResultCard[];        // очередь окон результата: показывается первое
 };
 
@@ -54,6 +56,9 @@ type Store = {
   answerCall: (callId: string, optionId: string) => void;
   dismissToast: (id: number) => void;
   dismissFlash: (id: number) => void;
+  /** Клик по «!» над сборщиком — открыть окно развилки; закрыть — мир идёт дальше, таймер «!» тоже. */
+  openCall: (callId: string) => void;
+  closeCall: () => void;
   dismissResult: (id: number) => void;
   /** Вызывается каждый кадр из GameLoop: двигает игровое время. */
   tick: (realDt: number) => void;
@@ -66,7 +71,7 @@ const newSeed = () => Math.floor(Math.random() * 2 ** 32);
 
 export const useGameStore = create<Store>((set) => ({
   game: createInitialGame(WAREHOUSE_MAP, newSeed()),
-  ui: { assignTaskId: null, chosenPickerId: null, toasts: [], nextToastId: 1, callFlashes: [], results: [] },
+  ui: { assignTaskId: null, chosenPickerId: null, toasts: [], nextToastId: 1, callFlashes: [], openCallId: null, results: [] },
 
   openAssign: (taskId) => set((s) => ({ ui: { ...s.ui, assignTaskId: taskId, chosenPickerId: null } })),
   closeAssign: () => set((s) => ({ ui: { ...s.ui, assignTaskId: null, chosenPickerId: null } })),
@@ -91,15 +96,19 @@ export const useGameStore = create<Store>((set) => ({
       const call = s.game.calls.find((c) => c.id === callId);
       const game = answerCall(s.game, callId, optionId);
       if (!call || game === s.game) return s;
-      const flash: CallFlash = { id: s.ui.nextToastId, call, text: callText(s.game, call), optionId, auto: false };
-      return { game, ui: { ...s.ui, callFlashes: [...s.ui.callFlashes, flash], nextToastId: s.ui.nextToastId + 1 } };
+      const flash: CallFlash = { id: s.ui.nextToastId, call, text: callText(s.game, call), optionId, auto: false, chain: true };
+      return {
+        game,
+        ui: { ...s.ui, openCallId: null, callFlashes: [...s.ui.callFlashes, flash], nextToastId: s.ui.nextToastId + 1 },
+      };
     }),
   scanShelf: (address, productId) => set((s) => ({ game: scanShelf(s.game, WAREHOUSE_MAP, address, productId) })),
 
   tick: (realDt) =>
     set((s) => {
       // автопауза, пока открыто окно «Кого отправить?» (02, раздел 2)
-      const dt = worldDt(s.game.clock, realDt, s.ui.assignTaskId !== null);
+      // и пока открыто окно развилки (решение автора 13.10)
+      const dt = worldDt(s.game.clock, realDt, s.ui.assignTaskId !== null || s.ui.openCallId !== null);
       if (dt === 0) return s;
       const { state, events } = advanceWorld(s.game, WAREHOUSE_MAP, dt);
       if (events.length === 0) return { game: state };
@@ -110,7 +119,7 @@ export const useGameStore = create<Store>((set) => ({
       for (const e of events) {
         if (e.kind === 'callAnswered') {
           // таймер истёк — подсветить, что выбрал сборщик (текст — по прежнему состоянию, пока вызов был на экране)
-          flashes.push({ id: nextToastId++, call: e.call, text: callText(s.game, e.call), optionId: e.optionId, auto: true });
+          flashes.push({ id: nextToastId++, call: e.call, text: callText(s.game, e.call), optionId: e.optionId, auto: true, chain: false });
         } else if (e.reveal) {
           results.push({ id: nextToastId++, taskNumber: state.tasks[e.taskId].number, pickerId: e.pickerId, reveal: e.reveal });
         } else {
@@ -140,6 +149,18 @@ export const useGameStore = create<Store>((set) => ({
     set((s) => ({ game: { ...s.game, clock: { ...s.game.clock, playerSpeed: speed, paused: false } } })),
 
   dismissToast: (id) => set((s) => ({ ui: { ...s.ui, toasts: s.ui.toasts.filter((t) => t.id !== id) } })),
-  dismissFlash: (id) => set((s) => ({ ui: { ...s.ui, callFlashes: s.ui.callFlashes.filter((f) => f.id !== id) } })),
+  dismissFlash: (id) =>
+    set((s) => {
+      const flash = s.ui.callFlashes.find((f) => f.id === id);
+      const callFlashes = s.ui.callFlashes.filter((f) => f.id !== id);
+      // после вашего решения — следующая ждущая развилка, если есть (решение автора 13.10)
+      const next = flash?.chain && !s.ui.openCallId && !s.ui.assignTaskId ? s.game.calls.find((c) => c.expiresAt !== null) : undefined;
+      return { ui: { ...s.ui, callFlashes, openCallId: next ? next.id : s.ui.openCallId } };
+    }),
+  openCall: (callId) =>
+    set((s) => (s.game.calls.some((c) => c.id === callId && c.expiresAt !== null) && !s.ui.assignTaskId
+      ? { ui: { ...s.ui, openCallId: callId } }
+      : s)),
+  closeCall: () => set((s) => ({ ui: { ...s.ui, openCallId: null } })),
   dismissResult: (id) => set((s) => ({ ui: { ...s.ui, results: s.ui.results.filter((r) => r.id !== id) } })),
 }));

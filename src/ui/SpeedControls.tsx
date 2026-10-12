@@ -8,7 +8,7 @@ import Icon from './icons';
 
 export default function SpeedControls() {
   const clock = useGameStore((s) => s.game.clock);
-  const autopause = useGameStore((s) => s.ui.assignTaskId !== null);
+  const autopause = useGameStore((s) => s.ui.assignTaskId !== null || s.ui.openCallId !== null);
   const { togglePause, setPlayerSpeed } = useGameStore.getState();
   const slowed = useGameStore((s) => s.game.minigame !== null);
   const paused = clock.paused || autopause;

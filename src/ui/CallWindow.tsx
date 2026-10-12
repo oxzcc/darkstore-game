@@ -1,17 +1,17 @@
-// Развилки (docs/10-minigames-concept.md, раздел 3): окна-вызовы от сборщиков, столбиком справа.
-// Вызов: кто зовёт, ситуация, варианты (время, последствие, риск словом) и таймер; закрытые варианты — серые с требованием.
-// После ответа окно ~2 с показывает выбор: «Ваше решение» или «Лаки решил сам» (решение автора 13.10).
-// Мир не стоит; на паузе таймеры стоят. Клавиши 1 / 2 / 3 — ответ на верхний вызов.
+// Окно развилки (docs/10-minigames-concept.md, раздел 3; переделка по решению автора 13.10).
+// Сначала над сборщиком только красный «!» с таймером по контуру (scene/Pickers.tsx). Клик по нему — это окно по центру:
+// мир на паузе, таймера в окне нет. Варианты: время, последствие, риск словом; закрытые — серые с требованием.
+// Закрыть (× или Esc) — мир идёт дальше. После ответа окно ~1,5 с показывает выбор, потом открывается следующая ждущая развилка.
+// Клавиши 1 / 2 / 3 — ответ.
 import { useEffect, type CSSProperties, type ReactNode } from 'react';
-import { CALLS } from '../config/calls';
 import type { Picker } from '../model/picker';
 import { useGameStore } from '../store/gameStore';
-import { callsView, clockText, flashView, type CallOptionView } from '../store/selectors';
+import { callsView, flashView, type CallOptionView } from '../store/selectors';
 import { RISK_LOOK } from './labels';
 import { Avatar } from './PickerBits';
 import Vx from './Vx';
 
-const FLASH_MS = 2000;
+const FLASH_MS = 1500;
 const STAT_NAME = { accuracy: 'точность', speed: 'скорость' } as const;
 
 type CardProps = {
@@ -20,9 +20,10 @@ type CardProps = {
   text: string;
   options: CallOptionView[];
   // вызов ждёт ответа:
-  secondsLeft?: number;
   withKeys?: boolean;
   onAnswer?: (optionId: string) => void;
+  onClose?: () => void;
+  waiting?: number; // сколько ещё сборщиков ждут помощи
   // ответ уже есть:
   chosenId?: string;
   auto?: boolean;
@@ -46,13 +47,10 @@ function CallCard(p: CardProps) {
         <Avatar picker={p.picker} small />
         <div className="grow">
           <div className="call-who">{p.picker.name} · Сборка №{p.taskNumber}</div>
-          <div className="call-sub">{decided ? (p.auto ? `${p.picker.name} решил сам` : 'Ваше решение') : 'Зовёт диспетчера'}</div>
+          <div className="call-sub">{decided ? (p.auto ? `${p.picker.name} решил сам` : 'Ваше решение') : 'Нужна помощь'}</div>
         </div>
-        {!decided && <div className="call-time">{clockText(p.secondsLeft ?? 0)}</div>}
+        {p.onClose && <button className="call-close" title="Закрыть (Esc) — мир продолжит идти" onClick={p.onClose}>×</button>}
       </div>
-      {!decided && (
-        <div className="progress wide"><b style={{ width: `${((p.secondsLeft ?? 0) / CALLS.answerSeconds) * 100}%` }} /></div>
-      )}
       <div className="call-text">{p.text}</div>
       <div className="call-options">
         {p.options.map((o) => {
@@ -83,7 +81,12 @@ function CallCard(p: CardProps) {
           );
         })}
       </div>
-      {!decided && <div className="note">Не ответите — {p.picker.name} решит сам, и риск будет выше.</div>}
+      {!decided && (
+        <div className="note">
+          Мир на паузе. Закроете окно — {p.picker.name} подождёт, но если не решить вовремя, решит сам, и риск будет выше.
+          {p.waiting ? ` Ещё ждут помощи: ${p.waiting}.` : ''}
+        </div>
+      )}
     </Vx>
   );
 }
@@ -101,50 +104,54 @@ function Flash({ id, children }: { id: number; children: ReactNode }) {
 export default function CallWindow() {
   const game = useGameStore((s) => s.game);
   const flashes = useGameStore((s) => s.ui.callFlashes);
+  const openCallId = useGameStore((s) => s.ui.openCallId);
   const assignOpen = useGameStore((s) => s.ui.assignTaskId !== null);
-  const answer = useGameStore((s) => s.answerCall);
-  const { shown, queued } = callsView(game);
-  const top = shown[0];
+  const { answerCall: answer, closeCall } = useGameStore.getState();
+  const { shown } = callsView(game);
+  const open = shown.find((c) => c.id === openCallId);
 
   useEffect(() => {
-    if (!top || assignOpen) return;
-    const available = top.options.filter((o) => !o.locked);
+    if (!open || assignOpen) return;
+    const available = open.options.filter((o) => !o.locked);
     const onKey = (e: KeyboardEvent) => {
       if (e.repeat) return;
+      if (e.code === 'Escape') { closeCall(); return; }
       const n = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code);
-      if (n >= 0 && available[n]) answer(top.id, available[n].id);
+      if (n >= 0 && available[n]) answer(open.id, available[n].id);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [top, assignOpen, answer]);
+  }, [open, assignOpen, answer, closeCall]);
 
-  // окно назначения стоит на том же месте и ставит мир на паузу — вызовы подождут
-  if ((shown.length === 0 && flashes.length === 0) || assignOpen) return null;
+  // окно назначения тоже ставит мир на паузу — развилка подождёт
+  if (assignOpen) return null;
+  const flash = flashes[0];
+  const fv = flash ? flashView(game, flash) : null;
 
   return (
-    <div className={`calls${game.minigame ? ' beside-tsd' : ''}`}>
-      {flashes.map((f) => {
-        const v = flashView(game, f);
-        if (!v.picker) return null;
-        return (
-          <Flash key={`f${f.id}`} id={f.id}>
-            <CallCard picker={v.picker} taskNumber={v.taskNumber} text={v.text} options={v.options} chosenId={v.chosenId} auto={v.auto} />
+    <>
+      {fv?.picker && (
+        <div className="call-center">
+          <Flash key={`f${fv.id}`} id={fv.id}>
+            <CallCard picker={fv.picker} taskNumber={fv.taskNumber} text={fv.text} options={fv.options} chosenId={fv.chosenId} auto={fv.auto} />
           </Flash>
-        );
-      })}
-      {shown.map((c, i) => (
-        <CallCard
-          key={c.id}
-          picker={c.picker}
-          taskNumber={c.taskNumber}
-          text={c.text}
-          options={c.options}
-          secondsLeft={c.secondsLeft}
-          withKeys={i === 0}
-          onAnswer={(optionId) => answer(c.id, optionId)}
-        />
-      ))}
-      {queued > 0 && <Vx className="call-queue">Ещё вызовов в очереди: {queued}</Vx>}
-    </div>
+        </div>
+      )}
+      {!fv && open && (
+        <div className="call-center">
+          <CallCard
+            key={open.id}
+            picker={open.picker}
+            taskNumber={open.taskNumber}
+            text={open.text}
+            options={open.options}
+            withKeys
+            onAnswer={(optionId) => answer(open.id, optionId)}
+            onClose={closeCall}
+            waiting={shown.length - 1}
+          />
+        </div>
+      )}
+    </>
   );
 }

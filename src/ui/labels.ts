@@ -16,7 +16,7 @@ export const PICKER_STATE_NAME: Record<PickerState, string> = {
   idle: 'Свободен',
   walking: 'Идёт',
   waiting: 'Ждёт решения',
-  calling: 'Зовёт диспетчера',
+  calling: 'Нужна помощь',
   working: 'Работает',
   playing: 'Играете за него',
   resting: 'Отдыхает',
