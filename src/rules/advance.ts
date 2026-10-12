@@ -123,9 +123,11 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
 
     // личная «Сборка»: сборщик дошёл до выбранного стеллажа — камера подлетает (06, раздел 2.3).
     // Задание при этом не заканчивается: его закончит сама мини-игра.
+    // Именно «дошёл за этот шаг»: если он уже стоял у стеллажа, а игрок нажал «Назад к складу», камеру не возвращаем.
     if (minigame?.pickerId === id) {
       const job = p.job!;
-      if (minigame.focus && !minigame.atFocus && job.steps.length > 0 && job.stepIndex >= job.steps.length) {
+      const wasWalking = before.job!.stepIndex < before.job!.steps.length;
+      if (minigame.focus && !minigame.atFocus && wasWalking && job.stepIndex >= job.steps.length) {
         minigame = { ...minigame, atFocus: true };
       }
       pickers[id] = p;

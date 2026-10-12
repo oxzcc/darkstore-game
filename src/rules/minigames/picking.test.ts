@@ -71,6 +71,8 @@ describe('«Сборка»: выбор стеллажа и ходьба (M5e1)',
     expect(chooseRack(there, map, 2, 2)).toBe(there);
     const back = leaveRack(there);
     expect(back.minigame?.atFocus).toBe(false);
+    // сборщик стоит у стеллажа, но камера не возвращается к нему сама
+    expect(advanceWorld(back, map, 0.5).state.minigame?.atFocus).toBe(false);
     expect(back.minigame?.focus).toEqual({ aisle: 1, rack: 1 });
     expect(chooseRack(back, map, 2, 2).minigame?.focus).toEqual({ aisle: 2, rack: 2 });
   });
