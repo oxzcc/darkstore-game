@@ -35,6 +35,19 @@ export function actualQtyAt(stock: Stock, address: Address, productId?: string):
     .reduce((sum, r) => sum + r.actualQty, 0);
 }
 
+/** Что реально видно на полке: товары и их фактическое количество (партии одного товара складываются).
+ *  Это показывает сцена и вид стеллажа в мини-игре — реальность, а не учёт (06, раздел 15). */
+export function shelfContents(stock: Stock, address: Address): { productId: string; qty: number }[] {
+  const out: { productId: string; qty: number }[] = [];
+  for (const r of recordsAt(stock, address)) {
+    if (r.actualQty <= 0) continue;
+    const same = out.find((o) => o.productId === r.productId);
+    if (same) same.qty += r.actualQty;
+    else out.push({ productId: r.productId, qty: r.actualQty });
+  }
+  return out;
+}
+
 /** Какой товар лежит на полке (по учёту или по факту). На одной полке — один вид товара (07, раздел 5.3). */
 export function productOnShelf(stock: Stock, address: Address): string | null {
   const rec = recordsAt(stock, address).find((r) => r.bookQty > 0 || r.actualQty > 0);

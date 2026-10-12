@@ -8,6 +8,9 @@ import { canAssign } from '../rules/tasks/lifecycle';
 import { formatAddress } from '../rules/address';
 import { etaToTask, pickerActivity } from '../rules/jobs';
 import { tsdOfferSecondsLeft } from '../rules/tsd';
+import { shelfContents } from '../rules/stock';
+import type { Address } from '../model/address';
+import type { Stock } from '../model/stock';
 import { WAREHOUSE_MAP } from './gameStore';
 
 /** Открытые задания по порядку появления. */
@@ -93,4 +96,21 @@ export function panelTaskList(tasks: GameState['tasks']): Task[] {
   return Object.values(tasks)
     .filter((t) => t.status !== 'done' && t.status !== 'expired')
     .sort((a, b) => a.number - b.number);
+}
+
+/** Все непустые полки и что на них ФАКТИЧЕСКИ лежит — для отрисовки товара на сцене (06, раздел 15). */
+export function goodsOnShelves(stock: Stock): { address: Address; contents: { productId: string; qty: number }[] }[] {
+  const seen = new Map<string, Address>();
+  for (const r of Object.values(stock)) if (r.actualQty > 0) seen.set(formatAddress(r.address), r.address);
+  return [...seen.values()].map((address) => ({ address, contents: shelfContents(stock, address) }));
+}
+
+/** Карточка товара внизу экрана у стеллажа (M5d): по какой полке кликнули и что на ней видно. */
+export function inspectedShelf(minigame: GameState['minigame'], stock: Stock, products: GameState['products']) {
+  const at = minigame?.atFocus ? minigame.inspected : null;
+  if (!at) return null;
+  const items = shelfContents(stock, at)
+    .filter((c) => products[c.productId])
+    .map((c) => ({ ...c, product: products[c.productId] }));
+  return { address: formatAddress(at), items };
 }

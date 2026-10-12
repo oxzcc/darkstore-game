@@ -1,4 +1,5 @@
-// 3D-сцена: камера (CameraRig: изометрия и вид «глазами сборщика»), склад, сборщики и выбор стеллажа в мини-игре.
+// 3D-сцена: камера (CameraRig: изометрия и вид «глазами сборщика»), склад, сборщики,
+// выбор стеллажа в мини-игре (RackPicking) и клик по товару у стеллажа (RackCloseup).
 // Сцена только рисует карту, которую ей передали.
 import { Canvas } from '@react-three/fiber';
 import type { WarehouseMap } from '../model/warehouse';
@@ -8,6 +9,7 @@ import Warehouse from './Warehouse';
 import Pickers from './Pickers';
 import CameraRig from './CameraRig';
 import RackPicking from './RackPicking';
+import RackCloseup from './RackCloseup';
 
 type Props = { map: WarehouseMap; stock: Stock };
 
@@ -28,6 +30,7 @@ export default function Scene({ map, stock }: Props) {
       <Warehouse map={map} stock={stock} />
       <Pickers />
       <RackPicking map={map} />
+      <RackCloseup map={map} />
     </Canvas>
   );
 }
