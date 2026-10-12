@@ -220,3 +220,20 @@ svg.i.sm { width: 18px; height: 18px; }
 .closeup-place > .vx-edge > .vx-body { display: flex; align-items: center; gap: 10px; padding: 6px 16px 6px 8px; height: 100%; }
 .closeup-title { font-weight: 700; font-size: 18px; text-transform: uppercase; letter-spacing: 0.03em; }
 .closeup-sub { font-size: 13px; color: var(--text-mute); }
+
+/* ---------- M5d: карточка товара внизу экрана у стеллажа ---------- */
+.shelf-card { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; gap: 10px; }
+.shelf-card .vx { --cut: 8px; animation: pop 0.2s ease-out; }
+.shelf-card-hint > .vx-edge > .vx-body { padding: 10px 18px; font-size: 16px; }
+.shelf-card-item > .vx-edge > .vx-body { display: flex; align-items: center; gap: 14px; padding: 10px 18px 10px 12px; min-width: 300px; }
+.shelf-card-item .note { text-align: left; margin-top: 4px; }
+.shelf-card-name { font-weight: 700; font-size: 20px; text-transform: uppercase; letter-spacing: 0.03em; }
+.shelf-card-sub { font-size: 14px; color: var(--text-mute); margin-top: 2px; }
+.shelf-card .tag { display: inline-block; padding: 0 6px; background: var(--tag); color: #fff; font-weight: 700; letter-spacing: 0.04em; }
+/* образец цвета товара, пока нет воксельных иконок (08, раздел 9): основной цвет и полоса детали */
+.shelf-card .swatch { flex: none; width: 44px; height: 44px; background: linear-gradient(var(--sw) 0 62%, var(--sw2) 62% 78%, var(--sw) 78%);
+  outline: var(--edge) solid var(--outline); }
+
+/* этикетка адреса на лицевом краю полки (08, раздел 7) */
+.shelf-label { pointer-events: none; white-space: nowrap; padding: 1px 6px; background: var(--tag); color: #fff;
+  font-family: 'X5 Sans', system-ui, sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.04em; }

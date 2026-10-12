@@ -8,6 +8,7 @@ import AssignDialog from './ui/AssignDialog';
 import Toasts from './ui/Toasts';
 import TsdOffer from './ui/TsdOffer';
 import TsdHint from './ui/TsdHint';
+import ShelfCard from './ui/ShelfCard';
 import SpeedControls from './ui/SpeedControls';
 import './ui/theme.css';
 
@@ -25,6 +26,7 @@ export default function App() {
         <AssignDialog />
         <TsdOffer />
         <TsdHint />
+        <ShelfCard />
         <SpeedControls />
         <Toasts />
       </div>

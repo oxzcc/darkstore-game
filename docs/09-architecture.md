@@ -611,7 +611,7 @@ assign: (taskId, pickerId) =>
 | M4 | `app/GameLoop.tsx`, `rules/warehouse.ts` (путь), `rules/advance.ts`, движение в `scene/Pickers.tsx` |
 | M5b | `rules/tsd.ts`, `tsdOffer` в `GameState`, `ui/TsdOffer.tsx`, замедление мира в `rules/time.ts` |
 | M5c | `scene/CameraRig.tsx` (перелёт к стеллажу и обратно), подсветка стеллажа |
-| M5d | разные товары на полках, `scene/RackCloseup.tsx` с кликом по товару |
+| M5d | `look` у товаров в `config/products.ts`, `scene/models/ProductItem.ts`, `scene/VoxelBatch.tsx`, `scene/shelfLayout.ts`, `scene/RackCloseup.tsx` (этикетки, клик по товару), `shelfContents` и `inspectShelf` в rules, `ui/ShelfCard.tsx` |
 | M5e | `model/minigame.ts`, `rules/minigames/picking.ts`, `minigames/types.ts`, `TsdFrame.tsx`, `minigames/picking/`, `ui/TsdPanel.tsx` |
 | M6 | `resultFromMinigame`, `applyTaskResult`, рейтинг и деньги в `TopBar` |
 | M7 | остальные мини-игры, полные `effects` для всех типов |

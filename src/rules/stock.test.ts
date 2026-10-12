@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Stock } from '../model/stock';
 import { parseAddress } from './address';
 import {
-  actualQtyAt, addStock, batchId, bookQtyAt, canPlace, hasDiscrepancy, productOnShelf, removeStock,
+  actualQtyAt, addStock, batchId, bookQtyAt, canPlace, hasDiscrepancy, productOnShelf, removeStock, shelfContents,
 } from './stock';
 
 const A = parseAddress('1.1.1');
@@ -64,5 +64,14 @@ describe('остатки', () => {
     expect(canPlace(s, 'milk', A)).toBe(true);
     expect(canPlace(s, 'bread', A)).toBe(false);
     expect(canPlace(s, 'bread', B)).toBe(true);
+  });
+
+  it('что видно на полке: факт, партии одного товара складываются, пустые не показываются', () => {
+    let s: Stock = {};
+    s = addStock(s, milk, { book: 3, actual: 3 });
+    s = addStock(s, { ...milk, expiresAtShift: 6 }, { book: 2, actual: 4 });
+    s = addStock(s, { ...milk, address: B }, { book: 5, actual: 0 }); // только в учёте
+    expect(shelfContents(s, A)).toEqual([{ productId: 'milk', qty: 7 }]);
+    expect(shelfContents(s, B)).toEqual([]);
   });
 });
