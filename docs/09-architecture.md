@@ -400,6 +400,10 @@ export type TaskResult = {
 
 ## 6. Мини-игры
 
+> **Обновлено 12.10** (`10-minigames-concept.md`): мини-игры — головоломки на экране ТСД во весь экран, а для всех заданий добавляются **развилки**. Контракт ниже (сессия в store, шаги — чистые функции в `rules`, экраны в `minigames/` только через props, результат → исход в `rules`) остаётся; меняется содержимое сессии. Выбор стеллажа на сцене, перелёт камеры и скан у полки (6.2–6.4) выключены флагом `MINIGAMES.shelfPicking` в `config` (по умолчанию `false`), код остаётся.
+>
+> Развилка (план N1): `GameState.calls` — список висящих вызовов `{ id, taskId, pickerId, situationId, options, expiresAt }`; `rules/calls.ts` — бросок развилки во время работы сборщика (`advanceWorld`), ответ игрока (`answerCall`) и ответ сборщика по истечении таймера; ситуации и варианты — данные в `config/calls.ts`. Риск варианта игрок видит словом, шансы считает `rules`.
+
 Мини-игра идёт прямо на складе (`06-minigames.md`, разделы 2–3): игрок кликает стеллаж в 3D-сцене, сборщик идёт к нему, камера подлетает, игрок кликает товар на полке, а список и кнопки — на панели ТСД. Поэтому мини-игра — **не один компонент**, а связка из четырёх слоёв вокруг одной **сессии** в store.
 
 ### 6.1 Предложение «Взять ТСД»
@@ -613,9 +617,11 @@ assign: (taskId, pickerId) =>
 | M5c | `scene/CameraRig.tsx` (перелёт к стеллажу и обратно), подсветка стеллажа |
 | M5d | `look` у товаров в `config/products.ts`, `scene/models/ProductItem.ts`, `scene/VoxelBatch.tsx`, `scene/shelfLayout.ts`, `scene/RackCloseup.tsx` (этикетки, клик по товару), `shelfContents` и `inspectShelf` в rules, `ui/ShelfCard.tsx` |
 | M5e1 | сессия в `model/minigame.ts` (`actions`, `errors`, `lastScan`, `elapsed`), `chooseRack` с ходьбой и `scanShelf` в `rules/minigames/picking.ts`, `minigames/picking/PickingTsd.tsx`, `ui/TsdPanel.tsx` |
-| M5e2 | `undoOne`, `markNotFound`, `finishPicking`, `MinigameResult`, исход по ошибкам |
+| N1 | развилки: `GameState.calls`, `rules/calls.ts`, `config/calls.ts`, `ui/CallWindow.tsx` (окно-вызов и очередь) |
+| N2 | терминал ТСД во весь экран (`ui/TsdTerminal.tsx` по `PDT.png`), «Маршрут» (`rules/minigames/route.ts`, `minigames/route/`), проигрывание маршрута сборщиком, `MinigameResult` и исход по порогам; флаг `MINIGAMES.shelfPicking` выключает M5c–M5e1 |
+| N3 | мир ×0,5 во время головоломки, развилки у других сборщиков, пока игрок занят |
 | M6 | `resultFromMinigame`, `applyTaskResult`, рейтинг и деньги в `TopBar` |
-| M7 | остальные мини-игры, полные `effects` для всех типов |
+| M7 | «Сверка», «Память», «Сортировка», развилки для всех типов заданий, полные `effects` |
 | M8 | `rules/shift.ts`, `rules/pickers.ts` (опыт, усталость), `ui/ShiftSummary.tsx`, генератор по весам, `store/persist.ts` (сохранение) |
 | M9 | ассеты, звук, полировка, публикация |
 
@@ -632,4 +638,4 @@ assign: (taskId, pickerId) =>
 - Тесты — Vitest.
 - Игра сохраняется в браузере (`localStorage` через `persist` из Zustand).
 - Личную мини-игру прервать нельзя, передумать в пользу «пусть работает» тоже нельзя.
-- ТСД выпадает с шансом; мини-игра идёт на складе через сессию в store (раздел 6); стеллажи в «Сборке» — в любом порядке.
+- ТСД выпадает с шансом; мини-игра — головоломка на терминале ТСД через сессию в store (раздел 6; `10-minigames-concept.md`, решение 12.10); основной слой — развилки.
