@@ -23,10 +23,17 @@ function runUntil(s: GameState, done: (s: GameState) => boolean, limitSec = 600)
   return { s, events };
 }
 
+/** Отправить без развилки: здесь проверяется ходьба и работа, развилки — в calls.test.ts. */
+function dispatch(g: GameState, m: typeof map, taskId: string, pickerId: string): GameState {
+  const s = dispatchTask(g, m, taskId, pickerId);
+  const p = s.pickers[pickerId];
+  return { ...s, pickers: { ...s.pickers, [pickerId]: { ...p, job: p.job && { ...p.job, call: undefined } } } };
+}
+
 const started = (seed = 1, pickerId = 'lucky') => {
   const g = createInitialGame(map, seed);
   const task = openTasks(g)[0];
-  return { s: dispatchTask(g, map, task.id, pickerId), taskId: task.id };
+  return { s: dispatch(g, map, task.id, pickerId), taskId: task.id };
 };
 
 describe('время', () => {
@@ -94,7 +101,7 @@ describe('выполнение задания', () => {
     const g = createInitialGame(map, 9);
     const task = openTasks(g)[0];
     const timeFor = (pickerId: string) => {
-      const s = dispatchTask(g, map, task.id, pickerId);
+      const s = dispatch(g, map, task.id, pickerId);
       return runUntil(s, (x) => x.tasks[task.id].status === 'done').s.clock.time;
     };
     expect(timeFor('korzh') < timeFor('buran')).toBe(true);
@@ -106,7 +113,7 @@ describe('выполнение задания', () => {
     if (task.type !== 'order') throw new Error('ожидался заказ');
     const eta = etaToTask(map, g.pickers.lucky, task)!;
     expect(etaToTask(map, g.pickers.korzh, task)! < etaToTask(map, g.pickers.buran, task)!).toBe(true);
-    const s = dispatchTask(g, map, task.id, 'lucky');
+    const s = dispatch(g, map, task.id, 'lucky');
     const arrived = runUntil(s, (x) => x.pickers.lucky.state === 'working').s;
     expect(Math.abs(arrived.clock.time - eta) <= 0.1 + 1e-9).toBe(true);
   });
@@ -121,7 +128,7 @@ describe('выполнение задания', () => {
   it('сборщики не встают друг в друга: на фасовке у каждого своё место', () => {
     for (const seed of [1, 2, 3, 4, 5]) {
       let s = createInitialGame(map, seed);
-      for (const pid of ['lucky', 'korzh', 'buran']) s = dispatchTask(s, map, openTasks(s)[0].id, pid);
+      for (const pid of ['lucky', 'korzh', 'buran']) s = dispatch(s, map, openTasks(s)[0].id, pid);
       const allIdle = (x: GameState) => Object.values(x.pickers).every((p) => p.state === 'idle');
       s = runUntil(s, allIdle).s;
       expect(allIdle(s)).toBe(true);
@@ -132,7 +139,7 @@ describe('выполнение задания', () => {
 
   it('пока работают, двое не стоят в одной клетке', () => {
     let s = createInitialGame(map, 11);
-    for (const pid of ['lucky', 'korzh', 'buran']) s = dispatchTask(s, map, openTasks(s)[0].id, pid);
+    for (const pid of ['lucky', 'korzh', 'buran']) s = dispatch(s, map, openTasks(s)[0].id, pid);
     for (let t = 0; t < 300; t += 0.1) {
       s = advanceWorld(s, map, 0.1).state;
       const standing = Object.values(s.pickers).filter((p) => p.path.length === 0);

@@ -9,6 +9,7 @@ import { secondsPerCell } from './time';
 import { createRng } from './random';
 import { outcomeChances, rollOutcome } from './outcome';
 import { declineTsd, worldSpeed, worldSpeedFor } from './tsd';
+import { applyCalls, expireCalls, raiseCall, showQueuedCalls } from './calls';
 
 /** Перейти к следующему шагу работы. Состояние сборщика — по виду шага. */
 function nextStep(p: Picker): Picker {
@@ -54,6 +55,12 @@ function advancePicker(map: WarehouseMap, blocked: Set<string>, picker: Picker, 
     const job = p.job;
     const step = job.steps[job.stepIndex];
     if (!step) break; // все шаги пройдены — завершение задания делает advanceWorld
+
+    // развилка: дошёл до позиции, на которой запланирован вызов, — останавливается и зовёт диспетчера (10, раздел 3)
+    if (job.call && !job.call.raised && job.stepIndex === job.call.stepIndex) {
+      p = { ...p, state: 'calling', job: { ...job, call: { ...job.call, raised: true } } };
+      break;
+    }
 
     if (step.kind === 'walk') {
       if (p.path.length === 0) {
@@ -101,6 +108,7 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
   const blocked = blockedCells(map);
   const rng = createRng(state.rngSeed);
   const events: ShiftEvent[] = [];
+  const newCallers: string[] = []; // кто за этот шаг остановился на развилке
   const pickers = { ...state.pickers };
   // сколько идёт личная сборка — в темпе своего сборщика (×1), а не замедленного мира
   let minigame = state.minigame ? { ...state.minigame, elapsed: state.minigame.elapsed + dt } : null;
@@ -113,6 +121,7 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
     const before = pickers[id];
     if (!before.job) continue;
     if (before.state === 'waiting') continue; // висит «Взять ТСД?» — стоит и ждёт ответа
+    if (before.state === 'calling') continue; // висит развилка — стоит и ждёт ответа диспетчера
     const taken = new Set(Object.values(pickers).filter((o) => o.id !== id).map((o) => key(claimedCell(o))));
     let p = advancePicker(map, blocked, before, dt * worldSpeedFor(state, id), taken);
     if (before.state === 'playing') p = { ...p, state: 'playing' }; // пока идёт мини-игра — «играете за него»
@@ -135,12 +144,14 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
     }
 
     if (isJobDone(p) && task) {
-      const outcome = rollOutcome(outcomeChances(p, task), rng);
+      // исход по характеристикам, потом — осложнения от ответов в развилках (10, раздел 3)
+      const outcome = applyCalls(rollOutcome(outcomeChances(p, task), rng), task.callLog, rng);
       setTask(task.id, { status: 'done', outcome });
       events.push({ kind: 'taskDone', taskId: task.id, pickerId: p.id, outcome, at: time });
       p = { ...p, state: 'idle', taskId: null, job: null, path: [], pathProgress: 0 };
     }
     pickers[id] = p;
+    if (p.state === 'calling') newCallers.push(id); // уже звавшие сюда не попадают — их пропускает continue выше
   }
 
   let next: GameState = {
@@ -154,6 +165,10 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
   };
   // игрок не ответил на «Взять ТСД?» вовремя — сборщик работает сам
   if (next.tsdOffer && time >= next.tsdOffer.expiresAt) next = declineTsd(next);
+
+  // развилки: новые вызовы в очередь, первые на экране получают таймер, просроченные решает сборщик
+  for (const id of newCallers) next = raiseCall(next, id);
+  next = expireCalls(showQueuedCalls(next));
 
   return { state: next, events };
 }

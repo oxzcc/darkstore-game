@@ -8,6 +8,7 @@ import { buildWarehouseMap } from '../rules/warehouse';
 import { createInitialGame } from '../rules/game';
 import { acceptTsd, declineTsd, sendPicker } from '../rules/tsd';
 import { chooseRack, leaveRack, scanShelf } from '../rules/minigames/picking';
+import { answerCall } from '../rules/calls';
 import type { Address } from '../model/address';
 import { advanceWorld } from '../rules/advance';
 import { worldDt } from '../rules/time';
@@ -40,6 +41,8 @@ type Store = {
   leaveRack: () => void;
   /** Клик по товару на полке у стеллажа — скан одной штуки (06, раздел 5). */
   scanShelf: (address: Address, productId: string) => void;
+  /** Ответ на развилку: вариант optionId вызова callId (10, раздел 3). */
+  answerCall: (callId: string, optionId: string) => void;
   dismissToast: (id: number) => void;
   /** Вызывается каждый кадр из GameLoop: двигает игровое время. */
   tick: (realDt: number) => void;
@@ -72,6 +75,7 @@ export const useGameStore = create<Store>((set) => ({
   declineTsd: () => set((s) => ({ game: declineTsd(s.game) })),
   chooseRack: (aisle, rack) => set((s) => ({ game: chooseRack(s.game, WAREHOUSE_MAP, aisle, rack) })),
   leaveRack: () => set((s) => ({ game: leaveRack(s.game) })),
+  answerCall: (callId, optionId) => set((s) => ({ game: answerCall(s.game, callId, optionId) })),
   scanShelf: (address, productId) => set((s) => ({ game: scanShelf(s.game, WAREHOUSE_MAP, address, productId) })),
 
   tick: (realDt) =>

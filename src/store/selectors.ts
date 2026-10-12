@@ -10,6 +10,8 @@ import { etaToTask, pickerActivity } from '../rules/jobs';
 import { tsdOfferSecondsLeft } from '../rules/tsd';
 import { shelfContents } from '../rules/stock';
 import { takenPerLine } from '../rules/minigames/picking';
+import { callText } from '../rules/calls';
+import { CALLS, SITUATION_BY_ID } from '../config/calls';
 import type { Address } from '../model/address';
 import type { Stock } from '../model/stock';
 import { WAREHOUSE_MAP } from './gameStore';
@@ -136,3 +138,24 @@ export function pickingView(game: GameState) {
 }
 
 export type PickingView = NonNullable<ReturnType<typeof pickingView>>;
+
+// ---------- Развилки (N1) ----------
+
+/** Вызовы на экране: первые CALLS.maxVisible, с текстом, вариантами и временем. Риск — только словом (решение автора). */
+export function callsView(game: GameState) {
+  const visible = game.calls.filter((c) => c.expiresAt !== null).slice(0, CALLS.maxVisible);
+  const shown = visible.map((c) => {
+    const picker = game.pickers[c.pickerId];
+    const task = game.tasks[c.taskId];
+    const situation = SITUATION_BY_ID[c.situationId];
+    return {
+      id: c.id,
+      picker,
+      taskNumber: task?.number ?? 0,
+      text: callText(game, c),
+      secondsLeft: Math.max(0, (c.expiresAt ?? 0) - game.clock.time),
+      options: situation.options.filter((o) => c.optionIds.includes(o.id)),
+    };
+  });
+  return { shown, queued: game.calls.length - shown.length };
+}

@@ -16,7 +16,15 @@ export const PICKER_STATE_NAME: Record<PickerState, string> = {
   idle: 'Свободен',
   walking: 'Идёт',
   waiting: 'Ждёт решения',
+  calling: 'Зовёт диспетчера',
   working: 'Работает',
   playing: 'Играете за него',
   resting: 'Отдыхает',
+};
+
+/** Риск варианта в развилке — только словом и числом делений (решение автора 12.10, 10, раздел 3). */
+export const RISK_LOOK: Record<'low' | 'medium' | 'high', { name: string; bars: number }> = {
+  low: { name: 'низкий', bars: 1 },
+  medium: { name: 'средний', bars: 2 },
+  high: { name: 'высокий', bars: 3 },
 };

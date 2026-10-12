@@ -8,6 +8,8 @@ import { useGameStore, WAREHOUSE_MAP } from '../store/gameStore';
 import { cellToWorld } from '../rules/warehouse';
 import PickerModel from './models/Picker';
 import { blocksCloseup } from './closeupView';
+import { Html } from '@react-three/drei';
+import type { CSSProperties } from 'react';
 
 const HOP_HEIGHT = 0.06;  // высота подскока при ходьбе
 const HOPS_PER_CELL = 2;  // два шажка на клетку
@@ -76,6 +78,10 @@ export default function Pickers() {
           <group key={p.id}>
             {p.path.length > 0 && <Route p={p} from={pos} />}
             <PickerModel position={pos} facing={lastFacing.get(p.id) ?? Math.PI / 4} hop={hop} fur={furOf(p.id)} ringColor={p.color} />
+            {/* зовёт диспетчера (развилка) — «!» над головой в цвете сборщика */}
+            {p.state === 'calling' && (
+              <Html position={[pos[0], 2.1, pos[2]]} center className="call-bang" style={{ '--pc': p.color } as CSSProperties}>!</Html>
+            )}
           </group>
         );
       })}

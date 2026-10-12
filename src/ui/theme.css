@@ -272,3 +272,35 @@ svg.i.sm { width: 18px; height: 18px; }
 .tsd-msg.warn { background: #FFF1DC; color: #B86A00; }
 .tsd-msg.bad { background: #FCE6E5; color: #C4262A; }
 .tsd-msg.mute { color: var(--text-mute); }
+
+/* ---------- N1: развилки — окна-вызовы справа (10, раздел 3) ---------- */
+.calls { position: absolute; right: 16px; top: 88px; width: 420px; display: flex; flex-direction: column; gap: 12px;
+  max-height: calc(100% - 104px); overflow-y: auto; }
+.calls.beside-tsd { right: 392px; } /* во время мини-игры справа стоит панель ТСД */
+.call { --cut: 10px; animation: pop 0.25s ease-out; }
+.call > .vx-edge { background: var(--pc); padding: 3px; } /* рамка в цвете сборщика: видно, кто зовёт */
+.call > .vx-edge > .vx-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.call-head { display: flex; align-items: center; gap: 10px; }
+.call-who { font-weight: 700; font-size: 16px; }
+.call-sub { font-size: 13px; color: var(--text-mute); }
+.call-time { font-weight: 700; font-size: 22px; font-variant-numeric: tabular-nums; }
+.call-text { font-size: 17px; font-weight: 500; line-height: 1.3; }
+.call-options { display: flex; flex-direction: column; gap: 6px; }
+.call-option { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; text-align: left; cursor: pointer;
+  font-family: inherit; color: var(--text); background: #fff; border: 2px solid var(--outline); }
+.call-option:hover { border-color: var(--pc); background: var(--card); }
+.call-key { flex: none; width: 24px; height: 24px; display: grid; place-items: center; background: var(--tag); color: #fff;
+  font-weight: 700; font-size: 14px; }
+.call-label { display: block; font-weight: 700; font-size: 15px; }
+.call-note { display: block; font-size: 13px; color: var(--text-mute); margin-top: 2px; }
+/* риск — деления и слово, без процентов (решение автора 12.10); цвета исходов не используем — они зарезервированы */
+.risk { flex: none; display: flex; align-items: center; gap: 2px; }
+.risk i { width: 6px; height: 14px; background: var(--track); }
+.risk i.on { background: var(--tag); }
+.risk em { font-style: normal; font-size: 12px; color: var(--text-mute); margin-left: 6px; min-width: 52px; }
+.call .note { margin-top: 0; text-align: left; }
+.call-queue > .vx-edge > .vx-body { padding: 8px 14px; font-size: 14px; text-align: center; }
+
+/* «!» над сборщиком, который зовёт диспетчера */
+.call-bang { pointer-events: none; width: 26px; height: 26px; display: grid; place-items: center; background: var(--pc); color: #fff;
+  font-family: 'X5 Sans', system-ui, sans-serif; font-weight: 700; font-size: 18px; outline: 2.5px solid #fff; animation: pop 0.25s ease-out; }

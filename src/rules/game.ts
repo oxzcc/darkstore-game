@@ -25,6 +25,7 @@ export function createInitialGame(map: WarehouseMap, seed: number): GameState {
     pickers: createPickers(STARTING_PICKERS, map),
     tsdOffer: null,
     minigame: null,
+    calls: [],
     shiftLog: [],
   };
   const rng = createRng(seed);

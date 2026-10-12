@@ -11,6 +11,7 @@ import Toasts from './ui/Toasts';
 import TsdOffer from './ui/TsdOffer';
 import TsdHint from './ui/TsdHint';
 import TsdPanel from './ui/TsdPanel';
+import CallWindow from './ui/CallWindow';
 import SpeedControls from './ui/SpeedControls';
 import './ui/theme.css';
 
@@ -32,6 +33,7 @@ export default function App() {
         <TsdOffer />
         <TsdHint />
         <TsdPanel />
+        <CallWindow />
         <SpeedControls />
         <Toasts />
       </div>

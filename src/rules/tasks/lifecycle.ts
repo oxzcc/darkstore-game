@@ -4,6 +4,7 @@ import type { GameState } from '../../model/game';
 import type { WarehouseMap } from '../../model/warehouse';
 import { createRng } from '../random';
 import { buildOrderJob } from '../jobs';
+import { planCall } from '../calls';
 import { topUpOrders } from './generator';
 
 export type AssignCheck = { ok: true } | { ok: false; reason: string };
@@ -23,7 +24,7 @@ export function canAssign(state: GameState, taskId: string, pickerId: string): A
  * «Отправить»: назначить сборщика и поручить ему задание.
  * Назначение окончательное — отменить или передать нельзя (02, раздел 5).
  * Сборщик получает маршрут и сразу начинает идти; очередь заказов дополняется.
- * M4: дойдя, сборщик работает сам (выбор «лично или поручить» — M5).
+ * Дойдя, сборщик работает сам; с шансом по пути случится развилка (N1).
  */
 export function dispatchTask(state: GameState, map: WarehouseMap, taskId: string, pickerId: string): GameState {
   const check = canAssign(state, taskId, pickerId);
@@ -31,9 +32,13 @@ export function dispatchTask(state: GameState, map: WarehouseMap, taskId: string
   const task = state.tasks[taskId];
   if (task.type !== 'order') throw new Error('Пока поддерживаются только заказы на сборку');
   const picker = state.pickers[pickerId];
+  // развилка планируется сразу при отправке (10, раздел 3); при «Взять ТСД» работа заменится и развилки не будет
+  const callRng = createRng(state.rngSeed);
+  const job = planCall(buildOrderJob(map, picker, task), task, callRng);
 
   let next: GameState = {
     ...state,
+    rngSeed: callRng.seed(),
     tasks: {
       ...state.tasks,
       [taskId]: { ...task, status: 'pickerEnRoute', assignedPickerId: pickerId, mode: 'delegated' },
@@ -44,7 +49,7 @@ export function dispatchTask(state: GameState, map: WarehouseMap, taskId: string
         ...picker,
         state: 'walking',
         taskId,
-        job: buildOrderJob(map, picker, task),
+        job,
         path: [],
         pathProgress: 0,
       },
