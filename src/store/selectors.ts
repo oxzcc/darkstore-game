@@ -9,6 +9,7 @@ import { formatAddress } from '../rules/address';
 import { etaToTask, pickerActivity } from '../rules/jobs';
 import { tsdOfferSecondsLeft } from '../rules/tsd';
 import { shelfContents } from '../rules/stock';
+import { takenPerLine } from '../rules/minigames/picking';
 import type { Address } from '../model/address';
 import type { Stock } from '../model/stock';
 import { WAREHOUSE_MAP } from './gameStore';
@@ -105,12 +106,33 @@ export function goodsOnShelves(stock: Stock): { address: Address; contents: { pr
   return [...seen.values()].map((address) => ({ address, contents: shelfContents(stock, address) }));
 }
 
-/** Карточка товара внизу экрана у стеллажа (M5d): по какой полке кликнули и что на ней видно. */
-export function inspectedShelf(minigame: GameState['minigame'], stock: Stock, products: GameState['products']) {
-  const at = minigame?.atFocus ? minigame.inspected : null;
-  if (!at) return null;
-  const items = shelfContents(stock, at)
-    .filter((c) => products[c.productId])
-    .map((c) => ({ ...c, product: products[c.productId] }));
-  return { address: formatAddress(at), items };
+/** Что видно на экране ТСД в «Сборке» (06, раздел 5): позиции заказа и сколько взято. Тексты собирает экран. */
+export function pickingView(game: GameState) {
+  const session = game.minigame;
+  if (!session) return null;
+  const task = game.tasks[session.taskId];
+  const picker = game.pickers[session.pickerId];
+  if (task?.type !== 'order' || !picker) return null;
+  const taken = takenPerLine(session, task.payload.lines.length);
+  const lines = task.payload.lines.map((l, i) => {
+    const product = game.products[l.productId];
+    return { index: i, name: product?.name ?? l.productId, look: product?.look ?? null,
+      address: formatAddress(l.address), qty: l.qty, taken: taken[i] };
+  });
+  const scan = session.lastScan;
+  return {
+    number: task.number,
+    summary: orderSummary(task),
+    picker: { name: picker.name, color: picker.color },
+    elapsed: session.elapsed,
+    lines,
+    lastScan: scan && {
+      ...scan,
+      name: game.products[scan.productId]?.name ?? scan.productId,
+      address: formatAddress(scan.address),
+      line: scan.lineIndex !== null ? lines[scan.lineIndex] : null,
+    },
+  };
 }
+
+export type PickingView = NonNullable<ReturnType<typeof pickingView>>;

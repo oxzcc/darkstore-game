@@ -58,9 +58,9 @@ export function declineTsd(state: GameState): GameState {
 }
 
 /**
- * «Взять ТСД»: начинается личная мини-игра. Отменить её уже нельзя (06, раздел 13).
- * M5b: заглушка — сборщик выполняет задание сам, но остальной мир замедлен (advanceWorld),
- * а исход пока бросается так же, как без игрока. Настоящая «Сборка» — M5e.
+ * «Взять ТСД»: начинается личная мини-игра «Сборка». Отменить её уже нельзя (06, раздел 13).
+ * Сборщик бросает свой маршрут и стоит, пока игрок не выберет стеллаж (rules/minigames/picking.ts).
+ * Остальной мир замедлен (advanceWorld).
  */
 export function acceptTsd(state: GameState): GameState {
   const offer = state.tsdOffer;
@@ -70,9 +70,18 @@ export function acceptTsd(state: GameState): GameState {
   return {
     ...state,
     tsdOffer: null,
-    minigame: { taskId: task.id, pickerId: picker.id, startedAt: state.clock.time, focus: null, atFocus: false, inspected: null },
+    minigame: {
+      taskId: task.id, pickerId: picker.id, startedAt: state.clock.time, elapsed: 0,
+      focus: null, atFocus: false, actions: [], errors: [], lastScan: null,
+    },
     tasks: { ...state.tasks, [task.id]: { ...task, status: 'pickerEnRoute', mode: 'personal' } },
-    pickers: { ...state.pickers, [picker.id]: { ...picker, state: 'playing' } },
+    pickers: {
+      ...state.pickers,
+      [picker.id]: {
+        ...picker, state: 'playing', path: [], pathProgress: 0,
+        job: { taskId: task.id, steps: [], stepIndex: 0, stepElapsed: 0 }, // шагов нет: ждёт, куда отправит игрок
+      },
+    },
   };
 }
 

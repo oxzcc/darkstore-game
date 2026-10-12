@@ -31,8 +31,10 @@ type Pose = { target: Vector3; dir: Vector3; dist: number; fovDeg: number; inset
 const rad = (deg: number) => (deg * Math.PI) / 180;
 
 /** Общий вид: весь склад «в изометрии» (узкий угол издалека). */
-function homePose(map: WarehouseMap, size: Size): Pose {
-  const ins = WAREHOUSE_VIEW.screenInsets;
+function homePose(map: WarehouseMap, size: Size, panel: number): Pose {
+  // panel — 0…1: насколько выдвинута панель ТСД справа (склад сдвигается влево, чтобы она его не закрывала)
+  const base = WAREHOUSE_VIEW.screenInsets;
+  const ins = { ...base, right: lerp(base.right, WAREHOUSE_VIEW.tsdPanelInset, panel) };
   const freeW = Math.max(100, size.width - ins.left - ins.right);
   const freeH = Math.max(100, size.height - ins.top - ins.bottom);
   const diag = (map.width + map.depth) / Math.SQRT2;
@@ -114,6 +116,8 @@ export default function CameraRig({ map }: { map: WarehouseMap }) {
   const size = useThree((s) => s.size);
   const scene = useThree((s) => s.scene);
   const focus = useGameStore((s) => (s.game.minigame?.atFocus ? s.game.minigame.focus : null));
+  const session = useGameStore((s) => s.game.minigame !== null);
+  const panel = useRef(0); // плавно 0 → 1, когда появляется панель ТСД
 
   const progress = useRef(0);                 // 0 — дом, 1 — у стеллажа
   const lastRack = useRef<Rack | null>(null); // к какому стеллажу летим (и от какого возвращаемся)
@@ -126,7 +130,8 @@ export default function CameraRig({ map }: { map: WarehouseMap }) {
     progress.current = rack ? Math.min(1, progress.current + step) : Math.max(0, progress.current - step);
     const t = smooth(progress.current);
 
-    const home = homePose(map, size);
+    panel.current = session ? Math.min(1, panel.current + step) : Math.max(0, panel.current - step);
+    const home = homePose(map, size, smooth(panel.current));
     const close = lastRack.current ? closePose(lastRack.current) : null;
     const pose = close && progress.current > 0 ? mix(home, close, t) : home;
     apply(camera, pose, size);

@@ -1,12 +1,13 @@
-// Вид стеллажа вблизи во время мини-игры (06, раздел 2.3; M5d): этикетки полок «3.2.1»,
-// наведение на товар — светлая рамка, клик — действие store (inspectShelf), выбранный товар — зелёная рамка.
-// Сцена ничего не решает: можно ли кликнуть, проверяет rules; что лежит на полке — из фактических остатков.
+// Вид стеллажа вблизи во время мини-игры (06, раздел 2.3): этикетки полок «3.2.1»,
+// наведение на товар — светлая рамка, клик — скан одной штуки (действие store scanShelf, M5e1).
+// Сцена ничего не решает: можно ли сканировать, проверяет rules; что лежит на полке — фактические остатки
+// минус уже взятое в сессии (их передаёт App).
 import { useEffect, useMemo, useState } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import type { Rack, WarehouseMap } from '../model/warehouse';
+import type { Stock } from '../model/stock';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
-import { PALETTE } from '../config/palette';
 import { useGameStore } from '../store/gameStore';
 import { addressText, goodsOnShelves } from '../store/selectors';
 import { rackFrontSign, rackLocalToWorld, rackRotY, rackWidth, shelfY } from './rackGeometry';
@@ -38,14 +39,12 @@ function ItemFrame({ x0, x1, y, z, color }: { x0: number; x1: number; y: number;
   );
 }
 
-export default function RackCloseup({ map }: { map: WarehouseMap }) {
-  const session = useGameStore((s) => s.game.minigame);
-  const stock = useGameStore((s) => s.game.stock);
+export default function RackCloseup({ map, stock }: { map: WarehouseMap; stock: Stock }) {
+  const focus = useGameStore((s) => (s.game.minigame?.atFocus ? s.game.minigame.focus : null));
   const paused = useGameStore((s) => s.game.clock.paused);
-  const inspectShelf = useGameStore((s) => s.inspectShelf);
+  const scanShelf = useGameStore((s) => s.scanShelf);
   const [hover, setHover] = useState<string | null>(null);
 
-  const focus = session?.atFocus ? session.focus : null;
   const rack: Rack | undefined = focus ? map.racks.find((r) => r.aisle === focus.aisle && r.rack === focus.rack) : undefined;
 
   // товар на полках этого стеллажа — по фактическим остаткам
@@ -63,7 +62,7 @@ export default function RackCloseup({ map }: { map: WarehouseMap }) {
     document.body.style.cursor = '';
   }, [rack]);
 
-  if (!session || !rack) return null;
+  if (!rack) return null;
 
   const setCursor = (c: string) => { document.body.style.cursor = c; };
   const rot = rackRotY(rack);
@@ -71,7 +70,6 @@ export default function RackCloseup({ map }: { map: WarehouseMap }) {
   const w = rackWidth(rack.cells.length);
   const d = WAREHOUSE_VIEW.rackDepth;
   const frontSign = rackFrontSign(rack);
-  const inspected = session.inspected;
   const keyOf = (shelf: number, g: ShelfGroup) => `${shelf}:${g.productId}`;
 
   return (
@@ -92,7 +90,6 @@ export default function RackCloseup({ map }: { map: WarehouseMap }) {
       {shelves.map(({ address, layout }) =>
         layout.groups.map((g) => {
           const key = keyOf(address.shelf, g);
-          const isInspected = inspected?.shelf === address.shelf;
           const isHover = hover === key && !paused;
           const frameZ = layout.front * (d / 2 + 0.02);
           return (
@@ -102,13 +99,12 @@ export default function RackCloseup({ map }: { map: WarehouseMap }) {
                 position={[(g.x0 + g.x1) / 2, layout.y + ITEM_HEIGHT / 2, 0]}
                 onPointerOver={(e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); setHover(key); setCursor('pointer'); }}
                 onPointerOut={() => { setHover((k) => (k === key ? null : k)); setCursor(''); }}
-                onClick={(e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); inspectShelf(address); }}
+                onClick={(e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); scanShelf(address, g.productId); }}
               >
                 <boxGeometry args={[g.x1 - g.x0, ITEM_HEIGHT, d]} />
                 <meshBasicMaterial transparent opacity={0} depthWrite={false} />
               </mesh>
-              {isInspected && <ItemFrame x0={g.x0} x1={g.x1} y={layout.y} z={frameZ} color={PALETTE.primary} />}
-              {isHover && !isInspected && <ItemFrame x0={g.x0} x1={g.x1} y={layout.y} z={frameZ} color={HOVER_COLOR} />}
+              {isHover && <ItemFrame x0={g.x0} x1={g.x1} y={layout.y} z={frameZ} color={HOVER_COLOR} />}
             </group>
           );
         }),
