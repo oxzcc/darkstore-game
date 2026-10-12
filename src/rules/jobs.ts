@@ -18,9 +18,16 @@ export function buildOrderJob(map: WarehouseMap, picker: Picker, task: OrderTask
     steps.push({ kind: 'walk', to: spots[0], spots, label: `к ${formatAddress(line.address)}` });
     steps.push({ kind: 'pick', lineIndex: i, seconds: pickSeconds(picker) });
   });
-  steps.push({ kind: 'walk', to: zoneAccess(map, 'packing'), spots: zoneCells(map, 'packing'), label: 'на фасовку' });
-  steps.push({ kind: 'pack', seconds: packSeconds() });
+  steps.push(...packSteps(map));
   return { taskId: task.id, steps, stepIndex: 0, stepElapsed: 0 };
+}
+
+/** Последние шаги заказа: отнести в зону фасовки и расфасовать. Общие для сборщика и для личной «Сборки». */
+export function packSteps(map: WarehouseMap): PickerJob['steps'] {
+  return [
+    { kind: 'walk', to: zoneAccess(map, 'packing'), spots: zoneCells(map, 'packing'), label: 'на фасовку' },
+    { kind: 'pack', seconds: packSeconds() },
+  ];
 }
 
 /** Время до первой точки задания (ближайшего места у стеллажа) из того места, где сборщик стоит. null — дойти нельзя. */
@@ -39,6 +46,7 @@ export function pickerActivity(game: GameState, pickerId: string): PickerActivit
   const p = game.pickers[pickerId];
   const job = p?.job;
   const step = job?.steps[job.stepIndex];
+  if (p?.state === 'playing' && job && !step) return { kind: 'atRack' };
   if (!p || !job || !step) return { kind: 'idle' };
   if (p.state === 'waiting' && game.tsdOffer?.pickerId === p.id) {
     return { kind: 'waitingTsd', secondsLeft: Math.max(0, game.tsdOffer.expiresAt - game.clock.time) };

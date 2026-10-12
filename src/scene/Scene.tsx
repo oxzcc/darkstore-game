@@ -30,7 +30,7 @@ export default function Scene({ map, stock }: Props) {
       <Warehouse map={map} stock={stock} />
       <Pickers />
       <RackPicking map={map} />
-      <RackCloseup map={map} />
+      <RackCloseup map={map} stock={stock} />
     </Canvas>
   );
 }

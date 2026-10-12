@@ -612,7 +612,8 @@ assign: (taskId, pickerId) =>
 | M5b | `rules/tsd.ts`, `tsdOffer` в `GameState`, `ui/TsdOffer.tsx`, замедление мира в `rules/time.ts` |
 | M5c | `scene/CameraRig.tsx` (перелёт к стеллажу и обратно), подсветка стеллажа |
 | M5d | `look` у товаров в `config/products.ts`, `scene/models/ProductItem.ts`, `scene/VoxelBatch.tsx`, `scene/shelfLayout.ts`, `scene/RackCloseup.tsx` (этикетки, клик по товару), `shelfContents` и `inspectShelf` в rules, `ui/ShelfCard.tsx` |
-| M5e | `model/minigame.ts`, `rules/minigames/picking.ts`, `minigames/types.ts`, `TsdFrame.tsx`, `minigames/picking/`, `ui/TsdPanel.tsx` |
+| M5e1 | сессия в `model/minigame.ts` (`actions`, `errors`, `lastScan`, `elapsed`), `chooseRack` с ходьбой и `scanShelf` в `rules/minigames/picking.ts`, `minigames/picking/PickingTsd.tsx`, `ui/TsdPanel.tsx` |
+| M5e2 | `undoOne`, `markNotFound`, `finishPicking`, `MinigameResult`, исход по ошибкам |
 | M6 | `resultFromMinigame`, `applyTaskResult`, рейтинг и деньги в `TopBar` |
 | M7 | остальные мини-игры, полные `effects` для всех типов |
 | M8 | `rules/shift.ts`, `rules/pickers.ts` (опыт, усталость), `ui/ShiftSummary.tsx`, генератор по весам, `store/persist.ts` (сохранение) |

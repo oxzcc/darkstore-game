@@ -10,6 +10,8 @@ import { advanceWorld } from './advance';
 import { pickerActivity } from './jobs';
 import { createRng } from './random';
 import { acceptTsd, declineTsd, rollTsdOffer, sendPicker, tsdOfferSecondsLeft } from './tsd';
+import { chooseRack } from './minigames/picking';
+import { secondsPerCell } from './time';
 
 const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
 
@@ -94,7 +96,7 @@ describe('шанс «Взять ТСД»', () => {
   });
 });
 
-describe('личная мини-игра (заглушка M5b)', () => {
+describe('личная мини-игра', () => {
   it('«Взять ТСД» — начинается мини-игра, сборщик «играете за него»', () => {
     const { s, taskId } = sent(1);
     const a = acceptTsd(s);
@@ -107,17 +109,16 @@ describe('личная мини-игра (заглушка M5b)', () => {
   });
 
   it('остальной мир замедлен, свой сборщик и часы — как задумано', () => {
-    // Лаки и Коржик отправлены без ТСД, сравниваем их ход с ТСД у Лаки и без
+    // Лаки и Коржик отправлены без ТСД, сравниваем ход Коржика с ТСД у Лаки и без
     const g = createInitialGame(map, 1);
     const [t1, t2] = openTasks(g);
     const both = dispatchTask(dispatchTask(g, map, t1.id, 'lucky'), map, t2.id, 'korzh');
     const normal = run(both, 2);
-    const withGame = run(
-      acceptTsd(rollTsdOffer(both, t1.id, createRng(1), 1)),
-      2,
-    );
-    // свой сборщик прошёл столько же
-    expect(moved(withGame, 'lucky')).toBeCloseTo(moved(normal, 'lucky'), 5);
+    // у Лаки ТСД: игрок отправил его к дальнему стеллажу
+    const playing = chooseRack(acceptTsd(rollTsdOffer(both, t1.id, createRng(1), 1)), map, 4, 6);
+    const withGame = run(playing, 2);
+    // свой сборщик идёт в обычном темпе: за 2 секунды — 2 / (секунд на клетку) клеток
+    expect(withGame.pickers.lucky.pathProgress).toBeCloseTo(2 / secondsPerCell(withGame.pickers.lucky), 5);
     // чужой — в TSD.worldSpeedDuringGame раз меньше
     expect(moved(withGame, 'korzh')).toBeCloseTo(moved(normal, 'korzh') * TSD.worldSpeedDuringGame, 5);
     // часы смены идут медленно
@@ -125,17 +126,14 @@ describe('личная мини-игра (заглушка M5b)', () => {
     expect(normal.clock.time).toBeCloseTo(2, 5);
   });
 
-  it('пока идёт мини-игра, новых предложений нет; после задания мини-игра заканчивается', () => {
+  it('пока идёт мини-игра, новых предложений нет, а само задание без игрока не заканчивается', () => {
     const { s, taskId } = sent(1);
     const a = acceptTsd(s);
     const other = openTasks(a)[0];
     const b = rollTsdOffer(dispatchTask(a, map, other.id, 'korzh'), other.id, createRng(2), 1);
     expect(b.tsdOffer).toBe(null);
-
-    let x = b;
-    for (let i = 0; i < 6000 && x.tasks[taskId].status !== 'done'; i++) x = advanceWorld(x, map, 0.1).state;
-    expect(x.tasks[taskId].status).toBe('done');
-    expect(x.minigame).toBe(null);
-    expect(x.pickers.lucky.state).toBe('idle');
+    const later = run(b, 60, 0.5);
+    expect(later.tasks[taskId].status).not.toBe('done');
+    expect(later.minigame?.taskId).toBe(taskId);
   });
 });

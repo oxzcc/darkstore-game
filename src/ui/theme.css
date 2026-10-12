@@ -221,20 +221,54 @@ svg.i.sm { width: 18px; height: 18px; }
 .closeup-title { font-weight: 700; font-size: 18px; text-transform: uppercase; letter-spacing: 0.03em; }
 .closeup-sub { font-size: 13px; color: var(--text-mute); }
 
-/* ---------- M5d: карточка товара внизу экрана у стеллажа ---------- */
-.shelf-card { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; gap: 10px; }
-.shelf-card .vx { --cut: 8px; animation: pop 0.2s ease-out; }
-.shelf-card-hint > .vx-edge > .vx-body { padding: 10px 18px; font-size: 16px; }
-.shelf-card-item > .vx-edge > .vx-body { display: flex; align-items: center; gap: 14px; padding: 10px 18px 10px 12px; min-width: 300px; }
-.shelf-card-item .note { text-align: left; margin-top: 4px; }
-.shelf-card-name { font-weight: 700; font-size: 20px; text-transform: uppercase; letter-spacing: 0.03em; }
-.shelf-card-sub { font-size: 14px; color: var(--text-mute); margin-top: 2px; }
-/* общий .tag — блок высотой 24px; в строке текста он съезжал вниз, поэтому здесь обычная строчная плашка */
-.shelf-card .tag { display: inline; height: auto; padding: 1px 6px; background: var(--tag); color: #fff; font-weight: 700; letter-spacing: 0.04em; }
-/* образец цвета товара, пока нет воксельных иконок (08, раздел 9): основной цвет и полоса детали */
-.shelf-card .swatch { flex: none; width: 44px; height: 44px; background: linear-gradient(var(--sw) 0 62%, var(--sw2) 62% 78%, var(--sw) 78%);
-  outline: var(--edge) solid var(--outline); }
-
+/* ---------- M5d ---------- */
 /* этикетка адреса на лицевом краю полки (08, раздел 7) */
 .shelf-label { pointer-events: none; white-space: nowrap; padding: 1px 6px; background: var(--tag); color: #fff;
   font-family: 'X5 Sans', system-ui, sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.04em; }
+
+/* ---------- M5e1: панель ТСД справа (структура — скриншот автора 12.10: приложение сборщика) ---------- */
+.tsd-panel { position: absolute; right: 16px; top: 88px; bottom: 16px; width: 360px; --cut: 10px; animation: pop 0.25s ease-out; }
+.tsd-panel > .vx-edge > .vx-body { height: 100%; padding: 0; }
+.tsd { display: flex; flex-direction: column; height: 100%; }
+
+.tsd-head { padding: 12px 16px 8px; text-align: center; }
+.tsd-head-title { font-size: 15px; color: var(--text-mute); }
+.tsd-head-time { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+
+.tsd-tabs { display: flex; border-bottom: 2px solid var(--divider); }
+.tsd-tabs button { flex: 1; height: 44px; border: 0; background: none; cursor: pointer; font-family: inherit;
+  font-size: 17px; color: var(--text-mute); display: flex; align-items: center; justify-content: center; gap: 6px;
+  border-bottom: 4px solid transparent; margin-bottom: -2px; }
+.tsd-tabs button.on { color: var(--text); font-weight: 700; border-bottom-color: var(--primary); }
+.tsd-badge { min-width: 22px; height: 22px; padding: 0 6px; display: inline-grid; place-items: center;
+  background: var(--primary); color: #fff; font-size: 13px; font-weight: 700; }
+
+.tsd-scroll { flex: 1; overflow-y: auto; }
+.tsd-info { padding: 12px 16px; border-bottom: 8px solid var(--divider); }
+.tsd-info-row { display: flex; justify-content: space-between; align-items: baseline; }
+.tsd-order-no { font-size: 22px; font-weight: 700; }
+.tsd-units { font-size: 15px; font-weight: 700; color: var(--text-mute); }
+.tsd-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tsd-chip { padding: 3px 10px; background: var(--track); font-size: 13px; font-weight: 500; }
+.tsd-chip.picker { background: var(--pc); color: #fff; font-weight: 700; }
+
+.tsd-group { border-bottom: 1px solid var(--divider); }
+.tsd-addr { padding: 10px 16px 6px; font-weight: 700; font-size: 16px; letter-spacing: 0.04em; font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid var(--divider); }
+.tsd-line { display: flex; gap: 12px; align-items: center; padding: 10px 16px; }
+.tsd-line .swatch { flex: none; width: 44px; height: 44px; background: linear-gradient(var(--sw) 0 62%, var(--sw2) 62% 78%, var(--sw) 78%);
+  outline: var(--edge) solid var(--outline); }
+.tsd-line-name { font-size: 16px; margin-bottom: 6px; }
+.tsd-qty { display: inline-block; padding: 3px 10px; background: var(--track); font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
+.tsd-qty.part { background: #FFE9C7; }
+.tsd-qty.full { background: var(--perfect); color: #fff; }
+.tsd-qty.over { background: var(--errors); color: #fff; }
+.tsd-empty { padding: 24px 16px; text-align: center; color: var(--text-mute); font-size: 15px; }
+
+/* ответ ТСД на скан — внизу экрана */
+.tsd-msg { padding: 12px 16px; font-size: 15px; font-weight: 700; text-align: center; border-top: 2px solid var(--divider); animation: pop 0.2s ease-out; }
+.tsd-msg.idle { font-weight: 400; color: var(--text-mute); animation: none; }
+.tsd-msg.ok { background: #EEF8E2; color: var(--primary); }
+.tsd-msg.warn { background: #FFF1DC; color: #B86A00; }
+.tsd-msg.bad { background: #FCE6E5; color: #C4262A; }
+.tsd-msg.mute { color: var(--text-mute); }

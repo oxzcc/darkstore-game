@@ -7,7 +7,7 @@ import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { buildWarehouseMap } from '../rules/warehouse';
 import { createInitialGame } from '../rules/game';
 import { acceptTsd, declineTsd, sendPicker } from '../rules/tsd';
-import { chooseRack, inspectShelf, leaveRack } from '../rules/minigames/picking';
+import { chooseRack, leaveRack, scanShelf } from '../rules/minigames/picking';
 import type { Address } from '../model/address';
 import { advanceWorld } from '../rules/advance';
 import { worldDt } from '../rules/time';
@@ -38,8 +38,8 @@ type Store = {
   /** Мини-игра: клик по стеллажу на сцене и «Назад к складу» (06, раздел 2). */
   chooseRack: (aisle: number, rack: number) => void;
   leaveRack: () => void;
-  /** Клик по товару на полке у стеллажа (M5d: карточка товара; в M5e — скан). */
-  inspectShelf: (address: Address) => void;
+  /** Клик по товару на полке у стеллажа — скан одной штуки (06, раздел 5). */
+  scanShelf: (address: Address, productId: string) => void;
   dismissToast: (id: number) => void;
   /** Вызывается каждый кадр из GameLoop: двигает игровое время. */
   tick: (realDt: number) => void;
@@ -72,7 +72,7 @@ export const useGameStore = create<Store>((set) => ({
   declineTsd: () => set((s) => ({ game: declineTsd(s.game) })),
   chooseRack: (aisle, rack) => set((s) => ({ game: chooseRack(s.game, WAREHOUSE_MAP, aisle, rack) })),
   leaveRack: () => set((s) => ({ game: leaveRack(s.game) })),
-  inspectShelf: (address) => set((s) => ({ game: inspectShelf(s.game, WAREHOUSE_MAP, address) })),
+  scanShelf: (address, productId) => set((s) => ({ game: scanShelf(s.game, WAREHOUSE_MAP, address, productId) })),
 
   tick: (realDt) =>
     set((s) => {

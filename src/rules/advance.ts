@@ -102,7 +102,8 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
   const rng = createRng(state.rngSeed);
   const events: ShiftEvent[] = [];
   const pickers = { ...state.pickers };
-  let minigame = state.minigame;
+  // сколько идёт личная сборка — в темпе своего сборщика (×1), а не замедленного мира
+  let minigame = state.minigame ? { ...state.minigame, elapsed: state.minigame.elapsed + dt } : null;
   let tasks = state.tasks;
   const setTask = (id: string, patch: Partial<GameState['tasks'][string]>) => {
     tasks = { ...tasks, [id]: { ...tasks[id], ...patch } as GameState['tasks'][string] };
@@ -120,12 +121,24 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
     // первый отрезок пути пройден — сборщик на месте, задание «выполняется»
     if (task && task.status === 'pickerEnRoute' && p.job!.stepIndex > 0) setTask(task.id, { status: 'inProgress' });
 
+    // личная «Сборка»: сборщик дошёл до выбранного стеллажа — камера подлетает (06, раздел 2.3).
+    // Задание при этом не заканчивается: его закончит сама мини-игра.
+    // Именно «дошёл за этот шаг»: если он уже стоял у стеллажа, а игрок нажал «Назад к складу», камеру не возвращаем.
+    if (minigame?.pickerId === id) {
+      const job = p.job!;
+      const wasWalking = before.job!.stepIndex < before.job!.steps.length;
+      if (minigame.focus && !minigame.atFocus && wasWalking && job.stepIndex >= job.steps.length) {
+        minigame = { ...minigame, atFocus: true };
+      }
+      pickers[id] = p;
+      continue;
+    }
+
     if (isJobDone(p) && task) {
       const outcome = rollOutcome(outcomeChances(p, task), rng);
       setTask(task.id, { status: 'done', outcome });
       events.push({ kind: 'taskDone', taskId: task.id, pickerId: p.id, outcome, at: time });
       p = { ...p, state: 'idle', taskId: null, job: null, path: [], pathProgress: 0 };
-      if (minigame?.taskId === task.id) minigame = null; // мини-игра закончилась вместе с заданием
     }
     pickers[id] = p;
   }
