@@ -46,6 +46,7 @@ export function pickerActivity(game: GameState, pickerId: string): PickerActivit
   const p = game.pickers[pickerId];
   const job = p?.job;
   const step = job?.steps[job.stepIndex];
+  if (p && game.tsdGame?.pickerId === p.id) return { kind: 'tsdGame' };
   if (p?.state === 'playing' && job && !step) return { kind: 'atRack' };
   if (!p || !job || !step) return { kind: 'idle' };
   if (p.state === 'waiting' && game.tsdOffer?.pickerId === p.id) {

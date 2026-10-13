@@ -13,6 +13,7 @@ import { TSD } from '../config/balance';
 import { PALETTE } from '../config/palette';
 import { useGameStore } from '../store/gameStore';
 import { closeupEye, closeupLook } from './closeupView';
+import { closeupFocus } from '../store/selectors';
 
 const ISO_ELEVATION = Math.atan(1 / Math.SQRT2); // ≈35,26° — классическая изометрия
 const SCREEN_FILL = 0.95;                         // доля свободного места, которую занимает склад в общем виде
@@ -115,8 +116,8 @@ export default function CameraRig({ map }: { map: WarehouseMap }) {
   const camera = useThree((s) => s.camera) as PerspectiveCamera;
   const size = useThree((s) => s.size);
   const scene = useThree((s) => s.scene);
-  const focus = useGameStore((s) => (s.game.minigame?.atFocus ? s.game.minigame.focus : null));
-  const session = useGameStore((s) => s.game.minigame !== null);
+  const focus = useGameStore((s) => closeupFocus(s.game));
+  const session = useGameStore((s) => s.game.minigame !== null || s.game.tsdGame !== null);
   const panel = useRef(0); // плавно 0 → 1, когда появляется панель ТСД
 
   const progress = useRef(0);                 // 0 — дом, 1 — у стеллажа

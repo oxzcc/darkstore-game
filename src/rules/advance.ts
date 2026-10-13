@@ -10,6 +10,7 @@ import { createRng } from './random';
 import { outcomeAt, outcomeChances } from './outcome';
 import { declineTsd, worldSpeed, worldSpeedFor } from './tsd';
 import { expireCalls, raiseCall, revealCalls, showQueuedCalls } from './calls';
+import { tickTsdGame } from './tsdGame';
 
 /** Перейти к следующему шагу работы. Состояние сборщика — по виду шага. */
 function nextStep(p: Picker): Picker {
@@ -122,6 +123,7 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
     if (!before.job) continue;
     if (before.state === 'waiting') continue; // висит «Взять ТСД?» — стоит и ждёт ответа
     if (before.state === 'calling') continue; // висит развилка — стоит и ждёт ответа диспетчера
+    if (state.tsdGame?.pickerId === id) continue; // игрок играет за него на ТСД — стоит у полки (10, раздел 11)
     const taken = new Set(Object.values(pickers).filter((o) => o.id !== id).map((o) => key(claimedCell(o))));
     let p = advancePicker(map, blocked, before, dt * worldSpeedFor(state, id), taken);
     if (before.state === 'playing') p = { ...p, state: 'playing' }; // пока идёт мини-игра — «играете за него»
@@ -166,7 +168,7 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
     if (p.state === 'calling') newCallers.push(id); // уже звавшие сюда не попадают — их пропускает continue выше
   }
 
-  let next: GameState = {
+  let next: GameState = tickTsdGame({
     ...state,
     clock: { ...state.clock, time },
     rngSeed: rng.seed(),
@@ -174,7 +176,7 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
     tasks,
     minigame,
     shiftLog: events.length ? [...state.shiftLog, ...events] : state.shiftLog,
-  };
+  }, dt); // игра на ТСД идёт в обычном темпе, а не замедленного мира
   // игрок не ответил на «Взять ТСД?» вовремя — сборщик работает сам
   if (next.tsdOffer && time >= next.tsdOffer.expiresAt) next = declineTsd(next);
 

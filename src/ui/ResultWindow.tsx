@@ -48,7 +48,7 @@ export default function ResultWindow() {
         <div className="outcome-chips">
           <span className="call-sub">{v.auto ? `${v.picker.name} решил сам:` : 'Вы решили:'}</span>
           <span className="chip pick">{v.optionLabel}</span>
-          <span className={`chip ${v.worked ? 'ok' : 'bad'}`}>{v.worked ? 'Сработало' : 'Не сработало'}</span>
+          <span className={`chip ${v.worked ? 'ok' : 'bad'}`}>{v.verdict in OUTCOME_LOOK ? OUTCOME_LOOK[v.verdict as keyof typeof OUTCOME_LOOK].name : v.verdict}</span>
         </div>
         <div className="outcome-title">{v.title}</div>
         <div className="outcome-text">{v.text}</div>

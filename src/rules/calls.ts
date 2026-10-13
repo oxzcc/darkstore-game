@@ -5,7 +5,8 @@ import type { GameState } from '../model/game';
 import type { Call, CallAnswer, CallReveal, RiskLevel } from '../model/call';
 import type { Picker, PickerJob } from '../model/picker';
 import type { Outcome, Task } from '../model/task';
-import { CALLS, SITUATION_BY_ID, SITUATIONS, type CallOption, type Situation } from '../config/calls';
+import { CALLS, SITUATION_BY_ID, SITUATIONS, TSD_GAMES_READY, TSD_OPTION_ID, type CallOption, type Situation } from '../config/calls';
+import { startTsdGame } from './tsdGame';
 import { formatAddress } from './address';
 import type { Rng } from './random';
 import { createRng } from './random';
@@ -24,13 +25,19 @@ export function raiseRisk(r: RiskLevel): RiskLevel {
  */
 export function planCall(job: PickerJob, task: Task, rng: Rng, chance = CALLS.chance): PickerJob {
   if (task.type !== 'order' || rng.next() >= chance) return job;
-  const situations = SITUATIONS.filter((s) => s.taskType === task.type);
+  // для проверки (CALLS.forceTsd) — только ситуации с готовой игрой на ТСД
+  const situations = SITUATIONS.filter((s) => s.taskType === task.type && (!CALLS.forceTsd || hasReadyGame(s)));
   const picks = job.steps.map((s, i) => ({ s, i })).filter(({ s }) => s.kind === 'pick');
   if (situations.length === 0 || picks.length === 0) return job;
   const situation = situations[Math.floor(rng.next() * situations.length)];
   const { s, i } = picks[Math.floor(rng.next() * picks.length)];
   const lineIndex = s.kind === 'pick' ? s.lineIndex : 0;
   return { ...job, call: { stepIndex: i, lineIndex, situationId: situation.id, raised: false } };
+}
+
+/** У ситуации есть игра на ТСД, и она уже сделана. */
+function hasReadyGame(s: Situation): boolean {
+  return !!s.tsdGame && TSD_GAMES_READY.includes(s.tsdGame);
 }
 
 /** Какие варианты ситуации есть у этого сборщика (часть открывают характеристики). */
@@ -52,6 +59,8 @@ export function raiseCall(state: GameState, pickerId: string): GameState {
     RISK_ORDER.indexOf(a.risk) - RISK_ORDER.indexOf(b.risk) || a.seconds - b.seconds)[0];
   const careful = rng.next() < picker.stats.accuracy / 10;
   const auto = careful ? safest : options[Math.floor(rng.next() * options.length)];
+  // вариант «Взять ТСД» — с шансом, у ситуаций с готовой игрой (10, раздел 11.1); сборщик сам его не выбирает
+  const tsd = hasReadyGame(situation) && (CALLS.forceTsd || rng.next() < CALLS.tsdChance) ? situation.tsdGame! : null;
   const call: Call = {
     id: `call-${state.nextId}`,
     taskId: picker.job!.taskId,
@@ -61,6 +70,7 @@ export function raiseCall(state: GameState, pickerId: string): GameState {
     optionIds: options.map((o) => o.id),
     autoOptionId: auto.id,
     expiresAt: null,
+    tsd,
   };
   return { ...state, rngSeed: rng.seed(), nextId: state.nextId + 1, calls: [...state.calls, call] };
 }
@@ -114,7 +124,9 @@ function resolve(state: GameState, call: Call, option: CallOption, auto: boolean
 /** Игрок выбрал вариант. Принимается только у вызова на экране (не в очереди) и только из доступных вариантов. */
 export function answerCall(state: GameState, callId: string, optionId: string): GameState {
   const call = state.calls.find((c) => c.id === callId);
-  if (!call || call.expiresAt === null || !call.optionIds.includes(optionId)) return state;
+  if (!call || call.expiresAt === null) return state;
+  if (optionId === TSD_OPTION_ID) return startTsdGame(state, callId); // игрок берёт ТСД: игра у стеллажа (rules/tsdGame.ts)
+  if (!call.optionIds.includes(optionId)) return state;
   const option = SITUATION_BY_ID[call.situationId]?.options.find((o) => o.id === optionId);
   if (!option) return state;
   return resolve(state, call, option, false);
@@ -146,6 +158,12 @@ export function revealCalls(outcome: Outcome, log: CallAnswer[] | undefined, rng
   let idx = OUTCOME_ORDER.indexOf(outcome);
   const calls: CallReveal[] = [];
   for (const a of log ?? []) {
+    if (a.tsd) {
+      // игрок взял ТСД: броска нет, итог игры сразу двигает исход (10, раздел 11.4): с ошибками — на ступень, провал — на две
+      idx = Math.min(OUTCOME_ORDER.length - 1, idx + OUTCOME_ORDER.indexOf(a.tsd));
+      calls.push({ ...a, chance: 0, roll: 1, complication: a.tsd !== 'perfect', capped: false, after: OUTCOME_ORDER[idx] });
+      continue;
+    }
     const chance = CALLS.complication[a.risk];
     const roll = rng.next();
     const complication = roll < chance;

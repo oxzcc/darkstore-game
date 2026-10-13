@@ -70,9 +70,26 @@ function ForkCard(p: CardProps) {
           : 'Выберите вариант — кликом или клавишами 1–' + p.options.filter((o) => !o.locked).length}
       </div>
 
-      <div className="fork-options" style={{ '--n': p.options.length } as CSSProperties}>
+      <div className="fork-options" style={{ '--n': p.options.filter((o) => !o.tsd).length } as CSSProperties}>
         {p.options.map((o) => {
           const state = decided ? (o.id === p.chosenId ? ' chosen' : ' dim') : o.locked ? ' locked' : '';
+          // «Взять ТСД» — во всю ширину под остальными (10, раздел 11.1): риска нет, исход решает игрок
+          if (o.tsd) return (
+            <button key={o.id} className={`fork-option tsd${state}`} disabled={decided || o.locked} onClick={() => p.onAnswer?.(o.id)}>
+              <div className="fork-tsd-main">
+                <div className="fork-option-head">
+                  {o.number !== null && <span className="call-key">{o.number}</span>}
+                  <span className="fork-tsd-icon">ТСД</span>
+                  <span>{o.label}</span>
+                </div>
+                <div className="fork-option-text">{o.text}</div>
+              </div>
+              <div className="fork-tsd-rows">
+                <div className="fork-option-row"><span>Время сборки</span><b>пока вы играете</b></div>
+                <div className="fork-option-row"><span>Исход</span><b className="tsd-yours">зависит от вас</b></div>
+              </div>
+            </button>
+          );
           return (
             <button key={o.id} className={`fork-option${state}`} disabled={decided || o.locked} onClick={() => p.onAnswer?.(o.id)}>
               <div className="fork-option-head">
@@ -132,7 +149,7 @@ export default function CallWindow() {
     const onKey = (e: KeyboardEvent) => {
       if (e.repeat) return;
       if (e.code === 'Escape') { closeCall(); return; }
-      const n = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code) + 1;
+      const n = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'].indexOf(e.code) + 1;
       const o = open.options.find((x) => x.number === n);
       if (o) answer(open.id, o.id);
     };

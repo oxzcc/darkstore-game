@@ -9,6 +9,8 @@ import { createInitialGame } from '../rules/game';
 import { acceptTsd, declineTsd, sendPicker } from '../rules/tsd';
 import { chooseRack, leaveRack, scanShelf } from '../rules/minigames/picking';
 import { answerCall, callText } from '../rules/calls';
+import { closeTsdGame, tapDepthCell } from '../rules/tsdGame';
+import { TSD_OPTION_ID } from '../config/calls';
 import type { Call, OutcomeReveal } from '../model/call';
 import type { Address } from '../model/address';
 import { advanceWorld } from '../rules/advance';
@@ -54,6 +56,9 @@ type Store = {
   scanShelf: (address: Address, productId: string) => void;
   /** Ответ на развилку: вариант optionId вызова callId (10, раздел 3). */
   answerCall: (callId: string, optionId: string) => void;
+  /** Игра на ТСД из развилки (10, раздел 11): клик по клетке полки в «Глубине»; «К складу» после итога. */
+  tapDepthCell: (cell: number) => void;
+  closeTsdGame: () => void;
   dismissToast: (id: number) => void;
   dismissFlash: (id: number) => void;
   /** Клик по «!» над сборщиком — открыть окно развилки; закрыть — мир идёт дальше, таймер «!» тоже. */
@@ -96,12 +101,16 @@ export const useGameStore = create<Store>((set) => ({
       const call = s.game.calls.find((c) => c.id === callId);
       const game = answerCall(s.game, callId, optionId);
       if (!call || game === s.game) return s;
+      // «Взять ТСД» — окно закрывается сразу, камера летит к стеллажу; подсветка выбора не нужна
+      if (optionId === TSD_OPTION_ID) return { game, ui: { ...s.ui, openCallId: null } };
       const flash: CallFlash = { id: s.ui.nextToastId, call, text: callText(s.game, call), optionId, auto: false, chain: true };
       return {
         game,
         ui: { ...s.ui, openCallId: null, callFlashes: [...s.ui.callFlashes, flash], nextToastId: s.ui.nextToastId + 1 },
       };
     }),
+  tapDepthCell: (cell) => set((s) => (s.game.clock.paused ? s : { game: tapDepthCell(s.game, cell) })),
+  closeTsdGame: () => set((s) => ({ game: closeTsdGame(s.game) })),
   scanShelf: (address, productId) => set((s) => ({ game: scanShelf(s.game, WAREHOUSE_MAP, address, productId) })),
 
   tick: (realDt) =>

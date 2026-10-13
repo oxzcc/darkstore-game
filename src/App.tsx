@@ -22,7 +22,7 @@ export default function App() {
   const actions = useGameStore((s) => s.game.minigame?.actions);
   const seen = useMemo(() => seenStock(stock, actions), [stock, actions]);
   // У стеллажа вид во весь экран (06, раздел 2.3): список заданий и карточки сборщиков прячутся.
-  const closeup = useGameStore((s) => s.game.minigame?.atFocus ?? false);
+  const closeup = useGameStore((s) => (s.game.minigame?.atFocus ?? false) || s.game.tsdGame !== null);
   return (
     <>
       <GameLoop />

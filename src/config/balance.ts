@@ -3,21 +3,25 @@
 import type { OutcomeChances, TaskType } from '../model/task';
 
 /** Версия формата GameState (09, раздел 12). */
-export const GAME_STATE_VERSION = 5;
+export const GAME_STATE_VERSION = 6;
 
 /**
  * «Взять ТСД» (02, раздел 6; 06, разделы 2–3). Допущения из документов, автор их ещё не подтвердил.
  * Обучающая смена со 100% на первое задание каждого типа — вместе с кампанией (M8).
  */
 export const TSD: {
+  offerOnDispatch: boolean;
   chance: Record<TaskType, number>;
   offerSeconds: number;
   worldSpeedDuringGame: number;
   cameraFlySeconds: number;
 } = {
+  // Предложение «Взять ТСД?» при «Отправить» (M5b) выключено: ТСД теперь — вариант в развилке (10, раздел 11; решение автора 14.10).
+  // Код оставлен; true — включить обратно.
+  offerOnDispatch: false,
   chance: { order: 0.3, putaway: 0.3, receiving: 0.3, writeoff: 0.3 }, // шанс предложения при «Отправить»
   offerSeconds: 8,           // таймер предложения, игровые секунды (на паузе стоит)
-  worldSpeedDuringGame: 0.2, // остальной мир во время мини-игры; свой сборщик идёт ×1
+  worldSpeedDuringGame: 0.5, // остальной мир во время игры на ТСД (решение автора 12.10: ×0,5); свой сборщик — ×1
   cameraFlySeconds: 0.6,     // перелёт камеры к стеллажу и обратно, реальные секунды (06, раздел 2.3)
 };
 
