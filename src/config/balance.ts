@@ -14,6 +14,7 @@ export const TSD: {
   chance: Record<TaskType, number>;
   offerSeconds: number;
   worldSpeedDuringGame: number;
+  worldSpeedDuringTsdGame: number;
   cameraFlySeconds: number;
 } = {
   // Предложение «Взять ТСД?» при «Отправить» (M5b) выключено: ТСД теперь — вариант в развилке (10, раздел 11; решение автора 14.10).
@@ -22,6 +23,8 @@ export const TSD: {
   chance: { order: 0.3, putaway: 0.3, receiving: 0.3, writeoff: 0.3 }, // шанс предложения при «Отправить»
   offerSeconds: 8,           // таймер предложения, игровые секунды (на паузе стоит)
   worldSpeedDuringGame: 0.5, // остальной мир во время игры на ТСД (решение автора 12.10: ×0,5); свой сборщик — ×1
+  // игра на ТСД из развилки (10, раздел 11): мир полностью на паузе, идёт только время самой игры (решение автора 14.10)
+  worldSpeedDuringTsdGame: 0,
   cameraFlySeconds: 0.6,     // перелёт камеры к стеллажу и обратно, реальные секунды (06, раздел 2.3)
 };
 

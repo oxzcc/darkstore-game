@@ -8,8 +8,8 @@ import Vx from '../../ui/Vx';
 
 const NOTE_TEXT: Record<string, { text: string; cls: string }> = {
   stuck: { text: 'Рядом нет пустого места — коробка не сдвинется', cls: 'mute' },
-  notFront: { text: 'Сначала выдвиньте товар в передний ряд', cls: 'warn' },
   timeout: { text: 'Время вышло', cls: 'bad' },
+  tooMany: { text: 'Слишком много ходов', cls: 'bad' },
 };
 
 export default function DepthTsd({ view, onClose }: { view: DepthView; onClose: () => void }) {
@@ -70,7 +70,7 @@ export default function DepthTsd({ view, onClose }: { view: DepthView; onClose: 
         <div className="depth-result" style={{ '--oc': result.color } as CSSProperties}>
           <div className="depth-result-name">{result.name}</div>
           <div className="depth-result-sub">
-            {view.note === 'timeout' ? 'Не успели за время' : `${view.moves} ${plural(view.moves, 'ход', 'хода', 'ходов')}`}
+            {view.note === 'timeout' ? 'Не успели за время' : view.note === 'tooMany' ? `Больше ${view.errorsUpTo} ходов` : `${view.moves} ${plural(view.moves, 'ход', 'хода', 'ходов')}`}
           </div>
           <button className="btn primary" onClick={onClose}><Vx>К складу · Enter</Vx></button>
         </div>

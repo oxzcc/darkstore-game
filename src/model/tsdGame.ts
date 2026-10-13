@@ -18,10 +18,11 @@ export type DepthBoard = {
   rows: number;
   cells: number[];
   boxes: string[]; // id товара каждой коробки (для вида); boxes[0] — нужный
+  exit: number;    // клетка выхода в переднем ряду: нужная коробка на ней — игра закончена (решение автора 14.10)
 };
 
 /** Что ТСД сказал на последний клик — строка на экране. */
-export type DepthNote = 'moved' | 'stuck' | 'notFront' | 'taken' | 'timeout';
+export type DepthNote = 'moved' | 'stuck' | 'taken' | 'timeout' | 'tooMany';
 
 export type DepthGame = {
   kind: 'depth';

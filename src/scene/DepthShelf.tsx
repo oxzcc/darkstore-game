@@ -1,6 +1,7 @@
 // «Глубина» на сцене (docs/10-minigames-concept.md, раздел 11.3): полка с коробками-пятнашками у стеллажа.
 // Полку как будто выдвинули и наклонили к игроку — она висит перед стеллажом, и видны все ряды
-// (передний ряд — ближе к игроку, внизу экрана). Клик по коробке — действие store tapDepthCell; что можно, решает rules.
+// (передний ряд — ближе к игроку, внизу экрана). Клик по коробке — выбрать её (store tapDepthBox), подсвечиваются клетки,
+// куда её можно сдвинуть (белым); клик по клетке — ход (moveDepthBox). Что можно, решает rules (решение автора 14.10).
 // Сцена только рисует доску из store и плавно двигает коробки к их клеткам.
 import { useEffect, useRef, useState } from 'react';
 import { Group, Vector3 } from 'three';
@@ -11,6 +12,7 @@ import type { DepthBoard } from '../model/tsdGame';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { PALETTE } from '../config/palette';
 import { useGameStore } from '../store/gameStore';
+import { depthMovesFrom } from '../rules/tsdGame';
 import { closeupEye, closeupLook } from './closeupView';
 import { rackFront } from './rackGeometry';
 
@@ -18,6 +20,7 @@ const V = WAREHOUSE_VIEW.depthShelf;
 const TARGET_FRAME = '#7FC743';
 const HOVER_FRAME = '#FFFFFF';
 const FRAME = 0.018;
+const SELECT_FRAME = '#1E1E1E';
 
 /** Центр клетки в координатах полки: x — вдоль (слева направо), z — к игроку (передний ряд — больше z). */
 function cellPos(b: DepthBoard, cell: number): [number, number] {
@@ -55,12 +58,13 @@ type BoxProps = {
   color: string;      // цвет товара — наклейка сверху
   accent: string;
   hover: boolean;
+  selected: boolean;
   active: boolean;    // можно кликать (игра идёт, не пауза)
   onHover: (cell: number | null) => void;
   onTap: (cell: number) => void;
 };
 
-function Box({ index, cell, board, color, accent, hover, active, onHover, onTap }: BoxProps) {
+function Box({ index, cell, board, color, accent, hover, selected, active, onHover, onTap }: BoxProps) {
   const ref = useRef<Group>(null);
   const target = useRef(new Vector3());
   const [x, z] = cellPos(board, cell);
@@ -92,9 +96,7 @@ function Box({ index, cell, board, color, accent, hover, active, onHover, onTap 
         <boxGeometry args={[V.box * 0.62, 0.004, V.box * 0.62]} />
         <meshStandardMaterial color={isTarget ? accent : color} />
       </mesh>
-      {isTarget && <Frame color={TARGET_FRAME} />}
-      {!isTarget && hover && <Frame color={HOVER_FRAME} />}
-      {isTarget && hover && <Frame color={HOVER_FRAME} />}
+      {selected ? <Frame color={SELECT_FRAME} /> : hover ? <Frame color={HOVER_FRAME} /> : isTarget && <Frame color={TARGET_FRAME} />}
     </group>
   );
 }
@@ -103,7 +105,10 @@ export default function DepthShelf({ map }: { map: WarehouseMap }) {
   const game = useGameStore((s) => (s.game.tsdGame?.kind === 'depth' ? s.game.tsdGame : null));
   const products = useGameStore((s) => s.game.products);
   const paused = useGameStore((s) => s.game.clock.paused);
-  const tap = useGameStore((s) => s.tapDepthCell);
+  const tap = useGameStore((s) => s.tapDepthBox);
+  const move = useGameStore((s) => s.moveDepthBox);
+  const selected = useGameStore((s) => s.ui.depthSelected);
+  const fullGame = useGameStore((s) => s.game);
   const [hover, setHover] = useState<number | null>(null);
 
   const active = !!game && !game.result && !paused;
@@ -113,6 +118,7 @@ export default function DepthShelf({ map }: { map: WarehouseMap }) {
   useEffect(() => () => { document.body.style.cursor = ''; }, []);
 
   if (!game) return null;
+  const targets = selected === null ? [] : depthMovesFrom(fullGame, selected);
   const rack = map.racks.find((r) => r.aisle === game.rack.aisle && r.rack === game.rack.rack);
   if (!rack) return null;
 
@@ -144,14 +150,31 @@ export default function DepthShelf({ map }: { map: WarehouseMap }) {
             <meshStandardMaterial color={PALETTE.metal} />
           </mesh>
         ))}
-        {/* передний ряд подсвечен: отсюда товар можно взять */}
-        <mesh position={[0, 0.002, (d - V.cell) / 2]}>
-          <boxGeometry args={[w, 0.004, V.cell]} />
-          <meshBasicMaterial color={TARGET_FRAME} transparent opacity={0.25} depthWrite={false} />
+        {/* клетка выхода: нужная коробка на ней — игра закончена сама (решение автора 14.10) */}
+        <mesh position={[cellPos(b, b.exit)[0], 0.002, cellPos(b, b.exit)[1]]}>
+          <boxGeometry args={[V.cell, 0.004, V.cell]} />
+          <meshBasicMaterial color={TARGET_FRAME} transparent opacity={0.45} depthWrite={false} />
         </mesh>
-        <Html position={[0, 0, d / 2 + 0.07]} center className="shelf-label depth-front-label">
-          передний ряд · отсюда берём
+        <Html position={[cellPos(b, b.exit)[0], 0, d / 2 + 0.07]} center className="shelf-label depth-front-label">
+          сюда
         </Html>
+
+        {/* куда можно сдвинуть выбранную коробку — прозрачные белые клетки, клик — ход */}
+        {active && targets.map((cell) => {
+          const [x, z] = cellPos(b, cell);
+          return (
+            <mesh
+              key={`t${cell}`}
+              position={[x, 0.01, z]}
+              onPointerOver={(e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); setHover(cell); }}
+              onPointerOut={() => setHover(null)}
+              onClick={(e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); move(cell); }}
+            >
+              <boxGeometry args={[V.box, 0.01, V.box]} />
+              <meshBasicMaterial color="#ffffff" transparent opacity={hover === cell ? 0.85 : 0.55} depthWrite={false} />
+            </mesh>
+          );
+        })}
 
         {b.cells.map((boxIndex, cell) => {
           if (boxIndex < 0) return null;
@@ -165,6 +188,7 @@ export default function DepthShelf({ map }: { map: WarehouseMap }) {
               color={look?.color ?? PALETTE.box}
               accent={look?.accent ?? '#ffffff'}
               hover={hover === cell}
+              selected={selected === cell}
               active={active}
               onHover={setHover}
               onTap={tap}

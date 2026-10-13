@@ -88,12 +88,13 @@ export function acceptTsd(state: GameState): GameState {
 
 /** Во сколько раз замедлен мир для сборщика: свой сборщик в мини-игре — 1, остальные — TSD.worldSpeedDuringGame. */
 export function worldSpeedFor(state: GameState, pickerId: string): number {
-  if (state.tsdGame) return state.tsdGame.pickerId === pickerId ? 1 : TSD.worldSpeedDuringGame;
+  if (state.tsdGame) return state.tsdGame.pickerId === pickerId ? 1 : TSD.worldSpeedDuringTsdGame;
   if (!state.minigame) return 1;
   return state.minigame.pickerId === pickerId ? 1 : TSD.worldSpeedDuringGame;
 }
 
 /** Множитель для часов смены и всего остального мира. */
 export function worldSpeed(state: GameState): number {
-  return state.minigame || state.tsdGame ? TSD.worldSpeedDuringGame : 1;
+  if (state.tsdGame) return TSD.worldSpeedDuringTsdGame;
+  return state.minigame ? TSD.worldSpeedDuringGame : 1;
 }

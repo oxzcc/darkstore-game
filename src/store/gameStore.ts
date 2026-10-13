@@ -9,7 +9,7 @@ import { createInitialGame } from '../rules/game';
 import { acceptTsd, declineTsd, sendPicker } from '../rules/tsd';
 import { chooseRack, leaveRack, scanShelf } from '../rules/minigames/picking';
 import { answerCall, callText } from '../rules/calls';
-import { closeTsdGame, tapDepthCell } from '../rules/tsdGame';
+import { closeTsdGame, depthMovesFrom, moveDepthBox, tapDepthBox } from '../rules/tsdGame';
 import { TSD_OPTION_ID } from '../config/calls';
 import type { Call, OutcomeReveal } from '../model/call';
 import type { Address } from '../model/address';
@@ -36,7 +36,8 @@ export type UiState = {
   nextToastId: number;          // общий счётчик id для всплывашек, вспышек и окон результата
   callFlashes: CallFlash[];
   openCallId: string | null;    // открыто окно развилки (по клику на «!»): мир на паузе
-  results: ResultCard[];        // очередь окон результата: показывается первое
+  results: ResultCard[];        // очередь окон результата: показывается первое (не во время игры на ТСД)
+  depthSelected: number | null; // «Глубина»: выбранная коробка (клетка) — сцена подсвечивает, куда её можно сдвинуть
 };
 
 type Store = {
@@ -57,7 +58,8 @@ type Store = {
   /** Ответ на развилку: вариант optionId вызова callId (10, раздел 3). */
   answerCall: (callId: string, optionId: string) => void;
   /** Игра на ТСД из развилки (10, раздел 11): клик по клетке полки в «Глубине»; «К складу» после итога. */
-  tapDepthCell: (cell: number) => void;
+  tapDepthBox: (cell: number) => void;
+  moveDepthBox: (to: number) => void;
   closeTsdGame: () => void;
   dismissToast: (id: number) => void;
   dismissFlash: (id: number) => void;
@@ -76,7 +78,7 @@ const newSeed = () => Math.floor(Math.random() * 2 ** 32);
 
 export const useGameStore = create<Store>((set) => ({
   game: createInitialGame(WAREHOUSE_MAP, newSeed()),
-  ui: { assignTaskId: null, chosenPickerId: null, toasts: [], nextToastId: 1, callFlashes: [], openCallId: null, results: [] },
+  ui: { assignTaskId: null, chosenPickerId: null, toasts: [], nextToastId: 1, callFlashes: [], openCallId: null, results: [], depthSelected: null },
 
   openAssign: (taskId) => set((s) => ({ ui: { ...s.ui, assignTaskId: taskId, chosenPickerId: null } })),
   closeAssign: () => set((s) => ({ ui: { ...s.ui, assignTaskId: null, chosenPickerId: null } })),
@@ -109,15 +111,31 @@ export const useGameStore = create<Store>((set) => ({
         ui: { ...s.ui, openCallId: null, callFlashes: [...s.ui.callFlashes, flash], nextToastId: s.ui.nextToastId + 1 },
       };
     }),
-  tapDepthCell: (cell) => set((s) => (s.game.clock.paused ? s : { game: tapDepthCell(s.game, cell) })),
-  closeTsdGame: () => set((s) => ({ game: closeTsdGame(s.game) })),
+  // «Глубина»: клик по коробке — выбрать её (или взять нужную из переднего ряда); клик по подсвеченной клетке — сдвинуть туда
+  tapDepthBox: (cell) =>
+    set((s) => {
+      if (s.game.clock.paused) return s;
+      const game = tapDepthBox(s.game, cell);
+      const canMove = game === s.game && depthMovesFrom(s.game, cell).length > 0;
+      const depthSelected = canMove && s.ui.depthSelected !== cell ? cell : null; // повторный клик — снять выбор
+      return { game, ui: { ...s.ui, depthSelected } };
+    }),
+  moveDepthBox: (to) =>
+    set((s) => {
+      const from = s.ui.depthSelected;
+      if (s.game.clock.paused || from === null) return s;
+      return { game: moveDepthBox(s.game, from, to), ui: { ...s.ui, depthSelected: null } };
+    }),
+  closeTsdGame: () => set((s) => ({ game: closeTsdGame(s.game), ui: { ...s.ui, depthSelected: null } })),
   scanShelf: (address, productId) => set((s) => ({ game: scanShelf(s.game, WAREHOUSE_MAP, address, productId) })),
 
   tick: (realDt) =>
     set((s) => {
       // автопауза, пока открыто окно «Кого отправить?» (02, раздел 2)
       // окна по центру (развилка и итог заказа) тоже ставят мир на паузу
-      const dt = worldDt(s.game.clock, realDt, s.ui.assignTaskId !== null || s.ui.openCallId !== null || s.ui.results.length > 0);
+      // во время игры на ТСД окно итога ждёт её конца и мир не держит (решение автора 14.10)
+      const resultShown = s.ui.results.length > 0 && s.game.tsdGame === null;
+      const dt = worldDt(s.game.clock, realDt, s.ui.assignTaskId !== null || s.ui.openCallId !== null || resultShown);
       if (dt === 0) return s;
       const { state, events } = advanceWorld(s.game, WAREHOUSE_MAP, dt);
       if (events.length === 0) return { game: state };

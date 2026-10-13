@@ -6,7 +6,7 @@ import type { DepthGame } from '../model/tsdGame';
 import type { CallAnswer } from '../model/call';
 import { DEPTH, TSD_OPTION_ID } from '../config/calls';
 import { createRng } from './random';
-import { createDepthBoard, scoreDepth, slideBox, targetCell, targetInFront, rowOf } from './minigames/depth';
+import { createDepthBoard, freeNeighbours, scoreDepth, slideBox, targetAtExit, targetCell, tooManyMoves, rowOf } from './minigames/depth';
 
 /** Начать игру по вызову: вызов уходит, сборщик «играете за него». null-ход (state без изменений) — нельзя. */
 export function startTsdGame(state: GameState, callId: string): GameState {
@@ -48,20 +48,37 @@ export function startTsdGame(state: GameState, callId: string): GameState {
   };
 }
 
-/** Клик по клетке полки: коробка съезжает в соседнюю пустую; нужная в переднем ряду — взять (игра закончена). */
-export function tapDepthCell(state: GameState, cell: number): GameState {
+const withNote = (state: GameState, g: DepthGame, n: DepthGame['note'], patch: Partial<DepthGame> = {}): GameState =>
+  ({ ...state, tsdGame: { ...g, ...patch, note: n, noteAt: g.elapsed } });
+
+/** Куда можно сдвинуть коробку из клетки (сцена подсвечивает эти клетки после выбора коробки). */
+export function depthMovesFrom(state: GameState, cell: number): number[] {
+  const g = state.tsdGame;
+  if (!g || g.kind !== 'depth' || g.result) return [];
+  return freeNeighbours(g.board, cell);
+}
+
+/** Клик по коробке — только выбор (его хранит интерфейс); если сдвинуть некуда, ТСД об этом скажет. */
+export function tapDepthBox(state: GameState, cell: number): GameState {
+  const g = state.tsdGame;
+  if (!g || g.kind !== 'depth' || g.result || g.board.cells[cell] === undefined || g.board.cells[cell] < 0) return state;
+  if (freeNeighbours(g.board, cell).length === 0) return withNote(state, g, 'stuck');
+  return state;
+}
+
+/**
+ * Ход: коробка из `from` в соседнюю пустую `to`. Нужная встала на выход — игра закончена сразу, исход по ходам;
+ * ходов больше, чем допускает «с ошибками», — сразу провал (решения автора 14.10).
+ */
+export function moveDepthBox(state: GameState, from: number, to: number): GameState {
   const g = state.tsdGame;
   if (!g || g.kind !== 'depth' || g.result) return state;
-  const isTarget = g.board.cells[cell] === 0;
-  const note = (n: DepthGame['note'], patch: Partial<DepthGame> = {}): GameState =>
-    ({ ...state, tsdGame: { ...g, ...patch, note: n, noteAt: g.elapsed } });
-
-  if (isTarget && targetInFront(g.board)) {
-    return note('taken', { result: scoreDepth(g.moves, g.best, false) });
-  }
-  const board = slideBox(g.board, cell);
-  if (!board) return note(isTarget ? 'notFront' : 'stuck');
-  return note('moved', { board, moves: g.moves + 1 });
+  const board = slideBox(g.board, from, to);
+  if (!board) return state;
+  const moves = g.moves + 1;
+  if (targetAtExit(board)) return withNote(state, g, 'taken', { board, moves, result: scoreDepth(moves, g.best, false) });
+  if (tooManyMoves(moves, g.best)) return withNote(state, g, 'tooMany', { board, moves, result: 'failed' });
+  return withNote(state, g, 'moved', { board, moves });
 }
 
 /** Время игры идёт в обычном темпе; вышло — провал. */

@@ -13,7 +13,8 @@ import { pickerActivity } from './jobs';
 import type { Rng } from './random';
 import { answerCall, raiseCall, revealCalls } from './calls';
 import { sendPicker } from './tsd';
-import { closeTsdGame, tapDepthCell } from './tsdGame';
+import { closeTsdGame, depthMovesFrom, moveDepthBox, tapDepthBox } from './tsdGame';
+import { CALLS } from '../config/calls';
 
 const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
 
@@ -37,10 +38,10 @@ function calling(tsd: 'depth' | null = 'depth') {
   return { s: { ...at, calls: at.calls.map((c) => ({ ...c, tsd })) }, taskId: task.id };
 }
 
-/** Игра с простой полкой: нужная коробка во втором ряду, перед ней пусто — лучший путь 1 ход. */
-function easyGame(s: GameState): GameState {
+/** Игра с простой полкой: нужная коробка во втором ряду, перед ней пустой выход — лучший путь 1 ход. */
+function easyGame(s: GameState, exit = 0): GameState {
   const g = s.tsdGame!;
-  return { ...s, tsdGame: { ...g, best: 1, board: { ...g.board, cells: [-1, 1, 2, 0, 3, 4, 5, 6, -1] } } };
+  return { ...s, tsdGame: { ...g, best: 1, board: { ...g.board, cells: [-1, 1, 2, 0, 3, 4, 5, 6, -1], exit } } };
 }
 
 describe('«Взять ТСД» в развилке', () => {
@@ -57,7 +58,7 @@ describe('«Взять ТСД» в развилке', () => {
     });
     const deep = raisedFor('deep');
     expect(deep).toContain('depth');
-    expect(deep).toContain(null);
+    if (!CALLS.forceTsd) expect(deep).toContain(null); // с флагом проверки вариант есть всегда
     expect(raisedFor('jam').every((x) => x === null)).toBe(true);     // у пробки игры нет
     expect(raisedFor('expiring').every((x) => x === null)).toBe(true); // «Срок» ещё не сделан (N3)
     expect(call.optionIds).not.toContain(TSD_OPTION_ID);              // сборщик сам ТСД не выбирает
@@ -68,7 +69,7 @@ describe('«Взять ТСД» в развилке', () => {
     expect(answerCall(s, s.calls[0].id, TSD_OPTION_ID)).toBe(s);
   });
 
-  it('взял ТСД: вызов уходит, игра у стеллажа позиции, сборщик стоит, мир ×0,5, игра — в обычном темпе', () => {
+  it('взял ТСД: вызов уходит, игра у стеллажа позиции, сборщик стоит, мир на паузе, время игры идёт', () => {
     const { s, taskId } = calling();
     const line = s.tasks[taskId].type === 'order' ? (s.tasks[taskId] as Extract<GameState['tasks'][string], { type: 'order' }>).payload.lines[0] : null;
     const g = answerCall(s, s.calls[0].id, TSD_OPTION_ID);
@@ -79,19 +80,21 @@ describe('«Взять ТСД» в развилке', () => {
     expect(pickerActivity(g, 'lucky').kind).toBe('tsdGame');
     const later = advanceWorld(g, map, 2).state;
     expect(later.pickers.lucky.position).toEqual(g.pickers.lucky.position);
-    expect(later.clock.time - g.clock.time).toBeCloseTo(2 * TSD.worldSpeedDuringGame, 5);
+    expect(later.clock.time - g.clock.time).toBeCloseTo(2 * TSD.worldSpeedDuringTsdGame, 5); // мир на паузе
     expect(later.tsdGame!.elapsed).toBeCloseTo(2, 5);
   });
 
-  it('ход и взятие: нужная коробка впереди — клик берёт её, исход по ходам; «К складу» — ответ в задании, сборщик работает дальше', () => {
+  it('ход: нужная коробка встала на выход — игра закончена сама, исход по ходам; «К складу» — ответ в задании, сборщик работает дальше', () => {
     const { s, taskId } = calling();
     let g = easyGame(answerCall(s, s.calls[0].id, TSD_OPTION_ID));
-    expect(tapDepthCell(g, 4).tsdGame!.note).toBe('stuck'); // вокруг нет места
-    g = tapDepthCell(g, 3); // вперёд
-    expect(g.tsdGame!.moves).toBe(1);
-    g = tapDepthCell(g, 0); // взять
-    expect(g.tsdGame!.result).toBe('perfect');
-    expect(tapDepthCell(g, 1)).toBe(g); // игра закончена — клики не действуют
+    expect(tapDepthBox(g, 4).tsdGame!.note).toBe('stuck'); // вокруг нет места
+    expect(tapDepthBox(g, 3)).toBe(g);                     // выбор коробки — только в интерфейсе
+    expect(depthMovesFrom(g, 3)).toEqual([0]);             // куда можно: пустая клетка впереди
+    expect(moveDepthBox(g, 3, 4)).toBe(g);                 // в занятую — нельзя
+    g = moveDepthBox(g, 3, 0); // на выход
+    expect(g.tsdGame).toMatchObject({ moves: 1, result: 'perfect', note: 'taken' });
+    expect(tapDepthBox(g, 1)).toBe(g); // игра закончена — клики не действуют
+    expect(moveDepthBox(g, 1, 3)).toBe(g);
     const back = closeTsdGame(g);
     expect(back.tsdGame).toBe(null);
     expect(back.tasks[taskId].callLog).toEqual([{ situationId: 'deep', lineIndex: 0, optionId: TSD_OPTION_ID, risk: 'low', auto: false, tsd: 'perfect' }]);
@@ -100,13 +103,25 @@ describe('«Взять ТСД» в развилке', () => {
     expect(done.tasks[taskId].status).toBe('done');
   });
 
-  it('нужная не в переднем ряду и не двигается — «сначала выдвиньте»; до конца игры закрыть нельзя', () => {
+  it('коробка, которую некуда сдвинуть, — «не сдвинется»; до конца игры закрыть нельзя', () => {
     const { s } = calling();
     const g0 = answerCall(s, s.calls[0].id, TSD_OPTION_ID);
     // нужная у задней стенки (клетка 7), вокруг неё коробки, пустые клетки — впереди слева
     const g = { ...g0, tsdGame: { ...g0.tsdGame!, board: { ...g0.tsdGame!.board, cells: [-1, -1, 1, 2, 3, 4, 5, 0, 6] } } };
-    expect(tapDepthCell(g, 7).tsdGame!.note).toBe('notFront');
+    expect(tapDepthBox(g, 7).tsdGame!.note).toBe('stuck');
     expect(closeTsdGame(g)).toBe(g);
+  });
+
+  it('ходов больше, чем допускает «с ошибками», — провал сразу', () => {
+    const { s } = calling();
+    let g = easyGame(answerCall(s, s.calls[0].id, TSD_OPTION_ID), 2); // выход справа — туда-обратно по левой клетке не попадём
+    // гоняем коробку туда-обратно: лучший путь 1 ход, «с ошибками» — до 1 + DEPTH.withErrorsExtra
+    for (let i = 0; i <= DEPTH.withErrorsExtra; i++) {
+      g = i % 2 === 0 ? moveDepthBox(g, 3, 0) : moveDepthBox(g, 0, 3);
+      expect(g.tsdGame!.result).toBe(null);
+    }
+    g = moveDepthBox(g, 0, 3);
+    expect(g.tsdGame).toMatchObject({ result: 'failed', note: 'tooMany', moves: DEPTH.withErrorsExtra + 2 });
   });
 
   it('время вышло — провал', () => {

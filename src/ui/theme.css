@@ -361,14 +361,16 @@ svg.i.sm { width: 18px; height: 18px; }
 .fork-option-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
 .fork-option-row > span:first-child { color: var(--text-mute); }
 .fork-option-row b.slow { color: #9A5300; }
-/* «Взять ТСД» в развилке (N2): во всю ширину, зелёная рамка — это «сыграть самому» */
-.fork-option.tsd { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 24px; border-color: var(--primary);
-  background: #F3FAEA; box-shadow: 0 5px 0 #B9DC94; }
-.fork-option.tsd:hover:not(:disabled) { background: #E6F4D5; border-color: var(--primary); }
-.fork-tsd-main { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.fork-tsd-rows { flex: none; width: 260px; display: flex; flex-direction: column; gap: 8px; }
+/* «Взять ТСД» в развилке (N2): в одном ряду с остальными, тёмная заливка (решение автора 14.10) */
+.fork-option.tsd { background: var(--text); color: #fff; border-color: var(--text); box-shadow: 0 5px 0 #000; }
+.fork-option.tsd:hover:not(:disabled), .fork-option.tsd.chosen { background: #33302F; border-color: var(--text); }
+.fork-option.tsd .fork-option-line { background: rgba(255, 255, 255, 0.2); }
+.fork-option.tsd .fork-option-row > span:first-child { color: rgba(255, 255, 255, 0.65); }
+.fork-option.tsd .call-key { background: #fff; color: var(--text); }
 .fork-tsd-icon { padding: 2px 6px; background: var(--primary); color: #fff; font-size: 12px; letter-spacing: 0.06em; }
-.fork-option-row b.tsd-yours { color: var(--primary); }
+.fork-option-row b.tsd-yours { color: #9BE05A; }
+/* без описаний карточки ниже: строки прижаты к низу */
+.fork-option > .fork-option-line { margin-top: auto; }
 .fork-risk { display: flex; align-items: center; gap: 6px; }
 .fork-risk span { display: flex; gap: 3px; }
 .fork-risk i { width: 9px; height: 13px; background: var(--divider); }
