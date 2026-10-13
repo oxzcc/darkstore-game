@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Развилка — диалог со сборщиком</title>
+</head>
+<body>
+<style>
+@font-face{font-family:"X5 Sans";src:url("fonts/X5-Regular.ttf") format("truetype");font-weight:400}
+@font-face{font-family:"X5 Sans";src:url("fonts/X5-Medium.ttf") format("truetype");font-weight:500}
+@font-face{font-family:"X5 Sans";src:url("fonts/X5-Bold.ttf") format("truetype");font-weight:700}
+body{margin:0}
+a{color:#2F67D8}a:hover{color:#1F4BA8}
+.ph{background:repeating-linear-gradient(45deg,#F1E7CF 0 12px,#F8F1E0 12px 24px)}
+button{font-family:inherit}
+</style>
+<div style="width: 1200px; height: 860px; box-sizing: border-box; background: #A9DD6B; display: flex; align-items: center; justify-content: center; font-family: 'X5 Sans', sans-serif; color: #2F2A22; padding-top: 60px">
+<div style="width: 1040px; box-sizing: border-box; background: #FFF9EC; border: 3px solid #2F67D8; border-radius: 16px; box-shadow: 0 6px 0 rgba(47,42,34,0.22); padding: 0 24px 24px 24px; display: flex; flex-direction: column; gap: 20px">
+
+<div style="display: flex; align-items: flex-end; gap: 20px">
+<div class="ph" style="width: 230px; height: 260px; margin-top: -110px; flex-shrink: 0; border: 3px solid #2F67D8; border-bottom: none; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #6B6152; text-align: center; padding: 14px; box-sizing: border-box">
+<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4-6 8-6s7 2 8 6"></path></svg>
+<div style="font-weight: 700; font-size: 14px">Портрет · 224 × 257</div>
+<div style="font-size: 12px; line-height: 1.35">Лаки по пояс, с ТСД в руке, растерянная эмоция. Может выходить за верх окна</div>
+</div>
+
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 0; padding-top: 20px">
+<div style="display: flex; align-items: flex-end; justify-content: space-between">
+<div style="background: #2F67D8; color: #FFFFFF; font-weight: 700; font-size: 15px; padding: 6px 16px; border-radius: 8px 8px 0 0; margin-left: 28px">Лаки <span style="font-weight: 400; opacity: 0.85">· Сборка №11</span></div>
+<button aria-label="Закрыть" style="width: 44px; height: 44px; margin-bottom: 8px; border: 2px solid #D8CBAE; border-radius: 10px; background: #FFFFFF; box-shadow: 0 3px 0 #D8CBAE; display: flex; align-items: center; justify-content: center; color: #2F2A22; cursor: pointer">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+</button>
+</div>
+<div style="position: relative; background: #FFFFFF; border: 3px solid #2F2A22; border-radius: 14px; padding: 18px 22px; box-shadow: 0 5px 0 #2F2A22">
+<div style="position: absolute; left: -13px; bottom: 26px; width: 20px; height: 20px; background: #FFFFFF; border-left: 3px solid #2F2A22; border-bottom: 3px solid #2F2A22; transform: rotate(45deg)"></div>
+<div style="font-size: 22px; font-weight: 700; line-height: 1.3">«Тут сыр по адресу 2.3.1, а срок годности — сегодня. Брать такой или поискать другой?»</div>
+</div>
+</div>
+</div>
+
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: #6B6152">
+<span>Выберите вариант — кликом или клавишами 1–3</span>
+<span style="display: flex; align-items: center; gap: 6px; background: #FDEBD3; border: 2px solid #E8892A; border-radius: 8px; padding: 4px 10px; color: #6A3A06; font-weight: 500">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l3 2M9 2h6"></path></svg>
+До срока заказа 0:48
+</span>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px">
+
+<button style="display: flex; flex-direction: column; gap: 10px; padding: 16px; text-align: left; background: #FFFDF7; border: 3px solid #D8CBAE; border-radius: 14px; box-shadow: 0 5px 0 #E3D8C0; cursor: pointer; color: #2F2A22">
+<div style="display: flex; align-items: center; gap: 8px"><span style="width: 26px; height: 26px; border-radius: 6px; background: #3A332A; color: #FFF9EC; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 14px">1</span><span style="font-weight: 700; font-size: 18px">Взять как есть</span></div>
+<div style="font-size: 14px; color: #6B6152; line-height: 1.4">Сыр уйдёт клиенту. Может, он не заметит — а может, пожалуется.</div>
+<div style="height: 2px; background: #EFE6D2; width: 100%"></div>
+<div style="display: flex; flex-direction: column; gap: 8px; width: 100%; font-size: 14px">
+<div style="display: flex; justify-content: space-between"><span style="color: #6B6152">Время сборки</span><b>не меняется</b></div>
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="color: #6B6152">Шанс жалобы</span><span style="display: flex; align-items: center; gap: 6px"><b style="color: #A8281E">высокий</b><span style="display: flex; gap: 3px"><span style="width: 9px; height: 13px; border-radius: 2px; background: #C83A2E"></span><span style="width: 9px; height: 13px; border-radius: 2px; background: #C83A2E"></span><span style="width: 9px; height: 13px; border-radius: 2px; background: #C83A2E"></span></span></span></div>
+</div>
+</button>
+
+<button style="display: flex; flex-direction: column; gap: 10px; padding: 16px; text-align: left; background: #EEF3FF; border: 3px solid #2F67D8; border-radius: 14px; box-shadow: 0 5px 0 #9DB6EC; cursor: pointer; color: #2F2A22">
+<div style="display: flex; align-items: center; gap: 8px"><span style="width: 26px; height: 26px; border-radius: 6px; background: #3A332A; color: #FFF9EC; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 14px">2</span><span style="font-weight: 700; font-size: 18px">Поискать свежее</span></div>
+<div style="font-size: 14px; color: #6B6152; line-height: 1.4">Лаки проверит соседние полки — там может быть партия с другим сроком.</div>
+<div style="height: 2px; background: #D6E1FA; width: 100%"></div>
+<div style="display: flex; flex-direction: column; gap: 8px; width: 100%; font-size: 14px">
+<div style="display: flex; justify-content: space-between"><span style="color: #6B6152">Время сборки</span><b style="color: #9A5300">+10 секунд</b></div>
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="color: #6B6152">Шанс жалобы</span><span style="display: flex; align-items: center; gap: 6px"><b style="color: #2F6418">низкий</b><span style="display: flex; gap: 3px"><span style="width: 9px; height: 13px; border-radius: 2px; background: #3F7A22"></span><span style="width: 9px; height: 13px; border-radius: 2px; background: #E3D8C0"></span><span style="width: 9px; height: 13px; border-radius: 2px; background: #E3D8C0"></span></span></span></div>
+</div>
+</button>
+
+<button style="display: flex; flex-direction: column; gap: 10px; padding: 16px; text-align: left; background: #FFFDF7; border: 3px solid #D8CBAE; border-radius: 14px; box-shadow: 0 5px 0 #E3D8C0; cursor: pointer; color: #2F2A22">
+<div style="display: flex; align-items: center; gap: 8px"><span style="width: 26px; height: 26px; border-radius: 6px; background: #3A332A; color: #FFF9EC; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 14px">3</span><span style="font-weight: 700; font-size: 18px">Сообщить на списание</span></div>
+<div style="font-size: 14px; color: #6B6152; line-height: 1.4">Лаки отметит партию в ТСД. Появится задание «Списание» на 2.3.1.</div>
+<div style="height: 2px; background: #EFE6D2; width: 100%"></div>
+<div style="display: flex; flex-direction: column; gap: 8px; width: 100%; font-size: 14px">
+<div style="display: flex; justify-content: space-between"><span style="color: #6B6152">Время сборки</span><b style="color: #9A5300">+3 секунды</b></div>
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="color: #6B6152">Шанс жалобы</span><span style="display: flex; align-items: center; gap: 6px"><b style="color: #2F6418">низкий</b><span style="display: flex; gap: 3px"><span style="width: 9px; height: 13px; border-radius: 2px; background: #3F7A22"></span><span style="width: 9px; height: 13px; border-radius: 2px; background: #E3D8C0"></span><span style="width: 9px; height: 13px; border-radius: 2px; background: #E3D8C0"></span></span></span></div>
+</div>
+</button>
+
+</div>
+
+<div style="display: flex; align-items: center; gap: 16px">
+<div style="font-size: 12px; color: #6B6152; line-height: 1.4; flex-grow: 1">Игра на паузе. Если не ответить, Лаки выберет вариант 1. Ещё ждут помощи: Буран.</div>
+<div style="display: flex; align-items: center; gap: 10px; width: 300px; flex-shrink: 0">
+<span style="font-size: 12px; color: #6B6152; white-space: nowrap">Лаки решит сам через</span>
+<div style="flex-grow: 1; height: 10px; background: #EFE6D2; border-radius: 5px; overflow: hidden"><div style="width: 62%; height: 100%; background: #2F67D8"></div></div>
+<b style="font-size: 13px">0:15</b>
+</div>
+</div>
+
+</div>
+</div>
+<script>window.READY = true;</script>
+</body>
+</html>
