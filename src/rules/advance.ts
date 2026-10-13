@@ -151,7 +151,14 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
       const { calls, final: outcome } = revealCalls(base, task.callLog, rng);
       setTask(task.id, { status: 'done', outcome });
       // была развилка — окно результата с раскрытием исхода; иначе обычная всплывашка
-      const reveal = calls.length > 0 ? { chances, roll, base, calls, final: outcome } : undefined;
+      let errorLine: { lineIndex: number; picked: number } | undefined;
+      if (calls.length > 0 && base !== 'perfect' && task.type === 'order' && task.payload.lines.length > 0) {
+        // на какой позиции сборщик ошибся — для строки чека (ui_12); «провал» — ничего не собрал на ней
+        const lineIndex = Math.floor(rng.next() * task.payload.lines.length);
+        const qty = task.payload.lines[lineIndex].qty;
+        errorLine = { lineIndex, picked: base === 'failed' ? 0 : Math.max(0, qty - 1) };
+      }
+      const reveal = calls.length > 0 ? { chances, roll, base, calls, final: outcome, ...(errorLine ? { errorLine } : {}) } : undefined;
       events.push({ kind: 'taskDone', taskId: task.id, pickerId: p.id, outcome, at: time, ...(reveal ? { reveal } : {}) });
       p = { ...p, state: 'idle', taskId: null, job: null, path: [], pathProgress: 0 };
     }

@@ -45,16 +45,24 @@ export function raiseCall(state: GameState, pickerId: string): GameState {
   if (!picker || !plan) return state;
   const situation = SITUATION_BY_ID[plan.situationId];
   if (!situation) return state;
+  const options = optionsFor(situation, picker);
+  // что выберет сборщик сам, решается сразу (окно показывает это): чем точнее, тем чаще самый безопасный вариант
+  const rng = createRng(state.rngSeed);
+  const safest = [...options].sort((a, b) =>
+    RISK_ORDER.indexOf(a.risk) - RISK_ORDER.indexOf(b.risk) || a.seconds - b.seconds)[0];
+  const careful = rng.next() < picker.stats.accuracy / 10;
+  const auto = careful ? safest : options[Math.floor(rng.next() * options.length)];
   const call: Call = {
     id: `call-${state.nextId}`,
     taskId: picker.job!.taskId,
     pickerId,
     situationId: situation.id,
     lineIndex: plan.lineIndex,
-    optionIds: optionsFor(situation, picker).map((o) => o.id),
+    optionIds: options.map((o) => o.id),
+    autoOptionId: auto.id,
     expiresAt: null,
   };
-  return { ...state, nextId: state.nextId + 1, calls: [...state.calls, call] };
+  return { ...state, rngSeed: rng.seed(), nextId: state.nextId + 1, calls: [...state.calls, call] };
 }
 
 /** Первые CALLS.maxVisible вызовов на экране: у показанных впервые запускается таймер. */
@@ -76,6 +84,7 @@ function resolve(state: GameState, call: Call, option: CallOption, auto: boolean
 
   const answer: CallAnswer = {
     situationId: call.situationId,
+    lineIndex: call.lineIndex,
     optionId: option.id,
     risk: auto ? raiseRisk(option.risk) : option.risk,
     auto,
@@ -111,31 +120,21 @@ export function answerCall(state: GameState, callId: string, optionId: string): 
   return resolve(state, call, option, false);
 }
 
-/**
- * Игрок не ответил — сборщик решает сам, и хуже (10, раздел 3): чем точнее сборщик, тем чаще он выбирает
- * самый безопасный вариант; риск выбранного — на ступень выше.
- */
-export function autoAnswer(state: GameState, callId: string, rng: Rng): GameState {
+/** Игрок не ответил — сборщик решает сам, и хуже (10, раздел 3): выбор решён заранее (raiseCall), риск — на ступень выше. */
+export function autoAnswer(state: GameState, callId: string): GameState {
   const call = state.calls.find((c) => c.id === callId);
   if (!call) return state;
-  const picker = state.pickers[call.pickerId];
-  const situation = SITUATION_BY_ID[call.situationId];
-  const options = situation.options.filter((o) => call.optionIds.includes(o.id));
-  const safest = [...options].sort((a, b) =>
-    RISK_ORDER.indexOf(a.risk) - RISK_ORDER.indexOf(b.risk) || a.seconds - b.seconds)[0];
-  const careful = rng.next() < (picker?.stats.accuracy ?? 5) / 10;
-  const option = careful ? safest : options[Math.floor(rng.next() * options.length)];
+  const option = SITUATION_BY_ID[call.situationId]?.options.find((o) => o.id === call.autoOptionId);
+  if (!option) return { ...state, calls: state.calls.filter((c) => c.id !== callId) };
   return resolve(state, call, option, true);
 }
 
 /** Вызовы, у которых вышло время, решает сборщик. */
 export function expireCalls(state: GameState): GameState {
   const due = state.calls.filter((c) => c.expiresAt !== null && state.clock.time >= c.expiresAt);
-  if (due.length === 0) return state;
-  const rng = createRng(state.rngSeed);
   let next = state;
-  for (const c of due) next = autoAnswer(next, c.id, rng);
-  return { ...next, rngSeed: rng.seed() };
+  for (const c of due) next = autoAnswer(next, c.id);
+  return next;
 }
 
 /**
@@ -165,14 +164,32 @@ export function applyCalls(outcome: Outcome, log: CallAnswer[] | undefined, rng:
   return revealCalls(outcome, log, rng).final;
 }
 
-/** Текст ситуации для экрана: подставить адрес, товар и аллею позиции. */
+/** Что подставить в тексты развилки: {picker}, {product}, {address}, {aisle}, {seconds}. */
+export type TextContext = { picker?: string; product?: string; address?: string; aisle?: string; seconds?: number };
+
+export function fillText(template: string, ctx: TextContext): string {
+  return template
+    .split('{picker}').join(ctx.picker ?? 'Сборщик')
+    .split('{product}').join(ctx.product ?? 'товар')
+    .split('{address}').join(ctx.address ?? '—')
+    .split('{aisle}').join(ctx.aisle ?? '—')
+    .split('{seconds}').join(String(ctx.seconds ?? 0));
+}
+
+/** Подстановки для позиции заказа, к которой относится развилка. */
+export function lineContext(state: GameState, taskId: string, lineIndex: number, pickerId: string): TextContext {
+  const task = state.tasks[taskId];
+  const line = task?.type === 'order' ? task.payload.lines[lineIndex] : undefined;
+  return {
+    picker: state.pickers[pickerId]?.name,
+    product: line ? state.products[line.productId]?.name ?? line.productId : undefined,
+    address: line ? formatAddress(line.address) : undefined,
+    aisle: line ? String(line.address.aisle) : undefined,
+  };
+}
+
+/** Реплика сборщика для окна развилки. */
 export function callText(state: GameState, call: Call): string {
   const situation = SITUATION_BY_ID[call.situationId];
-  const task = state.tasks[call.taskId];
-  const line = task?.type === 'order' ? task.payload.lines[call.lineIndex] : undefined;
-  if (!situation) return '';
-  return situation.text
-    .replace('{address}', line ? formatAddress(line.address) : '—')
-    .replace('{product}', line ? state.products[line.productId]?.name ?? line.productId : 'товар')
-    .replace('{aisle}', line ? String(line.address.aisle) : '—');
+  return situation ? fillText(situation.speech, lineContext(state, call.taskId, call.lineIndex, call.pickerId)) : '';
 }

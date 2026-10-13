@@ -3,6 +3,7 @@
 // до 3 вызовов на экране, остальные ждут в очереди (их таймер не идёт); бонуса опыта за ответ нет.
 // 13.10: итог развилок — в окне результата после заказа (okText / badText).
 // 13.10 (переделка): сначала только красный «!» над сборщиком с таймером по контуру; клик — окно по центру, мир на паузе.
+// 13.10 (макеты ui_11, ui_12): реплика сборщика от первого лица, карточки вариантов, итог — «чек» заказа. Тексты — черновик Claude, правь здесь.
 import type { RiskLevel } from '../model/call';
 import type { Outcome, TaskType } from '../model/task';
 
@@ -14,59 +15,136 @@ export const CALLS = {
   complication: { low: 0.1, medium: 0.35, high: 0.6 } as Record<RiskLevel, number>,
 };
 
-/** Вариант ответа. Время добавляется к работе сборщика; cap — исход не выше этого. */
+/**
+ * Вариант ответа. Время добавляется к работе сборщика; cap — исход не выше этого.
+ * В текстах подставляются {picker}, {product}, {address}, {aisle}, {seconds}.
+ */
 export type CallOption = {
   id: string;
-  label: string;          // «Поискать рядом»
+  label: string;          // «Поискать свежее»
+  description: string;    // что сделает сборщик и чем это грозит — на карточке варианта (ui_11)
   seconds: number;        // сколько добавит к работе
   risk: RiskLevel;
-  note?: string;          // последствие словами: «клиент может быть недоволен»
-  busyLabel: string;      // что пишет карточка сборщика, пока он это делает
-  okText: string;         // в окне результата: осложнения не было
-  badText: string;        // в окне результата: осложнение (исход хуже на ступень)
+  busyLabel: string;      // что пишет карточка сборщика внизу, пока он это делает
+  okTitle: string;        // окно итога (ui_12): «Сработало»
+  okText: string;
+  badTitle: string;       // окно итога: «Не сработало» — осложнение, исход хуже на ступень
+  badText: string;
   cap?: Outcome;          // исход не выше (например, пропустил позицию — не выше «с ошибками»)
   requires?: { stat: 'speed' | 'accuracy'; min: number }; // вариант есть только у сборщика с такой характеристикой
 };
 
 /**
- * Ситуация. В тексте подставляются {address} (адрес позиции), {product} (товар), {aisle} (аллея).
+ * Ситуация: реплика сборщика (от первого лица, ui_11) и что значит риск в этой ситуации (строка на карточке).
  * Сейчас только для сборки; остальные типы заданий — M7.
  */
-export type Situation = { id: string; taskType: TaskType; text: string; options: CallOption[] };
+export type Situation = { id: string; taskType: TaskType; speech: string; riskLabel: string; options: CallOption[] };
 
 export const SITUATIONS: Situation[] = [
   {
     id: 'notVisible',
     taskType: 'order',
-    text: 'На {address} не видно: {product}. Что делаю?',
+    speech: 'Я на {address}, а тут нет: {product}. Пусто на полке. Что делаем?',
+    riskLabel: 'Шанс недовольства',
     options: [
-      { id: 'search', label: 'Поискать рядом', seconds: 15, risk: 'medium', busyLabel: 'Ищет рядом', okText: 'нашёл товар на соседней полке', badText: 'искал долго, нашёл не всё' },
-      { id: 'substitute', label: 'Заменить похожим', seconds: 0, risk: 'medium', note: 'клиент может быть недоволен', busyLabel: 'Берёт замену', okText: 'клиент принял замену', badText: 'клиент недоволен заменой' },
-      { id: 'skip', label: 'Пропустить позицию', seconds: 0, risk: 'low', note: 'исход не выше «с ошибками»', cap: 'withErrors', busyLabel: 'Пропускает позицию', okText: 'позиция пропущена', badText: 'позиция пропущена, клиент недоволен' },
-      { id: 'checkNear', label: 'Проверить соседние полки', seconds: 8, risk: 'low', busyLabel: 'Проверяет соседние полки', okText: 'товар нашёлся на соседней полке', badText: 'на соседних полках пусто', requires: { stat: 'accuracy', min: 7 } },
+      {
+        id: 'search', label: 'Поискать рядом', seconds: 15, risk: 'medium', busyLabel: 'Ищет рядом',
+        description: '{picker} обойдёт соседние стеллажи. Товар могли выложить не туда — а могли и не привезти.',
+        okTitle: 'Товар лежал не на своём месте', okText: '{picker} обошёл стеллажи и нашёл {product} на соседней полке. Позиция в заказе, задержка — {seconds} секунд.',
+        badTitle: 'Поиски ничего не дали', badText: '{picker} обошёл всё рядом, но {product} так и не нашёл. Позиция собрана не полностью.',
+      },
+      {
+        id: 'substitute', label: 'Заменить похожим', seconds: 0, risk: 'medium', busyLabel: 'Берёт замену',
+        description: '{picker} возьмёт похожий товар с соседней полки. Клиент может принять замену — а может расстроиться.',
+        okTitle: 'Замена подошла', okText: 'Клиент не возражал против замены. Заказ собран без задержки.',
+        badTitle: 'Клиенту не понравилась замена', badText: 'Клиент ждал именно {product}. Заказ доставлен, но оценку он поставил ниже.',
+      },
+      {
+        id: 'skip', label: 'Пропустить позицию', seconds: 0, risk: 'low', cap: 'withErrors', busyLabel: 'Пропускает позицию',
+        description: '{picker} пойдёт дальше без этой позиции. Быстро, но заказ будет неполным: не выше «с ошибками».',
+        okTitle: 'Позиция пропущена', okText: '{product} в заказ не попал, остальное собрано вовремя. Клиенту вернут деньги за позицию.',
+        badTitle: 'Клиент заметил недостачу', badText: '{product} в заказ не попал, и клиент написал жалобу.',
+      },
+      {
+        id: 'checkNear', label: 'Проверить соседние полки', seconds: 8, risk: 'low', requires: { stat: 'accuracy', min: 7 }, busyLabel: 'Проверяет соседние полки',
+        description: '{picker} внимательный: быстро проверит полки рядом с адресом — чаще всего товар там.',
+        okTitle: 'Нашёлся на соседней полке', okText: '{picker} заглянул на соседние полки и нашёл {product}. Похоже, его так выложили ещё вчера. Задержка — {seconds} секунд.',
+        badTitle: 'На соседних полках пусто', badText: '{picker} проверил полки рядом, но {product} нигде нет. Позиция собрана не полностью.',
+      },
     ],
   },
   {
     id: 'jam',
     taskType: 'order',
-    text: 'В аллее {aisle} пробка: проход занят тележкой. Что делаю?',
+    speech: 'В аллее {aisle} пробка: проход перегородила тележка. Как пройти?',
+    riskLabel: 'Риск уронить товар',
     options: [
-      { id: 'wait', label: 'Подождать', seconds: 8, risk: 'low', busyLabel: 'Ждёт, пока освободится проход', okText: 'проход освободился', badText: 'ждал слишком долго' },
-      { id: 'around', label: 'Обойти по соседней аллее', seconds: 5, risk: 'medium', busyLabel: 'Обходит', okText: 'обошёл без проблем', badText: 'заблудился в соседней аллее' },
-      { id: 'squeeze', label: 'Протиснуться', seconds: 0, risk: 'high', note: 'можно уронить товар', busyLabel: 'Протискивается', okText: 'протиснулся аккуратно', badText: 'задел тележку и уронил товар' },
-      { id: 'slip', label: 'Проскочить ловко', seconds: 0, risk: 'low', busyLabel: 'Проскакивает', okText: 'проскочил ловко', badText: 'проскочил, но задел стеллаж', requires: { stat: 'speed', min: 7 } },
+      {
+        id: 'wait', label: 'Подождать', seconds: 8, risk: 'low', busyLabel: 'Ждёт, пока освободится проход',
+        description: '{picker} подождёт, пока тележку уберут. Надёжно, но время идёт.',
+        okTitle: 'Проход освободился', okText: 'Тележку откатили, и {picker} спокойно прошёл к полке. Задержка — {seconds} секунд.',
+        badTitle: 'Ждать пришлось долго', badText: 'Тележку так и не убрали вовремя: {picker} потерял время и заказ собран с опозданием.',
+      },
+      {
+        id: 'around', label: 'Обойти по соседней аллее', seconds: 5, risk: 'medium', busyLabel: 'Обходит',
+        description: '{picker} пойдёт в обход. Чуть дольше, и можно запутаться в адресах.',
+        okTitle: 'Обошёл без проблем', okText: '{picker} прошёл через соседнюю аллею и вернулся к нужной полке. Задержка — {seconds} секунд.',
+        badTitle: 'Запутался в обходе', badText: '{picker} свернул не туда и взял товар не с той полки. Пришлось исправлять.',
+      },
+      {
+        id: 'squeeze', label: 'Протиснуться', seconds: 0, risk: 'high', busyLabel: 'Протискивается',
+        description: '{picker} попробует пролезть мимо тележки. Без задержки — если ничего не уронит.',
+        okTitle: 'Протиснулся аккуратно', okText: '{picker} проскользнул мимо тележки и ничего не задел.',
+        badTitle: 'Задел тележку', badText: '{picker} протискивался и уронил товар из заказа. Упаковка помялась.',
+      },
+      {
+        id: 'slip', label: 'Проскочить ловко', seconds: 0, risk: 'low', requires: { stat: 'speed', min: 7 }, busyLabel: 'Проскакивает',
+        description: '{picker} шустрый: проскочит мимо тележки и не заденет её.',
+        okTitle: 'Проскочил', okText: '{picker} ловко проскочил мимо тележки — даже не притормозил.',
+        badTitle: 'Чуть не врезался', badText: '{picker} проскочил, но задел стеллаж, и товар упал с полки.',
+      },
     ],
   },
   {
     id: 'expiring',
     taskType: 'order',
-    text: '{product}: у товара срок истекает сегодня. Что делаю?',
+    speech: 'Тут {product} по адресу {address}, а срок годности — сегодня. Брать такой или поискать другой?',
+    riskLabel: 'Шанс жалобы',
     options: [
-      { id: 'take', label: 'Взять как есть', seconds: 0, risk: 'high', note: 'клиент может пожаловаться', busyLabel: 'Берёт товар', okText: 'клиент не заметил', badText: 'клиент пожаловался на срок' },
-      { id: 'fresher', label: 'Поискать свежее', seconds: 10, risk: 'low', busyLabel: 'Ищет свежее', okText: 'нашёл свежую партию', badText: 'свежего не нашлось' },
-      { id: 'report', label: 'Сообщить на списание', seconds: 3, risk: 'low', note: 'отметка для списания', busyLabel: 'Сообщает на списание', okText: 'отметил товар на списание', badText: 'отметка потерялась' },
+      {
+        id: 'take', label: 'Взять как есть', seconds: 0, risk: 'high', busyLabel: 'Берёт товар',
+        description: '{product} уйдёт клиенту. Может, он не заметит — а может, пожалуется.',
+        okTitle: 'Клиент не заметил', okText: '{product} доехал до клиента, и жалоб не было. В этот раз повезло.',
+        badTitle: 'Клиент пожаловался на срок', badText: 'Клиент увидел дату на упаковке и написал жалобу.',
+      },
+      {
+        id: 'fresher', label: 'Поискать свежее', seconds: 10, risk: 'low', busyLabel: 'Ищет свежее',
+        description: '{picker} проверит соседние полки — там может быть партия с другим сроком.',
+        okTitle: 'Нашлась свежая партия', okText: '{picker} нашёл {product} со сроком на неделю вперёд. Задержка — {seconds} секунд.',
+        badTitle: 'Свежего не нашлось', badText: 'Других партий не было, пришлось взять что есть. Клиент заметил дату.',
+      },
+      {
+        id: 'report', label: 'Сообщить на списание', seconds: 3, risk: 'low', busyLabel: 'Сообщает на списание',
+        description: '{picker} отметит партию в ТСД и возьмёт товар из той же партии. Задание на списание — позже (M7).',
+        okTitle: 'Партия отмечена', okText: '{picker} отметил партию на {address} для списания. Задержка — {seconds} секунды.',
+        badTitle: 'Отметка потерялась', badText: '{picker} отметил партию, но клиенту всё равно ушёл товар с коротким сроком.',
+      },
     ],
   },
 ];
 
 export const SITUATION_BY_ID: Record<string, Situation> = Object.fromEntries(SITUATIONS.map((s) => [s.id, s]));
+
+/**
+ * Окно итога (ui_12): сколько денег и рейтинга от награды задания даёт исход. Пока только показывается —
+ * начисление появится в M6. ДОПУЩЕНИЕ Claude (13.10, автор поручил решить самому): «с ошибками» — 60% денег и треть рейтинга,
+ * «провал» — 0 ₽ и минус треть рейтинга (02, раздел 7: минус 30–50% от идеала; суммы провала ОТКРЫТЫ).
+ */
+export const RESULT_SHARE: Record<Outcome, { money: number; rating: number }> = {
+  perfect: { money: 1, rating: 1 },
+  withErrors: { money: 0.6, rating: 1 / 3 },
+  failed: { money: 0, rating: -1 / 3 },
+};
+
+/** Опыт за задание — пока только строка в чеке (прогрессия сборщиков — M8). */
+export const RESULT_XP = 1;

@@ -24,7 +24,7 @@ export type Toast = { id: number; taskNumber: number; pickerName: string; outcom
 export type CallFlash = { id: number; call: Call; text: string; optionId: string; auto: boolean; chain: boolean };
 
 /** Окно результата после заказа с развилкой: раскрытие исхода (13.10; 10, раздел 3). */
-export type ResultCard = { id: number; taskNumber: number; pickerId: string; reveal: OutcomeReveal };
+export type ResultCard = { id: number; taskId: string; taskNumber: number; pickerId: string; reveal: OutcomeReveal };
 
 /** Состояние интерфейса: что выделено и что открыто. Не игровое, не сохраняется. */
 export type UiState = {
@@ -107,8 +107,8 @@ export const useGameStore = create<Store>((set) => ({
   tick: (realDt) =>
     set((s) => {
       // автопауза, пока открыто окно «Кого отправить?» (02, раздел 2)
-      // и пока открыто окно развилки (решение автора 13.10)
-      const dt = worldDt(s.game.clock, realDt, s.ui.assignTaskId !== null || s.ui.openCallId !== null);
+      // окна по центру (развилка и итог заказа) тоже ставят мир на паузу
+      const dt = worldDt(s.game.clock, realDt, s.ui.assignTaskId !== null || s.ui.openCallId !== null || s.ui.results.length > 0);
       if (dt === 0) return s;
       const { state, events } = advanceWorld(s.game, WAREHOUSE_MAP, dt);
       if (events.length === 0) return { game: state };
@@ -121,7 +121,7 @@ export const useGameStore = create<Store>((set) => ({
           // таймер истёк — подсветить, что выбрал сборщик (текст — по прежнему состоянию, пока вызов был на экране)
           flashes.push({ id: nextToastId++, call: e.call, text: callText(s.game, e.call), optionId: e.optionId, auto: true, chain: false });
         } else if (e.reveal) {
-          results.push({ id: nextToastId++, taskNumber: state.tasks[e.taskId].number, pickerId: e.pickerId, reveal: e.reveal });
+          results.push({ id: nextToastId++, taskId: e.taskId, taskNumber: state.tasks[e.taskId].number, pickerId: e.pickerId, reveal: e.reveal });
         } else {
           toasts.push({
             id: nextToastId++,
