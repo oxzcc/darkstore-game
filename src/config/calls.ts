@@ -10,7 +10,7 @@ import type { Outcome, TaskType } from '../model/task';
 import type { TsdGameKind } from '../model/tsdGame';
 
 export const CALLS = {
-  chance: 0.35,          // шанс развилки на задание
+  chance: 1,          // шанс развилки на задание
   answerSeconds: 15,     // таймер «!» над сборщиком, игровые секунды (на паузе и при открытом окне стоит); решение автора 13.10
   maxVisible: 3,         // сколько вызовов на экране одновременно
   /** Шанс осложнения по риску: осложнение ухудшает исход задания на ступень. */
