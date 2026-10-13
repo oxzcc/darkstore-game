@@ -5,12 +5,8 @@ import { useEffect, type CSSProperties } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { Avatar } from './PickerBits';
 import Vx from './Vx';
+import { nameForm } from './labels';
 
-/** «глазами Лаки / Коржика / Бурана». Имена сборщиков известны заранее (config/pickers.ts). */
-function nameForm(name: string): string {
-  if (/[бвгджзйклмнпрстфхцчшщ]$/.test(name)) return `${name}а`; // Коржик → Коржика, Буран → Бурана
-  return name; // Лаки — не склоняется
-}
 
 export default function TsdHint() {
   const session = useGameStore((s) => s.game.minigame);

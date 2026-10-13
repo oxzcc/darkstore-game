@@ -28,3 +28,9 @@ export const RISK_LOOK: Record<'low' | 'medium' | 'high', { name: string; bars: 
   medium: { name: 'средний', bars: 2 },
   high: { name: 'высокий', bars: 3 },
 };
+
+/** Имя в родительном падеже: «глазами Коржика», «работа Бурана». Имена сборщиков известны заранее (config/pickers.ts). */
+export function nameForm(name: string): string {
+  if (/[бвгджзйклмнпрстфхцчшщ]$/.test(name)) return `${name}а`; // Коржик → Коржика, Буран → Бурана
+  return name; // Лаки — не склоняется
+}

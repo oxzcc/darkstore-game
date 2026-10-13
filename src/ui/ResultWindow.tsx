@@ -1,84 +1,90 @@
-// Окно результата заказа с развилкой (решение автора 13.10; как раскрытие исхода в Dispatch).
-// Сначала маркер бежит по полосе «идеально / с ошибками / провал» — исход по характеристикам сборщика;
-// потом по очереди развилки: маркер на полосе «осложнение / без осложнений», текст, что вышло; в конце итог.
-// Процентов игрок не видит — только ширину зон (решение автора: риск словом). Окно уходит само или по клику.
+// Окно итога заказа с развилкой — по макету автора ui_12 (13.10).
+// Сверху иллюстрация (пока заглушка), что решили и что вышло; ниже «чек» заказа: позиции, деньги, рейтинг, опыт и штамп исхода.
+// Деньги и рейтинг пока только показываются (начисление — M6), опыт — M8. Закрывается кнопкой или кликом по «Закрыть».
 import { useEffect, type CSSProperties } from 'react';
-import type { CallReveal } from '../model/call';
-import { SITUATION_BY_ID } from '../config/calls';
 import { useGameStore } from '../store/gameStore';
-import { OUTCOME_LOOK, OUTCOMES_ORDER, RISK_LOOK } from './labels';
+import { money, resultView } from '../store/selectors';
+import { nameForm, OUTCOME_LOOK } from './labels';
 import { Avatar } from './PickerBits';
 import Vx from './Vx';
 import Icon from './icons';
 
-const STEP_MS = 1000;  // на каждую полосу (маркер бежит ~0,9 с)
-const HOLD_MS = 4000;  // сколько висит итог (решение автора 13.10: 4 с)
-
-function CallRow({ c, delayMs }: { c: CallReveal; delayMs: number }) {
-  const option = SITUATION_BY_ID[c.situationId]?.options.find((o) => o.id === c.optionId);
-  const effect = c.complication ? 'исход хуже на ступень' : c.capped ? `исход не выше «${OUTCOME_LOOK[c.after].name.toLowerCase()}»` : 'исход не меняется';
-  return (
-    <div className="result-row" style={{ '--d': `${delayMs}ms` } as CSSProperties}>
-      <div className="result-row-head">
-        <b>{option?.label ?? c.optionId}</b>
-        <span className="call-sub"> · {c.auto ? 'решил сам' : 'ваше решение'} · риск {RISK_LOOK[c.risk].name}</span>
-      </div>
-      <div className="reveal-bar small">
-        <i className="zone bad" style={{ width: `${c.chance * 100}%` }} />
-        <i className="zone ok" style={{ width: `${(1 - c.chance) * 100}%` }} />
-        <span className="marker" style={{ '--to': `${c.roll * 100}%`, '--d': `${delayMs}ms` } as CSSProperties} />
-      </div>
-      <div className={`result-text ${c.complication ? 'bad' : 'ok'}`}>
-        {c.complication ? option?.badText : option?.okText} — {effect}
-      </div>
-    </div>
-  );
-}
+const ratingText = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n).toFixed(2).replace('.', ',')}`;
 
 export default function ResultWindow() {
   const card = useGameStore((s) => s.ui.results[0]);
-  const picker = useGameStore((s) => (card ? s.game.pickers[card.pickerId] : null));
+  const game = useGameStore((s) => s.game);
   const dismiss = useGameStore((s) => s.dismissResult);
 
-  const total = card ? STEP_MS * (1 + card.reveal.calls.length) + HOLD_MS : 0;
   useEffect(() => {
     if (!card) return;
-    const t = setTimeout(() => dismiss(card.id), total);
-    return () => clearTimeout(t);
-  }, [card, total, dismiss]);
+    const onKey = (e: KeyboardEvent) => { if (e.code === 'Escape' || e.code === 'Enter') dismiss(card.id); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [card, dismiss]);
 
-  if (!card || !picker) return null;
-  const { reveal } = card;
-  const finalLook = OUTCOME_LOOK[reveal.final];
-  const finalDelay = STEP_MS * (1 + reveal.calls.length);
+  if (!card) return null;
+  const v = resultView(game, card);
+  if (!v) return null;
+  const look = OUTCOME_LOOK[v.outcome];
 
   return (
-    <Vx key={card.id} className="result" style={{ '--pc': picker.color } as CSSProperties} onClick={() => dismiss(card.id)}>
-      <div className="call-head">
-        <Avatar picker={picker} small />
-        <div className="grow">
-          <div className="call-who">Сборка №{card.taskNumber} · {picker.name}</div>
-          <div className="call-sub">Итог заказа</div>
+    <div className="call-center wide">
+      <Vx key={card.id} className="outcome" style={{ '--pc': v.picker.color, '--oc': look.color } as CSSProperties}>
+        <div className="call-head">
+          <Avatar picker={v.picker} small />
+          <div className="grow">
+            <div className="call-who">Сборка №{v.taskNumber} · {v.picker.name}</div>
+            <div className="call-sub">Как всё прошло</div>
+          </div>
         </div>
-      </div>
 
-      <div className="result-row" style={{ '--d': '0ms' } as CSSProperties}>
-        <div className="result-row-head"><b>Работа {picker.name}</b><span className="call-sub"> · по характеристикам</span></div>
-        <div className="reveal-bar">
-          {OUTCOMES_ORDER.map((o) => (
-            <i key={o} className="zone" style={{ width: `${reveal.chances[o] * 100}%`, background: OUTCOME_LOOK[o].color }} />
-          ))}
-          <span className="marker" style={{ '--to': `${reveal.roll * 100}%`, '--d': '0ms' } as CSSProperties} />
+        {/* заглушка иллюстрации итога 770 × 300 (решение автора 13.10 — картинка позже) */}
+        <div className="outcome-art">
+          <span className="outcome-art-pic">{v.picker.name[0]}</span>
+          <Icon name={v.worked ? 'check' : 'errors'} />
         </div>
-        <div className="result-text">{OUTCOME_LOOK[reveal.base].name}</div>
-      </div>
 
-      {reveal.calls.map((c, i) => <CallRow key={i} c={c} delayMs={STEP_MS * (i + 1)} />)}
+        <div className="outcome-chips">
+          <span className="call-sub">{v.auto ? `${v.picker.name} решил сам:` : 'Вы решили:'}</span>
+          <span className="chip pick">{v.optionLabel}</span>
+          <span className={`chip ${v.worked ? 'ok' : 'bad'}`}>{v.worked ? 'Сработало' : 'Не сработало'}</span>
+        </div>
+        <div className="outcome-title">{v.title}</div>
+        <div className="outcome-text">{v.text}</div>
 
-      <div className="result-final" style={{ '--oc': finalLook.color, '--d': `${finalDelay}ms` } as CSSProperties}>
-        <Icon name={finalLook.icon} />
-        <span>{finalLook.name}</span>
-      </div>
-    </Vx>
+        <div className="receipt">
+          <div className="receipt-head">
+            <b>ЗАКАЗ №{v.taskNumber}</b>
+            <span>собрал {v.picker.name}</span>
+          </div>
+          <div className="receipt-body">
+            <div className="receipt-lines">
+              {v.lines.map((l, i) => {
+                const ok = l.picked >= l.qty;
+                return (
+                  <div key={i} className="receipt-line">
+                    <span className={`mark ${ok ? 'ok' : 'bad'}`}>{ok ? '✓' : '✕'}</span>
+                    <span className="grow">{l.name}</span>
+                    <span className={ok ? '' : 'bad'}>{l.picked} / {l.qty}</span>
+                    {l.note && <div className="receipt-note">{l.note}</div>}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="receipt-sum">
+              <div><span>Деньги</span><span><b>{v.money.got > 0 ? '+' : ''}{money(v.money.got)}</b> из {v.money.of}</span></div>
+              <div><span>Рейтинг</span><span><b>{ratingText(v.rating.got)}</b> из {ratingText(v.rating.of)}</span></div>
+              <div><span>Опыт {nameForm(v.picker.name)}</span><b>Сборка +{v.xp}</b></div>
+            </div>
+          </div>
+          <div className="receipt-stamp">{look.name}</div>
+        </div>
+
+        <div className="outcome-foot">
+          <button className="btn" onClick={() => dismiss(card.id)}><Vx>Закрыть</Vx></button>
+        </div>
+      </Vx>
+    </div>
   );
 }

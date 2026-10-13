@@ -10,10 +10,10 @@ import { etaToTask, pickerActivity } from '../rules/jobs';
 import { tsdOfferSecondsLeft } from '../rules/tsd';
 import { shelfContents } from '../rules/stock';
 import { takenPerLine } from '../rules/minigames/picking';
-import { callText } from '../rules/calls';
-import { CALLS, SITUATION_BY_ID, type CallOption } from '../config/calls';
+import { callText, fillText, lineContext } from '../rules/calls';
+import { CALLS, RESULT_SHARE, RESULT_XP, SITUATION_BY_ID, type CallOption } from '../config/calls';
 import type { Call } from '../model/call';
-import type { CallFlash } from './gameStore';
+import type { CallFlash, ResultCard } from './gameStore';
 import type { Address } from '../model/address';
 import type { Stock } from '../model/stock';
 import { WAREHOUSE_MAP } from './gameStore';
@@ -143,36 +143,80 @@ export type PickingView = NonNullable<ReturnType<typeof pickingView>>;
 
 // ---------- Развилки (N1) ----------
 
-/** Вариант для окна: доступен ли он этому сборщику (закрытые показываются серыми с требованием — как в Dispatch, 13.10). */
-export type CallOptionView = CallOption & { locked: boolean };
+/** Вариант для окна (ui_11): доступен ли он этому сборщику, описание с подстановками.
+ *  Закрытые показываются серыми с требованием — как в Dispatch (13.10). */
+export type CallOptionView = CallOption & { locked: boolean; number: number | null; text: string };
 
-function optionViews(call: Call): CallOptionView[] {
-  return SITUATION_BY_ID[call.situationId].options.map((o) => ({ ...o, locked: !call.optionIds.includes(o.id) }));
+function optionViews(game: GameState, call: Call): CallOptionView[] {
+  const ctx = lineContext(game, call.taskId, call.lineIndex, call.pickerId);
+  let n = 0;
+  return SITUATION_BY_ID[call.situationId].options.map((o) => {
+    const locked = !call.optionIds.includes(o.id);
+    return { ...o, locked, number: locked ? null : ++n, text: fillText(o.description, { ...ctx, seconds: o.seconds }) };
+  });
 }
 
-/** Вызовы на экране: первые CALLS.maxVisible, с текстом, вариантами и временем. Риск — только словом (решение автора). */
-export function callsView(game: GameState) {
-  const visible = game.calls.filter((c) => c.expiresAt !== null).slice(0, CALLS.maxVisible);
-  const shown = visible.map((c) => ({
-    id: c.id,
-    picker: game.pickers[c.pickerId],
-    taskNumber: game.tasks[c.taskId]?.number ?? 0,
-    text: callText(game, c),
-    secondsLeft: Math.max(0, (c.expiresAt ?? 0) - game.clock.time),
-    options: optionViews(c),
-  }));
-  return { shown, queued: game.calls.length - shown.length };
-}
-
-/** Окно вызова после ответа (подсвечен выбор): те же данные, что у вызова, но без таймера. */
-export function flashView(game: GameState, f: CallFlash) {
+/** Окно развилки по центру (ui_11): реплика, варианты, что выберет сборщик сам, сколько ещё ждут помощи. */
+function callCardView(game: GameState, call: Call, text: string) {
+  const options = optionViews(game, call);
   return {
-    id: f.id,
-    picker: game.pickers[f.call.pickerId],
-    taskNumber: game.tasks[f.call.taskId]?.number ?? 0,
-    text: f.text,
-    options: optionViews(f.call),
-    chosenId: f.optionId,
-    auto: f.auto,
+    picker: game.pickers[call.pickerId],
+    taskNumber: game.tasks[call.taskId]?.number ?? 0,
+    text,
+    riskLabel: SITUATION_BY_ID[call.situationId].riskLabel,
+    options,
+    autoNumber: options.find((o) => o.id === call.autoOptionId)?.number ?? null,
+  };
+}
+
+/** Развилки, которые ждут ответа (у «!» идёт таймер). */
+export function callsView(game: GameState) {
+  const shown = game.calls.filter((c) => c.expiresAt !== null).slice(0, CALLS.maxVisible).map((c) => ({
+    id: c.id,
+    ...callCardView(game, c, callText(game, c)),
+    secondsLeft: Math.max(0, (c.expiresAt ?? 0) - game.clock.time),
+  }));
+  return { shown };
+}
+
+/** Окно после ответа (подсвечен выбор). */
+export function flashView(game: GameState, f: CallFlash) {
+  return { id: f.id, ...callCardView(game, f.call, f.text), chosenId: f.optionId, auto: f.auto };
+}
+
+/** Окно итога заказа с развилкой (ui_12): что решили, что вышло, чек с позициями и наградой. */
+export function resultView(game: GameState, card: ResultCard) {
+  const task = game.tasks[card.taskId];
+  const picker = game.pickers[card.pickerId];
+  if (!task || task.type !== 'order' || !picker) return null;
+  const { reveal } = card;
+  const c = reveal.calls[0];
+  const option = c ? SITUATION_BY_ID[c.situationId]?.options.find((o) => o.id === c.optionId) : undefined;
+  const ctx = c ? { ...lineContext(game, task.id, c.lineIndex, picker.id), seconds: option?.seconds ?? 0 } : {};
+  const worked = c ? !c.complication : true;
+  const lines = task.payload.lines.map((l, i) => {
+    let picked = l.qty;
+    let note: string | null = null;
+    if (c && i === c.lineIndex && option?.cap) { picked = 0; note = 'позиция пропущена'; }
+    if (reveal.errorLine?.lineIndex === i) {
+      picked = Math.min(picked, reveal.errorLine.picked);
+      note = `${picker.name} ошибся с количеством — зависит от его точности`;
+    }
+    return { name: game.products[l.productId]?.name ?? l.productId, qty: l.qty, picked, note };
+  });
+  const share = RESULT_SHARE[reveal.final];
+  return {
+    taskNumber: task.number,
+    picker,
+    optionLabel: option?.label ?? '',
+    auto: c?.auto ?? false,
+    worked,
+    title: option ? fillText(worked ? option.okTitle : option.badTitle, ctx) : '',
+    text: option ? fillText(worked ? option.okText : option.badText, ctx) : '',
+    lines,
+    money: { got: Math.round(task.reward.money * share.money), of: task.reward.money },
+    rating: { got: task.reward.rating * share.rating, of: task.reward.rating },
+    xp: RESULT_XP,
+    outcome: reveal.final,
   };
 }

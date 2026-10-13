@@ -87,7 +87,7 @@ describe('развилки: ответ', () => {
     const at = runUntil(s, (x) => x.calls.length > 0);
     const a = answerCall(at, at.calls[0].id, 'search');
     expect(a.calls).toHaveLength(0);
-    expect(a.tasks[taskId].callLog).toEqual([{ situationId: 'notVisible', optionId: 'search', risk: 'medium', auto: false }]);
+    expect(a.tasks[taskId].callLog).toEqual([{ situationId: 'notVisible', lineIndex: 0, optionId: 'search', risk: 'medium', auto: false }]);
     const job = a.pickers.lucky.job!;
     expect(job.steps[job.stepIndex]).toMatchObject({ kind: 'delay', seconds: 15 });
     expect(pickerActivity(a, 'lucky').kind).toBe('busy');
@@ -118,6 +118,8 @@ describe('развилки: ответ', () => {
     const base = SITUATION_BY_ID.notVisible.options.find((o) => o.id === log[0].optionId)!.risk;
     expect(log[0].risk).toBe(raiseRisk(base));
     expect(answered).toEqual([log[0].optionId]);
+    // выбрал ровно то, что окно обещало заранее («Лаки выберет вариант …»)
+    expect(log[0].optionId).toBe(at.calls[0].autoOptionId);
   });
 
   it('на экране не больше трёх вызовов: четвёртый ждёт в очереди без таймера', () => {
@@ -131,7 +133,7 @@ describe('развилки: ответ', () => {
 });
 
 describe('развилки: влияние на исход', () => {
-  const ans = (optionId: string, risk: CallAnswer['risk']): CallAnswer => ({ situationId: 'notVisible', optionId, risk, auto: false });
+  const ans = (optionId: string, risk: CallAnswer['risk']): CallAnswer => ({ situationId: 'notVisible', lineIndex: 0, optionId, risk, auto: false });
 
   it('осложнение ухудшает исход на ступень, без осложнения исход тот же', () => {
     expect(applyCalls('perfect', [ans('search', 'medium')], fixed(0.1))).toBe('withErrors'); // 0,1 < 0,35

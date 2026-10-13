@@ -12,12 +12,14 @@ export type Call = {
   situationId: string;      // ситуация из config/calls.ts
   lineIndex: number;        // к какой позиции заказа относится (для текста: адрес, товар, аллея)
   optionIds: string[];      // какие варианты доступны этому сборщику (часть открывают характеристики)
+  autoOptionId: string;     // что выберет сборщик сам, если не ответить (решено заранее — окно пишет «Лаки выберет вариант 1»)
   expiresAt: number | null; // игровое время, когда сборщик решит сам; null — ждёт в очереди, таймер не идёт
 };
 
 /** Как развилка разрешилась — записывается в задание; по этому журналу считается исход (и в M6 — последствия). */
 export type CallAnswer = {
   situationId: string;
+  lineIndex: number;  // позиция заказа, к которой относилась развилка
   optionId: string;
   risk: RiskLevel; // уже с учётом «решил сам» (на ступень выше)
   auto: boolean;   // true — игрок не ответил, решил сборщик
@@ -39,4 +41,6 @@ export type OutcomeReveal = {
   base: Outcome;                    // исход по характеристикам
   calls: CallReveal[];
   final: Outcome;
+  /** Исход хуже «идеально» по характеристикам: на какой позиции сборщик ошибся и сколько штук собрал (строка чека, ui_12). */
+  errorLine?: { lineIndex: number; picked: number };
 };
