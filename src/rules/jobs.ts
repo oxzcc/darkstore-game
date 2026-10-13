@@ -51,6 +51,14 @@ export function pickerActivity(game: GameState, pickerId: string): PickerActivit
   if (p.state === 'waiting' && game.tsdOffer?.pickerId === p.id) {
     return { kind: 'waitingTsd', secondsLeft: Math.max(0, game.tsdOffer.expiresAt - game.clock.time) };
   }
+  if (p.state === 'calling') {
+    const call = game.calls.find((c) => c.pickerId === p.id);
+    const left = call?.expiresAt != null ? Math.max(0, call.expiresAt - game.clock.time) : null;
+    return { kind: 'calling', secondsLeft: left };
+  }
+  if (step.kind === 'delay') {
+    return { kind: 'busy', label: step.label, progress: Math.min(1, job.stepElapsed / step.seconds) };
+  }
   if (step.kind === 'walk') {
     const total = p.path.length;
     const left = Math.max(0, total - p.pathProgress);

@@ -1,5 +1,6 @@
 // Задания (docs/04-tasks.md; окончательная модель — docs/09-architecture.md, раздел 4.4).
 import type { Address } from './address';
+import type { CallAnswer } from './call';
 
 export type TaskType = 'order' | 'putaway' | 'receiving' | 'writeoff';
 
@@ -28,6 +29,7 @@ type TaskBase = {
   assignedPickerId: string | null;
   mode: 'personal' | 'delegated' | null; // лично или поручено
   outcome: Outcome | null;
+  callLog?: CallAnswer[];          // как разрешились развилки по этому заданию (10, раздел 3)
 };
 
 export type OrderLine = { productId: string; address: Address; qty: number };

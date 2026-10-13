@@ -18,7 +18,11 @@ export function outcomeChances(_picker: Picker, _task: Task): OutcomeChances {
 
 /** Бросок исхода по шансам. */
 export function rollOutcome(chances: OutcomeChances, rng: Rng): Outcome {
-  const r = rng.next();
+  return outcomeAt(chances, rng.next());
+}
+
+/** Исход по числу 0…1: зоны «идеально / с ошибками / провал» идут подряд по ширине шансов. Это же — место маркера в окне результата. */
+export function outcomeAt(chances: OutcomeChances, r: number): Outcome {
   let acc = 0;
   for (const o of OUTCOMES) {
     acc += chances[o];

@@ -10,6 +10,10 @@ import { etaToTask, pickerActivity } from '../rules/jobs';
 import { tsdOfferSecondsLeft } from '../rules/tsd';
 import { shelfContents } from '../rules/stock';
 import { takenPerLine } from '../rules/minigames/picking';
+import { callText } from '../rules/calls';
+import { CALLS, SITUATION_BY_ID, type CallOption } from '../config/calls';
+import type { Call } from '../model/call';
+import type { CallFlash } from './gameStore';
 import type { Address } from '../model/address';
 import type { Stock } from '../model/stock';
 import { WAREHOUSE_MAP } from './gameStore';
@@ -136,3 +140,39 @@ export function pickingView(game: GameState) {
 }
 
 export type PickingView = NonNullable<ReturnType<typeof pickingView>>;
+
+// ---------- Развилки (N1) ----------
+
+/** Вариант для окна: доступен ли он этому сборщику (закрытые показываются серыми с требованием — как в Dispatch, 13.10). */
+export type CallOptionView = CallOption & { locked: boolean };
+
+function optionViews(call: Call): CallOptionView[] {
+  return SITUATION_BY_ID[call.situationId].options.map((o) => ({ ...o, locked: !call.optionIds.includes(o.id) }));
+}
+
+/** Вызовы на экране: первые CALLS.maxVisible, с текстом, вариантами и временем. Риск — только словом (решение автора). */
+export function callsView(game: GameState) {
+  const visible = game.calls.filter((c) => c.expiresAt !== null).slice(0, CALLS.maxVisible);
+  const shown = visible.map((c) => ({
+    id: c.id,
+    picker: game.pickers[c.pickerId],
+    taskNumber: game.tasks[c.taskId]?.number ?? 0,
+    text: callText(game, c),
+    secondsLeft: Math.max(0, (c.expiresAt ?? 0) - game.clock.time),
+    options: optionViews(c),
+  }));
+  return { shown, queued: game.calls.length - shown.length };
+}
+
+/** Окно вызова после ответа (подсвечен выбор): те же данные, что у вызова, но без таймера. */
+export function flashView(game: GameState, f: CallFlash) {
+  return {
+    id: f.id,
+    picker: game.pickers[f.call.pickerId],
+    taskNumber: game.tasks[f.call.taskId]?.number ?? 0,
+    text: f.text,
+    options: optionViews(f.call),
+    chosenId: f.optionId,
+    auto: f.auto,
+  };
+}

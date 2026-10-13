@@ -2,7 +2,7 @@
 import type { TaskType } from './task';
 import type { Cell } from './warehouse';
 
-export type PickerState = 'idle' | 'walking' | 'waiting' | 'working' | 'playing' | 'resting';
+export type PickerState = 'idle' | 'walking' | 'waiting' | 'calling' | 'working' | 'playing' | 'resting';
 
 export type PickerStats = {
   speed: number;    // 1–10
@@ -17,14 +17,18 @@ export type JobStep =
   // label — куда идёт, для экрана: «к 2.3.2» или «на фасовку».
   | { kind: 'walk'; to: Cell; spots: Cell[]; label: string }
   | { kind: 'pick'; lineIndex: number; seconds: number }
-  | { kind: 'pack'; seconds: number };
+  | { kind: 'pack'; seconds: number }
+  // задержка из-за ответа на развилку: «Ищет рядом», «Ждёт, пока освободится проход» (10, раздел 3)
+  | { kind: 'delay'; seconds: number; label: string };
 
 /** Текущая работа сборщика: список шагов и где он сейчас. */
 export type PickerJob = {
   taskId: string;
   steps: JobStep[];
   stepIndex: number;   // какой шаг выполняется
-  stepElapsed: number; // сколько секунд прошло в текущем рабочем шаге (pick/pack)
+  stepElapsed: number; // сколько секунд прошло в текущем рабочем шаге (pick/pack/delay)
+  /** Развилка, запланированная при отправке: на каком шаге сборщик остановится и позовёт диспетчера. */
+  call?: { stepIndex: number; lineIndex: number; situationId: string; raised: boolean };
 };
 
 /** Что сборщик делает сейчас — для карточек интерфейса (считает rules/jobs.ts). */
@@ -32,6 +36,8 @@ export type PickerActivity =
   | { kind: 'idle' }
   | { kind: 'waitingTsd'; secondsLeft: number } // висит «Взять ТСД?», сборщик стоит
   | { kind: 'atRack' }                            // личная «Сборка»: стоит, ждёт, куда отправит игрок, или у стеллажа
+  | { kind: 'calling'; secondsLeft: number | null } // зовёт диспетчера (развилка); null — вызов ждёт в очереди
+  | { kind: 'busy'; label: string; progress: number } // делает то, что решили в развилке
   | { kind: 'walking'; to: string; secondsLeft: number; progress: number }
   | { kind: 'picking'; line: number; lines: number; progress: number }
   | { kind: 'packing'; progress: number };
