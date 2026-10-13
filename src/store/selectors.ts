@@ -264,6 +264,7 @@ export function depthView(game: GameState) {
     secondsLeft: Math.max(0, g.timeLimit - g.elapsed),
     timeLimit: g.timeLimit,
     moves: g.moves,
+    best: g.best,
     perfectUpTo: g.best + DEPTH.perfectExtra,
     errorsUpTo: g.best + DEPTH.withErrorsExtra,
     note: g.note,

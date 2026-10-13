@@ -1,16 +1,22 @@
-// Экран ТСД в «Глубине» (docs/10-minigames-concept.md, раздел 11.3): что достать, с какой полки, время и ходы.
-// Сама полка с коробками — на сцене (scene/DepthShelf.tsx). Только показывает данные из props (09, раздел 6.3).
+// Экран ТСД в «Глубине» (docs/10-minigames-concept.md, раздел 11.3; вид — по прототипу, одобрен автором 14.10).
+// Сверху по центру одна плашка: что достать и ходы (дорожка: зелёные клетки — «идеально», оранжевые — «с ошибками»,
+// крестик — дальше провал) и тонкая полоса времени. Итог — окно по центру, фон затемнён.
+// Сама полка с лотками — на сцене (scene/DepthShelf.tsx). Только показывает данные из props (09, раздел 6.3).
 import { useEffect, type CSSProperties } from 'react';
 import type { DepthView } from '../../store/selectors';
-import { clockText, plural } from '../../store/selectors';
+import { plural } from '../../store/selectors';
 import { OUTCOME_LOOK } from '../../ui/labels';
 import Vx from '../../ui/Vx';
 
-const NOTE_TEXT: Record<string, { text: string; cls: string }> = {
-  stuck: { text: 'Рядом нет пустого места — коробка не сдвинется', cls: 'mute' },
-  timeout: { text: 'Время вышло', cls: 'bad' },
-  tooMany: { text: 'Слишком много ходов', cls: 'bad' },
+const NOTE_TEXT: Partial<Record<NonNullable<DepthView['note']>, string>> = {
+  stuck: 'Этот лоток некуда сдвинуть',
 };
+
+function resultText(v: DepthView): string {
+  if (v.note === 'timeout') return 'Время вышло';
+  if (v.note === 'tooMany') return `Больше ${v.errorsUpTo} ${plural(v.errorsUpTo, 'хода', 'ходов', 'ходов')}`;
+  return `${v.moves} ${plural(v.moves, 'ход', 'хода', 'ходов')} · лучший путь — ${v.best}`;
+}
 
 export default function DepthTsd({ view, onClose }: { view: DepthView; onClose: () => void }) {
   const look = view.product.look;
@@ -23,62 +29,53 @@ export default function DepthTsd({ view, onClose }: { view: DepthView; onClose: 
     return () => window.removeEventListener('keydown', onKey);
   }, [done, onClose]);
 
-  const note = view.note ? NOTE_TEXT[view.note] : undefined;
+  const note = view.note && !done ? NOTE_TEXT[view.note] : undefined;
   const result = view.result ? OUTCOME_LOOK[view.result] : null;
+  const timeShare = view.secondsLeft / view.timeLimit;
 
   return (
-    <div className="tsd">
-      <div className="tsd-head">
-        <div className="tsd-head-title">Достаньте товар</div>
-        <div className={`tsd-head-time${view.secondsLeft <= 5 && !done ? ' late' : ''}`}>{clockText(view.secondsLeft)}</div>
-        <div className="progress wide tsd-time-bar"><b style={{ width: `${(view.secondsLeft / view.timeLimit) * 100}%` }} /></div>
+    <>
+      <div className="depth-hud-wrap">
+        <Vx className="depth-hud">
+          <div className="depth-hud-item">
+            <span className="swatch" style={look ? ({ '--sw': look.color, '--sw2': look.accent } as CSSProperties) : undefined} />
+            <div>
+              <div className="depth-hud-label">Достаньте</div>
+              <div className="depth-hud-name">{view.product.name}</div>
+            </div>
+          </div>
+          <div className="depth-hud-sep" />
+          <div className="depth-hud-moves">
+            <div className="depth-hud-moves-top">
+              <span>Ходы</span>
+              <b>{view.moves} <small>из {view.errorsUpTo}</small></b>
+            </div>
+            <div className="depth-track">
+              {Array.from({ length: view.errorsUpTo }, (_, i) => (
+                <i key={i} className={i < view.moves ? 'on' : ''}
+                  style={{ '--zone': i < view.perfectUpTo ? 'var(--perfect)' : 'var(--errors)' } as CSSProperties} />
+              ))}
+              <i className="end" title="дальше — провал" />
+            </div>
+            <div className="depth-track-legend">
+              <span>идеально до {view.perfectUpTo}</span>
+              <span>с ошибками до {view.errorsUpTo}</span>
+            </div>
+            <div className={`depth-time${view.secondsLeft <= 8 ? ' low' : ''}`}><b style={{ width: `${timeShare * 100}%` }} /></div>
+          </div>
+        </Vx>
+        {note && <div key={view.noteAt} className="depth-note">{note}</div>}
       </div>
 
-      <div className="tsd-scroll">
-        <div className="tsd-info">
-          <div className="tsd-info-row">
-            <span className="tsd-order-no">Заказ №{view.taskNumber}</span>
-            <span className="tsd-units">полка {view.address}</span>
-          </div>
-          <div className="tsd-chips">
-            <span className="tsd-chip picker" style={{ '--pc': view.picker.color } as CSSProperties}>{view.picker.name}</span>
-            <span className="tsd-chip">товар в глубине полки</span>
-          </div>
+      {result && (
+        <div className="depth-result-dim">
+          <Vx className="depth-result" style={{ '--oc': result.color } as CSSProperties}>
+            <div className="depth-result-name">{result.name}</div>
+            <div className="depth-result-sub">{resultText(view)}</div>
+            <button className="btn primary" onClick={onClose}><Vx>К складу · Enter</Vx></button>
+          </Vx>
         </div>
-
-        <div className="tsd-line">
-          <span className="swatch" style={look ? ({ '--sw': look.color, '--sw2': look.accent } as CSSProperties) : undefined} />
-          <div className="tsd-line-text">
-            <div className="tsd-line-name">{view.product.name}</div>
-            <span className="tsd-qty part">у задней стенки</span>
-          </div>
-        </div>
-
-        <div className="depth-rules">
-          <p>Кликайте по коробкам рядом с пустым местом — они сдвигаются.</p>
-          <p>Выведите <b>{view.product.name}</b> (в зелёной рамке) в передний ряд — ближе к вам — и кликните по нему.</p>
-        </div>
-
-        <div className="depth-moves">
-          <div><span>Ходов</span><b>{view.moves}</b></div>
-          <div><span>Идеально</span><b>до {view.perfectUpTo}</b></div>
-          <div><span>С ошибками</span><b>до {view.errorsUpTo}</b></div>
-        </div>
-      </div>
-
-      {result ? (
-        <div className="depth-result" style={{ '--oc': result.color } as CSSProperties}>
-          <div className="depth-result-name">{result.name}</div>
-          <div className="depth-result-sub">
-            {view.note === 'timeout' ? 'Не успели за время' : view.note === 'tooMany' ? `Больше ${view.errorsUpTo} ходов` : `${view.moves} ${plural(view.moves, 'ход', 'хода', 'ходов')}`}
-          </div>
-          <button className="btn primary" onClick={onClose}><Vx>К складу · Enter</Vx></button>
-        </div>
-      ) : note ? (
-        <div key={view.noteAt} className={`tsd-msg ${note.cls}`}>{note.text}</div>
-      ) : (
-        <div className="tsd-msg idle">Мир идёт медленнее, пока вы с ТСД</div>
       )}
-    </div>
+    </>
   );
 }

@@ -1,4 +1,4 @@
-// Панель ТСД справа: игра на ТСД из развилки («Глубина», N2) или личная «Сборка» (M5e1, выключена флагом).
+// Экран ТСД: игра из развилки («Глубина», N2 — плашка сверху по центру) или личная «Сборка» (M5e1, панель справа, выключена флагом).
 // Подключает экран игры к store. Другие игры («Срок», «Штрихкод») встанут сюда же.
 import { useGameStore } from '../store/gameStore';
 import { depthView, pickingView } from '../store/selectors';
@@ -10,13 +10,8 @@ export default function TsdPanel() {
   const game = useGameStore((s) => s.game);
   const closeTsdGame = useGameStore((s) => s.closeTsdGame);
   const depth = depthView(game);
-  if (depth) {
-    return (
-      <Vx className="tsd-panel">
-        <DepthTsd key={game.tsdGame!.callId} view={depth} onClose={closeTsdGame} />
-      </Vx>
-    );
-  }
+  // «Глубина»: без панели справа — плашка сверху по центру и итог по центру (прототип, одобрен автором 14.10)
+  if (depth) return <DepthTsd key={game.tsdGame!.callId} view={depth} onClose={closeTsdGame} />;
   const view = pickingView(game);
   if (!view) return null;
   return (

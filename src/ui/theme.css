@@ -419,17 +419,40 @@ svg.i.sm { width: 18px; height: 18px; }
 .outcome-foot { display: flex; justify-content: flex-end; }
 .outcome-foot .btn { flex: none; width: 180px; height: 48px; }
 
-/* «Глубина» на ТСД (N2) */
-.tsd-head-time.late { color: var(--failed); }
-.tsd-time-bar { margin-top: 6px; }
-.depth-rules { padding: 12px 16px; font-size: 14px; line-height: 1.45; color: var(--text-mute); border-top: 1px solid var(--divider); }
-.depth-rules p { margin: 0 0 6px; }
-.depth-rules b { color: var(--text); }
-.depth-moves { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px 16px; border-top: 8px solid var(--divider); }
-.depth-moves > div { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; background: var(--track); }
-.depth-moves span { font-size: 12px; color: var(--text-mute); }
-.depth-moves b { font-size: 20px; font-variant-numeric: tabular-nums; }
-.depth-result { padding: 14px 16px 16px; border-top: 4px solid var(--oc); text-align: center; display: flex; flex-direction: column; gap: 6px; animation: pop 0.25s ease-out; }
-.depth-result-name { font-size: 26px; font-weight: 700; color: var(--oc); }
-.depth-result-sub { font-size: 14px; color: var(--text-mute); margin-bottom: 6px; }
+/* «Глубина» на ТСД (N2; прототип одобрен автором 14.10): плашка сверху по центру, итог по центру с затемнением */
+.depth-hud-wrap { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.depth-hud { --cut: 12px; animation: pop 0.25s ease-out; }
+.depth-hud > .vx-edge > .vx-body { display: flex; align-items: stretch; }
+.depth-hud-item { display: flex; align-items: center; gap: 14px; padding: 12px 20px 12px 14px; }
+.depth-hud-item .swatch { flex: none; width: 52px; height: 52px; background: linear-gradient(var(--sw) 0 62%, var(--sw2) 62% 78%, var(--sw) 78%);
+  border: 2px solid rgba(0, 0, 0, 0.08); }
+.depth-hud-label { font-size: 12px; color: var(--text-mute); letter-spacing: 0.06em; text-transform: uppercase; }
+.depth-hud-name { font-size: 24px; font-weight: 700; line-height: 1.1; }
+.depth-hud-sep { width: 2px; margin: 10px 0; background: var(--divider); }
+.depth-hud-moves { display: flex; flex-direction: column; justify-content: center; gap: 7px; padding: 10px 20px; min-width: 330px; }
+.depth-hud-moves-top { display: flex; align-items: baseline; justify-content: space-between; }
+.depth-hud-moves-top span { font-size: 13px; color: var(--text-mute); letter-spacing: 0.04em; text-transform: uppercase; }
+.depth-hud-moves-top b { font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
+.depth-hud-moves-top small { font-size: 14px; font-weight: 400; color: var(--text-mute); }
+.depth-track { display: flex; gap: 3px; }
+.depth-track i { flex: 1; height: 12px; background: var(--zone); opacity: 0.28; transition: opacity 0.15s; }
+.depth-track i.on { opacity: 1; }
+.depth-track i.end { flex: 0 0 18px; background: var(--failed); opacity: 1; position: relative; }
+.depth-track i.end::after { content: '✕'; position: absolute; inset: -1px 0 0; color: #fff; font-size: 10px; font-weight: 700; font-style: normal; text-align: center; }
+.depth-track-legend { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-mute); font-variant-numeric: tabular-nums; }
+.depth-time { height: 4px; background: var(--track); position: relative; }
+.depth-time b { position: absolute; inset: 0 auto 0 0; background: var(--primary); }
+.depth-time.low b { background: var(--failed); }
+.depth-note { padding: 6px 12px; background: var(--tag); color: #fff; font-size: 14px; font-weight: 700; animation: pop 0.2s ease-out; }
+.depth-result-dim { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(40, 34, 24, 0.55);
+  animation: fade 0.2s ease-out; pointer-events: auto; }
+.depth-result { width: 380px; --cut: 14px; animation: pop 0.25s ease-out; }
+.depth-result > .vx-edge > .vx-body { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 26px 28px 24px;
+  border-top: 8px solid var(--oc); }
+.depth-result-name { font-size: 38px; font-weight: 700; line-height: 1.1; color: var(--oc); }
+.depth-result-sub { font-size: 15px; color: var(--text-mute); margin-bottom: 14px; }
+.depth-result .btn { width: 240px; height: 48px; }
 .depth-front-label { background: var(--primary); }
+.depth-tray-label { font-size: 11px; padding: 0 6px; background: #fff; color: var(--text); }
+.depth-tray-label.target { background: var(--perfect); color: #fff; }
+@keyframes fade { from { opacity: 0; } }

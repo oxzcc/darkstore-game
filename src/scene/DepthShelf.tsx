@@ -15,11 +15,12 @@ import { useGameStore } from '../store/gameStore';
 import { depthMovesFrom } from '../rules/tsdGame';
 import { closeupEye, closeupLook } from './closeupView';
 import { rackFront } from './rackGeometry';
+import { productParts } from './models/ProductItem';
+import type { ProductLook } from '../model/product';
 
 const V = WAREHOUSE_VIEW.depthShelf;
 const TARGET_FRAME = '#7FC743';
 const HOVER_FRAME = '#FFFFFF';
-const FRAME = 0.018;
 const SELECT_FRAME = '#1E1E1E';
 
 /** Центр клетки в координатах полки: x — вдоль (слева направо), z — к игроку (передний ряд — больше z). */
@@ -29,34 +30,76 @@ function cellPos(b: DepthBoard, cell: number): [number, number] {
   return [(c - (b.cols - 1) / 2) * V.cell, ((b.rows - 1) / 2 - r) * V.cell];
 }
 
-/** Рамка вокруг коробки сверху. */
-function Frame({ color }: { color: string }) {
-  const s = V.box + 0.03;
-  const y = V.boxHeight + 0.005;
-  const bars: { pos: [number, number, number]; size: [number, number, number] }[] = [
-    { pos: [0, y, s / 2], size: [s, FRAME, FRAME] },
-    { pos: [0, y, -s / 2], size: [s, FRAME, FRAME] },
-    { pos: [s / 2, y, 0], size: [FRAME, FRAME, s] },
-    { pos: [-s / 2, y, 0], size: [FRAME, FRAME, s] },
+const CARTON = PALETTE.box;       // борт лотка
+const CARTON_SIDE = '#C9A26B';    // стенки лотка
+const CARTON_IN = '#B98F57';      // дно лотка изнутри
+
+/**
+ * Лоток: открытая картонная тара с 4 штуками товара внутри (решение автора 14.10 по прототипу).
+ * Товар — те же воксельные модели, что на полках склада (models/ProductItem), уменьшенные под лоток.
+ * Борт подсвечивается: нужный — зелёный, выбранный — тёмный, под курсором — белый.
+ */
+function Tray({ look, rim, label, labelTarget }: { look: ProductLook | null; rim: string; label: string; labelTarget: boolean }) {
+  const s = V.box;
+  const h = V.boxHeight;
+  const t = 0.014; // толщина стенки
+  const walls: { pos: [number, number, number]; size: [number, number, number] }[] = [
+    { pos: [0, h / 2, s / 2 - t / 2], size: [s, h, t] },
+    { pos: [0, h / 2, -s / 2 + t / 2], size: [s, h, t] },
+    { pos: [s / 2 - t / 2, h / 2, 0], size: [t, h, s] },
+    { pos: [-s / 2 + t / 2, h / 2, 0], size: [t, h, s] },
   ];
+  const rimBars: { pos: [number, number, number]; size: [number, number, number] }[] = [
+    { pos: [0, h, s / 2 - t], size: [s, 0.012, t * 2] },
+    { pos: [0, h, -s / 2 + t], size: [s, 0.012, t * 2] },
+    { pos: [s / 2 - t, h, 0], size: [t * 2, 0.012, s] },
+    { pos: [-s / 2 + t, h, 0], size: [t * 2, 0.012, s] },
+  ];
+  const parts = look ? productParts(look, V.unitWidth) : [];
+  const q = (s - 2 * t) / 4; // центры четырёх мест в лотке
+  const spots: [number, number][] = [[-q, -q], [q, -q], [-q, q], [q, q]];
   return (
     <group>
-      {bars.map((b, i) => (
-        <mesh key={i} position={b.pos}>
-          <boxGeometry args={b.size} />
-          <meshBasicMaterial color={color} />
+      <mesh position={[0, 0.004, 0]}>
+        <boxGeometry args={[s, 0.008, s]} />
+        <meshStandardMaterial color={CARTON_IN} />
+      </mesh>
+      {walls.map((w, i) => (
+        <mesh key={`w${i}`} position={w.pos}>
+          <boxGeometry args={w.size} />
+          <meshStandardMaterial color={CARTON_SIDE} />
         </mesh>
       ))}
+      {rimBars.map((r, i) => (
+        <mesh key={`r${i}`} position={r.pos}>
+          <boxGeometry args={r.size} />
+          <meshStandardMaterial color={rim} />
+        </mesh>
+      ))}
+      {spots.map(([x, z], i) => (
+        <group key={`u${i}`} position={[x, 0.008, z]} scale={V.unitScale}>
+          {parts.map((p, k) => (
+            <mesh key={k} position={p.pos}>
+              <boxGeometry args={p.size} />
+              <meshStandardMaterial color={p.color} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+      {/* подпись товара на переднем борту */}
+      <Html position={[0, h, s / 2]} center className={`shelf-label depth-tray-label${labelTarget ? ' target' : ''}`}>
+        {label}
+      </Html>
     </group>
   );
 }
 
 type BoxProps = {
-  index: number;      // номер коробки (0 — нужная)
+  index: number;      // номер лотка (0 — нужный)
   cell: number;       // в какой клетке сейчас
   board: DepthBoard;
-  color: string;      // цвет товара — наклейка сверху
-  accent: string;
+  look: ProductLook | null;
+  name: string;
   hover: boolean;
   selected: boolean;
   active: boolean;    // можно кликать (игра идёт, не пауза)
@@ -64,39 +107,34 @@ type BoxProps = {
   onTap: (cell: number) => void;
 };
 
-function Box({ index, cell, board, color, accent, hover, selected, active, onHover, onTap }: BoxProps) {
+function Box({ index, cell, board, look, name, hover, selected, active, onHover, onTap }: BoxProps) {
   const ref = useRef<Group>(null);
   const target = useRef(new Vector3());
   const [x, z] = cellPos(board, cell);
   target.current.set(x, 0, z);
 
-  // коробка плавно съезжает в новую клетку
+  // лоток плавно съезжает в новую клетку
   useFrame((_, delta) => {
     const g = ref.current;
     if (!g) return;
-    const k = Math.min(1, delta / V.slideSeconds);
-    g.position.lerp(target.current, k);
+    g.position.lerp(target.current, Math.min(1, delta / V.slideSeconds));
   });
 
   const isTarget = index === 0;
-  const h = V.boxHeight;
+  const rim = selected ? SELECT_FRAME : hover ? HOVER_FRAME : isTarget ? TARGET_FRAME : CARTON;
   return (
     <group ref={ref} position={[x, 0, z]}>
+      {/* невидимый блок по размеру лотка — в него попадает клик */}
       <mesh
-        position={[0, h / 2, 0]}
+        position={[0, V.boxHeight, 0]}
         onPointerOver={(e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); if (active) onHover(cell); }}
         onPointerOut={() => onHover(null)}
         onClick={(e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); if (active) onTap(cell); }}
       >
-        <boxGeometry args={[V.box, h, V.box]} />
-        <meshStandardMaterial color={isTarget ? color : PALETTE.box} />
+        <boxGeometry args={[V.box, V.boxHeight * 2, V.box]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
-      {/* наклейка сверху: у нужной — светлая полоса, у остальных — цвет их товара */}
-      <mesh position={[0, h + 0.002, 0]}>
-        <boxGeometry args={[V.box * 0.62, 0.004, V.box * 0.62]} />
-        <meshStandardMaterial color={isTarget ? accent : color} />
-      </mesh>
-      {selected ? <Frame color={SELECT_FRAME} /> : hover ? <Frame color={HOVER_FRAME} /> : isTarget && <Frame color={TARGET_FRAME} />}
+      <Tray look={look} rim={rim} label={name} labelTarget={isTarget} />
     </group>
   );
 }
@@ -171,22 +209,22 @@ export default function DepthShelf({ map }: { map: WarehouseMap }) {
               onClick={(e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); move(cell); }}
             >
               <boxGeometry args={[V.box, 0.01, V.box]} />
-              <meshBasicMaterial color="#ffffff" transparent opacity={hover === cell ? 0.85 : 0.55} depthWrite={false} />
+              <meshBasicMaterial color="#ffffff" transparent opacity={hover === cell ? 0.9 : 0.6} depthWrite={false} />
             </mesh>
           );
         })}
 
         {b.cells.map((boxIndex, cell) => {
           if (boxIndex < 0) return null;
-          const look = products[b.boxes[boxIndex]]?.look;
+          const product = products[b.boxes[boxIndex]];
           return (
             <Box
               key={boxIndex}
               index={boxIndex}
               cell={cell}
               board={b}
-              color={look?.color ?? PALETTE.box}
-              accent={look?.accent ?? '#ffffff'}
+              look={product?.look ?? null}
+              name={product?.name ?? b.boxes[boxIndex]}
               hover={hover === cell}
               selected={selected === cell}
               active={active}

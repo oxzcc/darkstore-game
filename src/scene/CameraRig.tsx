@@ -54,8 +54,8 @@ function homePose(map: WarehouseMap, size: Size, panel: number): Pose {
   };
 }
 
-/** Вид стеллажа «глазами сборщика». */
-function closePose(rack: Rack): Pose {
+/** Вид стеллажа «глазами сборщика». insets — сколько места занимает интерфейс (у «Глубины» он свой). */
+function closePose(rack: Rack, insets: Insets): Pose {
   const eye = closeupEye(rack);
   const look = closeupLook(rack);
   const toEye = eye.clone().sub(look);
@@ -64,7 +64,7 @@ function closePose(rack: Rack): Pose {
     dir: toEye.clone().normalize(),
     dist: toEye.length(),
     fovDeg: WAREHOUSE_VIEW.closeup.fovDeg,
-    insets: WAREHOUSE_VIEW.closeup.screenInsets,
+    insets,
     clipNear: WAREHOUSE_VIEW.closeup.clipNear,
   };
 }
@@ -117,7 +117,10 @@ export default function CameraRig({ map }: { map: WarehouseMap }) {
   const size = useThree((s) => s.size);
   const scene = useThree((s) => s.scene);
   const focus = useGameStore((s) => closeupFocus(s.game));
-  const session = useGameStore((s) => s.game.minigame !== null || s.game.tsdGame !== null);
+  // панель ТСД справа — только у личной «Сборки» (M5e1); у игры из развилки интерфейс сверху по центру
+  const session = useGameStore((s) => s.game.minigame !== null);
+  const depth = useGameStore((s) => s.game.tsdGame !== null);
+  const lastInsets = useRef<Insets>(WAREHOUSE_VIEW.closeup.screenInsets);
   const panel = useRef(0); // плавно 0 → 1, когда появляется панель ТСД
 
   const progress = useRef(0);                 // 0 — дом, 1 — у стеллажа
@@ -126,14 +129,17 @@ export default function CameraRig({ map }: { map: WarehouseMap }) {
 
   useFrame((_, delta) => {
     const rack = focus ? map.racks.find((r) => r.aisle === focus.aisle && r.rack === focus.rack) ?? null : null;
-    if (rack) lastRack.current = rack;
+    if (rack) {
+      lastRack.current = rack;
+      lastInsets.current = depth ? WAREHOUSE_VIEW.depthShelf.screenInsets : WAREHOUSE_VIEW.closeup.screenInsets;
+    }
     const step = Math.min(delta, 0.1) / TSD.cameraFlySeconds;
     progress.current = rack ? Math.min(1, progress.current + step) : Math.max(0, progress.current - step);
     const t = smooth(progress.current);
 
     panel.current = session ? Math.min(1, panel.current + step) : Math.max(0, panel.current - step);
     const home = homePose(map, size, smooth(panel.current));
-    const close = lastRack.current ? closePose(lastRack.current) : null;
+    const close = lastRack.current ? closePose(lastRack.current, lastInsets.current) : null;
     const pose = close && progress.current > 0 ? mix(home, close, t) : home;
     apply(camera, pose, size);
 

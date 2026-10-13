@@ -6,7 +6,6 @@ import { useGameStore } from '../store/gameStore';
 import { Avatar } from './PickerBits';
 import Vx from './Vx';
 import { nameForm } from './labels';
-import { addressText } from '../store/selectors';
 
 
 export default function TsdHint() {
@@ -33,7 +32,7 @@ export default function TsdHint() {
             <Avatar picker={tsdPicker} small />
             <div>
               <div className="closeup-title">Стеллаж {tsdGame.rack.aisle}.{tsdGame.rack.rack} · ТСД у вас</div>
-              <div className="closeup-sub">рядом с {tsdPicker.name} · полка {addressText(tsdGame.address)}</div>
+              <div className="closeup-sub">рядом с {tsdPicker.name}</div>
             </div>
           </Vx>
         </div>
