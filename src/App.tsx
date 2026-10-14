@@ -14,11 +14,12 @@ import TsdPanel from './ui/TsdPanel';
 import CallWindow from './ui/CallWindow';
 import ResultWindow from './ui/ResultWindow';
 import SpeedControls from './ui/SpeedControls';
+import TopBar from './ui/TopBar';
 import './ui/theme.css';
 
 export default function App() {
   const stock = useGameStore((s) => s.game.stock);
-  // во время «Сборки» взятое в тележку уже не лежит на полке (склад поменяется только в M6)
+  // во время «Сборки» (M5e1, выключена) взятое в тележку уже не рисуется на полке
   const actions = useGameStore((s) => s.game.minigame?.actions);
   const seen = useMemo(() => seenStock(stock, actions), [stock, actions]);
   // У стеллажа вид во весь экран (06, раздел 2.3): список заданий и карточки сборщиков прячутся.
@@ -36,6 +37,7 @@ export default function App() {
         <TsdPanel />
         <CallWindow />
         <ResultWindow />
+        {!closeup && <TopBar />}
         <SpeedControls />
         <Toasts />
       </div>

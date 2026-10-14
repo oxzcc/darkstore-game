@@ -5,6 +5,9 @@ import type { OrderLine, OrderTask } from '../../model/task';
 import type { StockRecord } from '../../model/stock';
 import { ORDER, REWARD } from '../../config/balance';
 import type { Rng } from '../random';
+import { reservedQty } from '../rewards';
+import { addressKey } from '../address';
+import { qtyAt } from '../stock';
 
 /** Сложность по числу позиций (допущение из 04, раздел 4.2). */
 export function orderDifficulty(lines: number): 1 | 2 | 3 {
@@ -13,16 +16,21 @@ export function orderDifficulty(lines: number): 1 | 2 | 3 {
 }
 
 /**
- * Новый заказ клиента. Берёт только товары, которые ЕСТЬ ПО УЧЁТУ (04, 5.1: «если товара в учёте нет,
- * заказ не создаётся»). Фактического наличия генератор не знает — как и настоящая система.
- * Возвращает null, если на складе по учёту пусто.
+ * Новый заказ клиента. Берёт только товар, который лежит на полке и ещё не обещан другим открытым заказам
+ * (04, 5.1: «если товара нет, заказ не создаётся»). Возвращает null, если свободного товара нет.
  */
 export function createOrder(state: GameState, rng: Rng, now: number): { state: GameState; task: OrderTask } | null {
-  // Записи с товаром по учёту, сгруппированные по товару.
-  const byProduct = new Map<string, StockRecord[]>();
+  // Свободный товар (лежит на полке и ещё не обещан открытым заказам), сгруппированный по товару.
+  // На одной полке один товар (07, 5.3), поэтому свободное считается по полке целиком, а не по партии.
+  const byProduct = new Map<string, { address: StockRecord['address']; free: number }[]>();
+  const seen = new Set<string>();
   for (const r of Object.values(state.stock)) {
-    if (r.qty <= 0) continue;
-    byProduct.set(r.productId, [...(byProduct.get(r.productId) ?? []), r]);
+    const shelf = addressKey(r.address);
+    if (seen.has(shelf)) continue;
+    seen.add(shelf);
+    const free = qtyAt(state.stock, r.address, r.productId) - reservedQty(state, r.productId, r.address);
+    if (free <= 0) continue;
+    byProduct.set(r.productId, [...(byProduct.get(r.productId) ?? []), { address: r.address, free }]);
   }
   if (byProduct.size === 0) return null;
 
@@ -33,7 +41,7 @@ export function createOrder(state: GameState, rng: Rng, now: number): { state: G
   const lines: OrderLine[] = products.map((productId) => {
     const rec = rng.pick(byProduct.get(productId)!);
     const [minQty, maxQty] = ORDER.qtyPerLine;
-    return { productId, address: rec.address, qty: rng.int(minQty, Math.min(maxQty, rec.qty)) };
+    return { productId, address: rec.address, qty: rng.int(Math.min(minQty, rec.free), Math.min(maxQty, rec.free)) };
   });
 
   const difficulty = orderDifficulty(lines.length);
