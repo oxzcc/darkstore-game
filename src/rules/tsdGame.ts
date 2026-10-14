@@ -2,11 +2,12 @@
 // Игрок выбрал «Взять ТСД» — сборщик стоит у полки, камера у стеллажа, мир идёт ×0,5 (rules/tsd.ts: worldSpeed).
 // Игра закончилась — итог записывается в задание как ответ на развилку, и сборщик дособирает заказ сам.
 import type { GameState } from '../model/game';
-import type { DepthGame, ExpiryGame, TsdGame } from '../model/tsdGame';
+import type { BarcodeGame, DepthGame, ExpiryGame, TsdGame } from '../model/tsdGame';
 import type { CallAnswer } from '../model/call';
-import { DEPTH, EXPIRY, TSD_OPTION_ID } from '../config/calls';
+import { BARCODE, DEPTH, EXPIRY, TSD_OPTION_ID } from '../config/calls';
 import { createRng } from './random';
 import { createExpiryUnits, scoreExpiry } from './minigames/expiry';
+import { createBarcode, hiddenDigits, markGuess, scoreBarcode } from './minigames/barcode';
 import { createDepthBoard, freeNeighbours, scoreDepth, slideBox, targetAtExit, targetCell, tooManyMoves, rowOf } from './minigames/depth';
 
 /** Начать игру по вызову: вызов уходит, сборщик «играете за него». Нельзя — state без изменений. */
@@ -40,8 +41,13 @@ export function startTsdGame(state: GameState, callId: string): GameState {
   } else if (call.tsd === 'expiry') {
     game = { ...common, kind: 'expiry', timeLimit: EXPIRY.timeLimit, productId: line.productId, need: EXPIRY.need,
       units: createExpiryUnits(rng), open: null, taken: null, note: null };
+  } else if (call.tsd === 'barcode') {
+    const { code, side } = createBarcode(rng);
+    game = { ...common, kind: 'barcode', timeLimit: BARCODE.timeLimit, startDelay: BARCODE.introSeconds, productId: line.productId,
+      code, side, hiddenFrom: BARCODE.hiddenFrom, hiddenCount: BARCODE.hiddenCount, attempts: BARCODE.attempts,
+      perfectWithin: BARCODE.perfectWithin, guesses: [], note: null };
   } else {
-    return state; // «Штрихкод» — N4
+    return state;
   }
   return {
     ...state,
@@ -112,14 +118,39 @@ export function takeExpiryUnit(state: GameState): GameState {
   return { ...state, tsdGame: next };
 }
 
+// ---------- «Штрихкод» ----------
+
+/** Вступление (подлёт, подъём, поворот) закончилось — можно вводить. */
+export const barcodeReady = (g: BarcodeGame) => g.elapsed >= g.startDelay;
+
+/**
+ * Попытка: стёртые цифры, которые ввёл игрок. Все на месте — угадано (исход по числу попыток);
+ * попытки кончились — провал. Неполная попытка или вступление ещё идёт — не принимается.
+ */
+export function submitBarcodeGuess(state: GameState, digits: number[]): GameState {
+  const g = state.tsdGame;
+  if (!g || g.kind !== 'barcode' || g.result || !barcodeReady(g)) return state;
+  if (digits.length !== g.hiddenCount || digits.some((d) => !Number.isInteger(d) || d < 0 || d > 9)) return state;
+  const marks = markGuess(hiddenDigits(g.code, g.hiddenFrom, g.hiddenCount), digits);
+  const guesses = [...g.guesses, { digits: [...digits], marks }];
+  const tries = guesses.length;
+  let next: BarcodeGame = { ...g, guesses };
+  if (marks.every((m) => m === 'hit')) next = { ...next, result: scoreBarcode(tries, g.perfectWithin), note: 'solved', noteAt: g.elapsed };
+  else if (tries >= g.attempts) next = { ...next, result: 'failed', note: 'outOfTries', noteAt: g.elapsed };
+  return { ...state, tsdGame: next };
+}
+
 /** Время игры идёт в обычном темпе; вышло — провал. */
 export function tickTsdGame(state: GameState, dt: number): GameState {
   const g = state.tsdGame;
   if (!g || g.result) return state;
   const elapsed = g.elapsed + dt;
-  if (elapsed >= g.timeLimit) {
-    const done = { elapsed: g.timeLimit, result: 'failed' as const, note: 'timeout' as const, noteAt: g.timeLimit };
-    return { ...state, tsdGame: g.kind === 'depth' ? { ...g, ...done } : { ...g, ...done, open: null } };
+  const limit = g.timeLimit + (g.kind === 'barcode' ? g.startDelay : 0); // у «Штрихкода» вступление не считается
+  if (elapsed >= limit) {
+    const done = { elapsed: limit, result: 'failed' as const, note: 'timeout' as const, noteAt: limit };
+    if (g.kind === 'depth') return { ...state, tsdGame: { ...g, ...done } };
+    if (g.kind === 'expiry') return { ...state, tsdGame: { ...g, ...done, open: null } };
+    return { ...state, tsdGame: { ...g, ...done } };
   }
   return { ...state, tsdGame: { ...g, elapsed } };
 }

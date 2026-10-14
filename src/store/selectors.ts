@@ -218,6 +218,7 @@ export function resultView(game: GameState, card: ResultCard) {
     if (c && i === c.lineIndex && c.tsd === 'failed') {
       // «Глубина» — товар не достали; «Срок» — товар есть, но срок короткий
       if (tsdKind === 'expiry') note = 'взяли товар с коротким сроком';
+      else if (tsdKind === 'barcode') note = 'взяли без скана — могли перепутать';
       else { picked = 0; note = 'не достали с ТСД'; }
     }
     if (reveal.errorLine?.lineIndex === i) {
@@ -302,3 +303,29 @@ export function expiryView(game: GameState) {
 }
 
 export type ExpiryView = NonNullable<ReturnType<typeof expiryView>>;
+
+/** Что показывает ТСД в «Штрихкоде» (N4): попытки с отметками, сколько осталось, время (без вступления). */
+export function barcodeView(game: GameState, input: number[]) {
+  const g = game.tsdGame;
+  if (!g || g.kind !== 'barcode') return null;
+  const product = game.products[g.productId];
+  const picker = game.pickers[g.pickerId];
+  const played = Math.max(0, g.elapsed - g.startDelay);
+  return {
+    product: { name: product?.name ?? g.productId, look: product?.look ?? null },
+    picker: { name: picker?.name ?? '', color: picker?.color ?? '#428C00' },
+    hiddenCount: g.hiddenCount,
+    attempts: g.attempts,
+    perfectWithin: g.perfectWithin,
+    guesses: g.guesses,
+    input,
+    ready: g.elapsed >= g.startDelay,
+    secondsLeft: Math.max(0, g.timeLimit - played),
+    timeLimit: g.timeLimit,
+    result: g.result,
+    note: g.note,
+    code: g.code.join(''),
+  };
+}
+
+export type BarcodeView = NonNullable<ReturnType<typeof barcodeView>>;

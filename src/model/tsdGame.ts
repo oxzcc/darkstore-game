@@ -74,5 +74,43 @@ export type ExpiryGame = {
   result: Outcome | null;
 };
 
+/** Отметка цифры в попытке, как в играх с угадыванием слов: на месте / есть, но в другом месте / нет. */
+export type BarcodeMark = 'hit' | 'near' | 'miss';
+
+export type BarcodeGuess = { digits: number[]; marks: BarcodeMark[] };
+
+/** Что ТСД сказал про конец игры. */
+export type BarcodeNote = 'solved' | 'outOfTries' | 'timeout';
+
+/**
+ * «Штрихкод» (N4; прототип одобрен автором 14.10): у штуки на наклейке код из 13 цифр, середина затёрта.
+ * Камера подлетает, штуку достают с полки, она сама поворачивается наклейкой (startDelay секунд — время в это время не идёт).
+ * Игрок подбирает стёртые цифры за несколько попыток; после каждой — отметки по цифрам.
+ */
+export type BarcodeGame = {
+  kind: 'barcode';
+  callId: string;
+  taskId: string;
+  pickerId: string;
+  situationId: string;
+  lineIndex: number;
+  address: Address;
+  rack: RackRef;
+  elapsed: number;
+  timeLimit: number;     // секунды на подбор (после вступления)
+  startDelay: number;    // вступление: подлёт, подъём, поворот
+  productId: string;
+  code: number[];        // весь код
+  hiddenFrom: number;    // с какой цифры затёрто
+  hiddenCount: number;
+  side: number;          // на какой стороне наклейка (как в «Сроке»; сверху — никогда)
+  attempts: number;
+  perfectWithin: number; // угадал за столько попыток — идеально
+  guesses: BarcodeGuess[];
+  note: BarcodeNote | null;
+  noteAt: number;
+  result: Outcome | null;
+};
+
 /** Игра, которая идёт сейчас (одна за раз). */
-export type TsdGame = DepthGame | ExpiryGame;
+export type TsdGame = DepthGame | ExpiryGame | BarcodeGame;

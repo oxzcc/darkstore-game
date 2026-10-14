@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { GameState } from '../model/game';
 import type { CallAnswer } from '../model/call';
-import type { DepthGame, ExpiryGame } from '../model/tsdGame';
+import type { BarcodeGame, DepthGame, ExpiryGame } from '../model/tsdGame';
 import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { TSD } from '../config/balance';
-import { DEPTH, EXPIRY, SITUATION_BY_ID, TSD_OPTION_ID } from '../config/calls';
+import { BARCODE, DEPTH, EXPIRY, SITUATION_BY_ID, TSD_OPTION_ID } from '../config/calls';
 import { buildWarehouseMap } from './warehouse';
 import { createInitialGame } from './game';
 import { openTasks } from './tasks/generator';
@@ -14,7 +14,7 @@ import { pickerActivity } from './jobs';
 import type { Rng } from './random';
 import { answerCall, raiseCall, revealCalls } from './calls';
 import { sendPicker } from './tsd';
-import { closeExpiryUnit, closeTsdGame, depthMovesFrom, moveDepthBox, openExpiryUnit, takeExpiryUnit, tapDepthBox } from './tsdGame';
+import { submitBarcodeGuess, closeExpiryUnit, closeTsdGame, depthMovesFrom, moveDepthBox, openExpiryUnit, takeExpiryUnit, tapDepthBox } from './tsdGame';
 import { expiryDate } from './minigames/expiry';
 import { CALLS } from '../config/calls';
 
@@ -26,7 +26,7 @@ function runUntil(s: GameState, done: (s: GameState) => boolean, step = 0.1, max
 }
 
 /** Лаки на заказе, развилка «товар в глубине» на первой позиции; дошёл и зовёт. tsd — есть ли вариант «Взять ТСД». */
-function calling(tsd: 'depth' | 'expiry' | null = 'depth', situationId = tsd === 'expiry' ? 'expiring' : 'deep') {
+function calling(tsd: 'depth' | 'expiry' | 'barcode' | null = 'depth', situationId = tsd === 'expiry' ? 'expiring' : tsd === 'barcode' ? 'barcode' : 'deep') {
   const g = createInitialGame(map, 1);
   const task = openTasks(g)[0];
   const s = dispatchTask(g, map, task.id, 'lucky');
@@ -65,7 +65,7 @@ describe('«Взять ТСД» в развилке', () => {
     if (!CALLS.forceTsd) expect(deep).toContain(null); // с флагом проверки вариант есть всегда
     expect(raisedFor('jam').every((x) => x === null)).toBe(true);     // у пробки игры нет
     expect(raisedFor('expiring')).toContain('expiry');                // «Срок» сделан (N3)
-    expect(raisedFor('barcode').every((x) => x === null)).toBe(true);  // «Штрихкод» ещё нет (N4)
+    expect(raisedFor('barcode')).toContain('barcode');                // «Штрихкод» сделан (N4)
     expect(call.optionIds).not.toContain(TSD_OPTION_ID);              // сборщик сам ТСД не выбирает
   });
 
@@ -223,5 +223,55 @@ describe('«Срок»', () => {
   it('дата на этикетке: сегодня из config плюс дни', () => {
     expect(expiryDate(0)).toBe(`${String(EXPIRY.today.day).padStart(2, '0')}.${String(EXPIRY.today.month).padStart(2, '0')}`);
     expect(expiryDate(2, { ...EXPIRY, today: { day: 30, month: 10 } })).toBe('01.11');
+  });
+});
+
+describe('«Штрихкод»', () => {
+  const bg = (s: GameState) => s.tsdGame as BarcodeGame;
+  const start = () => {
+    const { s, taskId } = calling('barcode');
+    return { g: answerCall(s, s.calls[0].id, TSD_OPTION_ID), taskId };
+  };
+  /** Вступление прошло — можно вводить. */
+  const ready = (g: GameState): GameState => ({ ...g, tsdGame: { ...bg(g), elapsed: bg(g).startDelay } });
+  const secret = (g: GameState) => bg(g).code.slice(bg(g).hiddenFrom, bg(g).hiddenFrom + bg(g).hiddenCount);
+  /** Неверная попытка: все цифры сдвинуты на 1. */
+  const wrong = (g: GameState) => secret(g).map((d) => (d + 1) % 10);
+
+  it('код из 13 цифр, начало 46, середина затёрта, наклейка не сверху', () => {
+    const { g } = start();
+    const b = bg(g);
+    expect(b.code).toHaveLength(BARCODE.length);
+    expect(b.code.slice(0, 2)).toEqual([4, 6]);
+    expect(b).toMatchObject({ hiddenFrom: BARCODE.hiddenFrom, hiddenCount: BARCODE.hiddenCount, attempts: BARCODE.attempts, guesses: [], result: null });
+    expect(b.side).not.toBe(4);
+  });
+
+  it('пока идёт вступление (подлёт, подъём, поворот), ввод не принимается; неполная попытка — тоже', () => {
+    const { g } = start();
+    expect(submitBarcodeGuess(g, secret(g))).toBe(g);
+    const r = ready(g);
+    expect(submitBarcodeGuess(r, secret(r).slice(0, 3))).toBe(r);
+  });
+
+  it('угадал за perfectWithin — идеально, позже — неплохо', () => {
+    let g = ready(start().g);
+    g = submitBarcodeGuess(g, secret(g));
+    expect(bg(g)).toMatchObject({ result: 'perfect', note: 'solved' });
+    let h = ready(start().g);
+    for (let i = 0; i < BARCODE.perfectWithin; i++) h = submitBarcodeGuess(h, wrong(h));
+    expect(bg(h).result).toBe(null);
+    h = submitBarcodeGuess(h, secret(h));
+    expect(bg(h).result).toBe('withErrors');
+  });
+
+  it('попытки кончились — провал; время кончилось (не считая вступления) — провал', () => {
+    let g = ready(start().g);
+    for (let i = 0; i < BARCODE.attempts; i++) g = submitBarcodeGuess(g, wrong(g));
+    expect(bg(g)).toMatchObject({ result: 'failed', note: 'outOfTries' });
+    expect(bg(g).guesses).toHaveLength(BARCODE.attempts);
+    const late = runUntil(start().g, (x) => x.tsdGame?.result !== null, 0.5);
+    expect(bg(late)).toMatchObject({ result: 'failed', note: 'timeout' });
+    expect(bg(late).elapsed).toBe(BARCODE.timeLimit + BARCODE.introSeconds);
   });
 });
