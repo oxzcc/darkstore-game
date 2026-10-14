@@ -21,7 +21,7 @@ export function createOrder(state: GameState, rng: Rng, now: number): { state: G
   // Записи с товаром по учёту, сгруппированные по товару.
   const byProduct = new Map<string, StockRecord[]>();
   for (const r of Object.values(state.stock)) {
-    if (r.bookQty <= 0) continue;
+    if (r.qty <= 0) continue;
     byProduct.set(r.productId, [...(byProduct.get(r.productId) ?? []), r]);
   }
   if (byProduct.size === 0) return null;
@@ -33,7 +33,7 @@ export function createOrder(state: GameState, rng: Rng, now: number): { state: G
   const lines: OrderLine[] = products.map((productId) => {
     const rec = rng.pick(byProduct.get(productId)!);
     const [minQty, maxQty] = ORDER.qtyPerLine;
-    return { productId, address: rec.address, qty: rng.int(minQty, Math.min(maxQty, rec.bookQty)) };
+    return { productId, address: rec.address, qty: rng.int(minQty, Math.min(maxQty, rec.qty)) };
   });
 
   const difficulty = orderDifficulty(lines.length);

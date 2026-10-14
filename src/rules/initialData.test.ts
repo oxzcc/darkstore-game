@@ -6,7 +6,7 @@ import { CAMPAIGN_START_SHIFT, INITIAL_STOCK } from '../config/initialStock';
 import { STAT_SCALE, STARTING_PICKERS } from '../config/pickers';
 import { buildWarehouseMap } from './warehouse';
 import { parseAddress } from './address';
-import { actualQtyAt, bookQtyAt, buildInitialStock, hasDiscrepancy } from './stock';
+import { buildInitialStock, qtyAt } from './stock';
 import { createPickers } from './pickers';
 
 const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
@@ -23,13 +23,12 @@ describe('начальный запас', () => {
     for (const id of Object.keys(PRODUCTS)) expect(stocked.has(id)).toBe(true);
   });
 
-  it('учёт и факт совпадают, срок = смена старта + срок товара', () => {
+  it('срок = смена старта + срок товара', () => {
     for (const r of Object.values(stock)) {
-      expect(hasDiscrepancy(r)).toBe(false);
       expect(r.expiresAtShift).toBe(CAMPAIGN_START_SHIFT + PRODUCTS[r.productId].shelfLifeShifts);
     }
-    expect(bookQtyAt(stock, parseAddress('1.1.1'))).toBe(8);
-    expect(actualQtyAt(stock, parseAddress('1.1.2'))).toBe(0);
+    expect(qtyAt(stock, parseAddress('1.1.1'))).toBe(8);
+    expect(qtyAt(stock, parseAddress('1.1.2'))).toBe(0);
   });
 
   it('ошибка в данных ловится', () => {

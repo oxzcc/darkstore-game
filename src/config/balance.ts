@@ -3,7 +3,7 @@
 import type { OutcomeChances, TaskType } from '../model/task';
 
 /** Версия формата GameState (09, раздел 12). */
-export const GAME_STATE_VERSION = 6;
+export const GAME_STATE_VERSION = 7; // 7: одно количество в остатках (qty)
 
 /**
  * «Взять ТСД» (02, раздел 6; 06, разделы 2–3). Допущения из документов, автор их ещё не подтвердил.

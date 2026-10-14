@@ -1,5 +1,5 @@
 // Как товар расставлен на полке: только геометрия отрисовки, общая для ShelfGoods (все полки) и RackCloseup (клики вблизи).
-// Что лежит на полке, решает не сцена: содержимое приходит из rules (shelfContents — фактические остатки).
+// Что лежит на полке, решает не сцена: содержимое приходит из rules (shelfContents — остатки склада).
 import type { Rack } from '../model/warehouse';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { RACK_BOARD, rackFrontSign, rackWidth, shelfY } from './rackGeometry';

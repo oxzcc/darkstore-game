@@ -5,7 +5,7 @@ import { ORDER } from '../../config/balance';
 import { buildWarehouseMap } from '../warehouse';
 import { createInitialGame } from '../game';
 import { createRng } from '../random';
-import { bookQtyAt } from '../stock';
+import { qtyAt } from '../stock';
 import { createOrder, openTasks, orderDifficulty } from './generator';
 import { canAssign, dispatchTask } from './lifecycle';
 
@@ -28,7 +28,7 @@ describe('заказы', () => {
         expect(t.payload.lines.length).toBeLessThanOrEqual(maxL);
         expect(new Set(t.payload.lines.map((l) => l.productId)).size).toBe(t.payload.lines.length);
         for (const l of t.payload.lines) {
-          const have = bookQtyAt(g.stock, l.address, l.productId);
+          const have = qtyAt(g.stock, l.address, l.productId);
           expect(have).toBeGreaterThanOrEqual(l.qty);
           expect(l.qty).toBeGreaterThanOrEqual(1);
         }

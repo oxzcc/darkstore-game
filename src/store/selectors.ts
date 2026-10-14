@@ -108,7 +108,7 @@ export function panelTaskList(tasks: GameState['tasks']): Task[] {
 /** Все непустые полки и что на них ФАКТИЧЕСКИ лежит — для отрисовки товара на сцене (06, раздел 15). */
 export function goodsOnShelves(stock: Stock): { address: Address; contents: { productId: string; qty: number }[] }[] {
   const seen = new Map<string, Address>();
-  for (const r of Object.values(stock)) if (r.actualQty > 0) seen.set(formatAddress(r.address), r.address);
+  for (const r of Object.values(stock)) if (r.qty > 0) seen.set(formatAddress(r.address), r.address);
   return [...seen.values()].map((address) => ({ address, contents: shelfContents(stock, address) }));
 }
 

@@ -1,6 +1,6 @@
 // Вид стеллажа вблизи во время мини-игры (06, раздел 2.3): этикетки полок «3.2.1»,
 // наведение на товар — светлая рамка, клик — скан одной штуки (действие store scanShelf, M5e1).
-// Сцена ничего не решает: можно ли сканировать, проверяет rules; что лежит на полке — фактические остатки
+// Сцена ничего не решает: можно ли сканировать, проверяет rules; что лежит на полке — остатки склада
 // минус уже взятое в сессии (их передаёт App).
 import { useEffect, useMemo, useState } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
@@ -47,7 +47,7 @@ export default function RackCloseup({ map, stock }: { map: WarehouseMap; stock: 
 
   const rack: Rack | undefined = focus ? map.racks.find((r) => r.aisle === focus.aisle && r.rack === focus.rack) : undefined;
 
-  // товар на полках этого стеллажа — по фактическим остаткам
+  // товар на полках этого стеллажа — по остаткам склада
   const shelves = useMemo(() => {
     if (!rack) return [];
     return goodsOnShelves(stock)
