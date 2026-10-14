@@ -147,21 +147,17 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
     }
 
     if (isJobDone(p) && task) {
-      // исход по характеристикам, потом — осложнения от ответов в развилках (10, раздел 3)
+      // была развилка — исход зависит только от неё (решение автора 14.10): броска по характеристикам нет,
+      // а риск ответа считается по точности сборщика. Развилки не было — бросок по характеристикам (10, раздел 3).
+      const hadCall = (task.callLog?.length ?? 0) > 0;
       const chances = outcomeChances(p, task);
-      const roll = rng.next();
-      const base = outcomeAt(chances, roll);
-      const { calls, final: outcome } = revealCalls(base, task.callLog, rng);
+      const roll = hadCall ? 0 : rng.next();
+      const base = hadCall ? 'perfect' : outcomeAt(chances, roll);
+      const { calls, final: outcome } = revealCalls(base, task.callLog, rng, p.stats.accuracy);
       setTask(task.id, { status: 'done', outcome });
-      // была развилка — окно результата с раскрытием исхода; иначе обычная всплывашка
-      let errorLine: { lineIndex: number; picked: number } | undefined;
-      if (calls.length > 0 && base !== 'perfect' && task.type === 'order' && task.payload.lines.length > 0) {
-        // на какой позиции сборщик ошибся — для строки чека (ui_12); «провал» — ничего не собрал на ней
-        const lineIndex = Math.floor(rng.next() * task.payload.lines.length);
-        const qty = task.payload.lines[lineIndex].qty;
-        errorLine = { lineIndex, picked: base === 'failed' ? 0 : Math.max(0, qty - 1) };
-      }
-      const reveal = calls.length > 0 ? { chances, roll, base, calls, final: outcome, ...(errorLine ? { errorLine } : {}) } : undefined;
+      // была развилка — окно результата с раскрытием исхода; иначе обычная всплывашка.
+      // Ошибки «сам ошибся с количеством» у заказа с развилкой больше нет — исход только от развилки (14.10).
+      const reveal = calls.length > 0 ? { chances, roll, base, calls, final: outcome } : undefined;
       events.push({ kind: 'taskDone', taskId: task.id, pickerId: p.id, outcome, at: time, ...(reveal ? { reveal } : {}) });
       p = { ...p, state: 'idle', taskId: null, job: null, path: [], pathProgress: 0 };
     }

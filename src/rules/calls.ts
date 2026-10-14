@@ -154,7 +154,19 @@ export function expireCalls(state: GameState): GameState {
  * осложнение ухудшает исход на ступень; потом ограничение варианта (cap), например «не выше с ошибками».
  * Всё, что выпало, записывается — окно результата показывает это игроку (решение автора 13.10).
  */
-export function revealCalls(outcome: Outcome, log: CallAnswer[] | undefined, rng: Rng): { calls: CallReveal[]; final: Outcome } {
+/** Шанс осложнения для ответа с этим риском у сборщика с этой точностью (CALLS.riskByAccuracy). */
+export function complicationChance(risk: RiskLevel, accuracy: number = CALLS.riskByAccuracy.ref): number {
+  const { ref, perPoint, min, max } = CALLS.riskByAccuracy;
+  const factor = Math.min(max, Math.max(min, 1 - (accuracy - ref) * perPoint));
+  return CALLS.complication[risk] * factor;
+}
+
+/**
+ * Раскрыть развилки заказа. `accuracy` — точность сборщика: от неё зависит шанс осложнения.
+ * С 14.10 (решение автора) у заказа с развилкой броска по характеристикам нет: advanceWorld передаёт сюда «идеально»,
+ * и исход зависит только от развилок.
+ */
+export function revealCalls(outcome: Outcome, log: CallAnswer[] | undefined, rng: Rng, accuracy?: number): { calls: CallReveal[]; final: Outcome } {
   let idx = OUTCOME_ORDER.indexOf(outcome);
   const calls: CallReveal[] = [];
   for (const a of log ?? []) {
@@ -164,7 +176,7 @@ export function revealCalls(outcome: Outcome, log: CallAnswer[] | undefined, rng
       calls.push({ ...a, chance: 0, roll: 1, complication: a.tsd !== 'perfect', capped: false, after: OUTCOME_ORDER[idx] });
       continue;
     }
-    const chance = CALLS.complication[a.risk];
+    const chance = complicationChance(a.risk, accuracy);
     const roll = rng.next();
     const complication = roll < chance;
     if (complication) idx = Math.min(OUTCOME_ORDER.length - 1, idx + 1);
