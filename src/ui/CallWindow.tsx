@@ -7,7 +7,8 @@ import { useEffect, type CSSProperties, type ReactNode } from 'react';
 import type { Picker } from '../model/picker';
 import { useGameStore } from '../store/gameStore';
 import { callsView, flashView, plural, type CallOptionView } from '../store/selectors';
-import { RISK_LOOK } from './labels';
+import { RISK_LOOK, taskTitle } from './labels';
+import type { TaskType } from '../model/task';
 import Vx from './Vx';
 
 const FLASH_MS = 1500;
@@ -16,6 +17,7 @@ const STAT_NAME = { accuracy: 'точность', speed: 'скорость' } as
 type CardProps = {
   picker: Picker;
   taskNumber: number;
+  taskType: TaskType;
   text: string;
   riskLabel: string;
   options: CallOptionView[];
@@ -56,7 +58,7 @@ function ForkCard(p: CardProps) {
         <div className="fork-portrait-space" />
         <div className="fork-talk">
           <div className="fork-tab-row">
-            <div className="fork-tab"><b>{p.picker.name}</b> · Сборка №{p.taskNumber}</div>
+            <div className="fork-tab"><b>{p.picker.name}</b> · {taskTitle({ type: p.taskType, number: p.taskNumber })}</div>
             {p.onClose && <button className="call-close" title="Закрыть (Esc) — мир продолжит идти" onClick={p.onClose}>×</button>}
           </div>
           <div className="fork-bubble">«{p.text}»</div>

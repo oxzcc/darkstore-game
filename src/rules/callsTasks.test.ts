@@ -1,0 +1,125 @@
+// Развилки приёмки и выкладки (M7d1; docs/10, раздел 13).
+import { describe, expect, it } from 'vitest';
+import type { GameState, ShiftEvent } from '../model/game';
+import type { PutawayTask, ReceivingTask } from '../model/task';
+import { WAREHOUSE_LAYOUT } from '../config/warehouse';
+import { SITUATIONS } from '../config/calls';
+import { buildWarehouseMap } from './warehouse';
+import { createInitialGame } from './game';
+import { dispatchTask } from './tasks/lifecycle';
+import { advanceWorld } from './advance';
+import { buildPutawayJob, buildReceivingJob } from './jobs';
+import { answerCall, callText, fillText, lineContext, planCall } from './calls';
+import { taskLines } from './taskLines';
+import { acceptDelivery } from './deliveries';
+import { createPutawayTasks } from './putaway';
+import { createRng } from './random';
+
+const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
+
+const receiving = (s: GameState) => Object.values(s.tasks).find((t): t is ReceivingTask => t.type === 'receiving')!;
+const putaways = (s: GameState) => Object.values(s.tasks).filter((t): t is PutawayTask => t.type === 'putaway');
+
+function afterReceiving(seed = 1): GameState {
+  const g = createInitialGame(map, seed);
+  const r = receiving(g);
+  return createPutawayTasks(acceptDelivery(g, r.payload.deliveryId), map, r.payload.deliveryId);
+}
+
+function runUntil(s: GameState, done: (s: GameState) => boolean, limitSec = 900) {
+  const events: ShiftEvent[] = [];
+  for (let t = 0; t < limitSec && !done(s); t += 0.1) {
+    const r = advanceWorld(s, map, 0.1);
+    s = r.state;
+    events.push(...r.events);
+  }
+  return { s, events };
+}
+
+describe('где сборщик зовёт', () => {
+  it('приёмка — перед работой, про один из товаров поставки', () => {
+    const g = createInitialGame(map, 1);
+    const r = receiving(g);
+    const lines = taskLines(g, r);
+    for (let seed = 1; seed <= 20; seed++) {
+      const job = planCall(buildReceivingJob(map, g.pickers.lucky, r), r, createRng(seed), 1, lines.length);
+      expect(job.call).toBeDefined();
+      expect(job.steps[job.call!.stepIndex].kind).toBe('work');
+      expect(job.call!.lineIndex).toBeLessThan(lines.length);
+      expect(SITUATIONS.find((x) => x.id === job.call!.situationId)!.taskType).toBe('receiving');
+    }
+  });
+
+  it('выкладка — у полки, перед выкладкой этой позиции', () => {
+    const s = afterReceiving();
+    const t = putaways(s)[0];
+    for (let seed = 1; seed <= 20; seed++) {
+      const job = planCall(buildPutawayJob(map, s.pickers.lucky, t), t, createRng(seed), 1);
+      const step = job.steps[job.call!.stepIndex];
+      expect(step.kind).toBe('place');
+      if (step.kind === 'place') expect(job.call!.lineIndex).toBe(step.lineIndex);
+      expect(SITUATIONS.find((x) => x.id === job.call!.situationId)!.taskType).toBe('putaway');
+    }
+  });
+
+  it('шанс 0 — развилки нет', () => {
+    const g = createInitialGame(map, 1);
+    const r = receiving(g);
+    expect(planCall(buildReceivingJob(map, g.pickers.lucky, r), r, createRng(1), 0, 3).call).toBeUndefined();
+  });
+});
+
+describe('тексты', () => {
+  it('у всех ситуаций приёмки и выкладки подстановки заполняются целиком', () => {
+    const s = afterReceiving();
+    const r = receiving(s);
+    const t = putaways(s)[0];
+    for (const sit of SITUATIONS.filter((x) => x.taskType === 'receiving' || x.taskType === 'putaway')) {
+      const ctx = { ...lineContext(s, sit.taskType === 'receiving' ? r.id : t.id, 0, 'lucky'), seconds: 10 };
+      const texts = [sit.speech, ...sit.options.flatMap((o) => [o.description, o.okTitle, o.okText, o.badTitle, o.badText])];
+      for (const text of texts) {
+        const filled = fillText(text, ctx);
+        expect(filled.includes('{')).toBe(false);
+        expect(filled.includes('—  ')).toBe(false);
+      }
+      expect(sit.options.length).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it('у приёмки вместо адреса — номер паллеты, у выкладки — адрес полки', () => {
+    const s = afterReceiving();
+    const r = receiving(s);
+    expect(lineContext(s, r.id, 0, 'lucky').address).toBe('паллете 1');
+    const t = putaways(s)[0];
+    const l = t.payload.lines[0];
+    expect(lineContext(s, t.id, 0, 'lucky').address).toBe(`${l.address.aisle}.${l.address.rack}.${l.address.shelf}`);
+  });
+});
+
+describe('развилка в работе', () => {
+  it('приёмка с развилкой: сборщик зовёт, ответ — задержка и исход от развилки, окно итога', () => {
+    const g = createInitialGame(map, 1);
+    const r = receiving(g);
+    // отправить и гарантировать развилку
+    let s = dispatchTask(g, map, r.id, 'lucky');
+    const p = s.pickers.lucky;
+    const job = planCall({ ...p.job!, call: undefined }, r, createRng(7), 1, taskLines(s, r).length);
+    s = { ...s, pickers: { ...s.pickers, lucky: { ...p, job } } };
+
+    ({ s } = runUntil(s, (x) => x.calls.some((c) => c.expiresAt !== null)));
+    const call = s.calls[0];
+    expect(call.taskId).toBe(r.id);
+    expect(callText(s, call).length).toBeGreaterThan(10);
+
+    const option = SITUATIONS.find((x) => x.id === call.situationId)!.options.find((o) => call.optionIds.includes(o.id))!;
+    s = answerCall(s, call.id, option.id);
+    expect(s.tasks[r.id].callLog).toHaveLength(1);
+
+    const res = runUntil(s, (x) => x.tasks[r.id].status === 'done');
+    const done = res.events.find((e) => e.kind === 'taskDone' && e.taskId === r.id);
+    expect(done && done.kind === 'taskDone' && done.reveal).toBeTruthy();
+    // приёмка закрыта при любом исходе: паллеты приняты, появились выкладки
+    expect(res.s.deliveries[r.payload.deliveryId].status).toBe('received');
+    expect(putaways(res.s).length).toBeGreaterThan(0);
+  });
+});

@@ -1,10 +1,10 @@
-// Окно итога заказа с развилкой — по макету автора ui_12 (13.10).
+// Окно итога задания с развилкой — по макету автора ui_12 (13.10). С M7d1 — для сборки, приёмки и выкладки.
 // Сверху иллюстрация (пока заглушка), что решили и что вышло; ниже «чек» заказа: позиции, деньги, рейтинг, опыт и штамп исхода.
 // Деньги и рейтинг пока только показываются (начисление — M6), опыт — M8. Закрывается кнопкой или кликом по «Закрыть».
 import { useEffect, type CSSProperties } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { money, resultView } from '../store/selectors';
-import { nameForm, OUTCOME_LOOK } from './labels';
+import { nameForm, OUTCOME_LOOK, TASK_TYPE_LOOK, taskTitle } from './labels';
 import { Avatar } from './PickerBits';
 import Vx from './Vx';
 import Icon from './icons';
@@ -35,7 +35,7 @@ export default function ResultWindow() {
         <div className="call-head">
           <Avatar picker={v.picker} small />
           <div className="grow">
-            <div className="call-who">Сборка №{v.taskNumber} · {v.picker.name}</div>
+            <div className="call-who">{taskTitle({ type: v.taskType, number: v.taskNumber })} · {v.picker.name}</div>
             <div className="call-sub">Как всё прошло</div>
           </div>
         </div>
@@ -56,8 +56,8 @@ export default function ResultWindow() {
 
         <div className="receipt">
           <div className="receipt-head">
-            <b>ЗАКАЗ №{v.taskNumber}</b>
-            <span>собрал {v.picker.name}</span>
+            <b>{TASK_TYPE_LOOK[v.taskType].receipt} №{v.taskNumber}</b>
+            <span>{TASK_TYPE_LOOK[v.taskType].doneBy} {v.picker.name}</span>
           </div>
           <div className="receipt-body">
             <div className="receipt-lines">
@@ -76,7 +76,7 @@ export default function ResultWindow() {
             <div className="receipt-sum">
               <div><span>Деньги</span><span><b>{v.money.got > 0 ? '+' : ''}{money(v.money.got)}</b> из {v.money.of}</span></div>
               <div><span>Рейтинг</span><span><b>{ratingText(v.rating.got)}</b> из {ratingText(v.rating.of)}</span></div>
-              <div><span>Опыт {nameForm(v.picker.name)}</span><b>Сборка +{v.xp}</b></div>
+              <div><span>Опыт {nameForm(v.picker.name)}</span><b>{TASK_TYPE_LOOK[v.taskType].name} +{v.xp}</b></div>
             </div>
           </div>
           <div className="receipt-stamp">{look.name}</div>
