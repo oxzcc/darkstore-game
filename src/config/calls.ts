@@ -28,7 +28,7 @@ export const CALLS = {
 export const TSD_OPTION_ID = 'tsd';
 
 /** Какие игры на ТСД уже сделаны: у остальных ситуаций вариант «Взять ТСД» пока не появляется. */
-export const TSD_GAMES_READY: TsdGameKind[] = ['depth'];
+export const TSD_GAMES_READY: TsdGameKind[] = ['depth', 'expiry'];
 
 /** Тексты карточки «Взять ТСД» и окна итога для каждой игры. {picker}, {product}, {address}. */
 export type TsdGameText = {
@@ -80,6 +80,20 @@ export const DEPTH = {
   perfectExtra: 2,
   withErrorsExtra: 6,
   minBest: 4,          // раскладка, где хватает меньше ходов, слишком простая — раздаём заново
+};
+
+/**
+ * «Срок» (10, раздел 11.3; прототип одобрен автором 14.10). Сроки — в днях от сегодня.
+ * Подходит ровно одна штука: её срок need + 0…goodSpread дней; у остальных — badDays (сегодня, завтра…), чтобы легко было ошибиться.
+ * Взял подходящую за perfectSeconds — идеально, позже — с ошибками; не ту или не успел за timeLimit — провал. Допущения Claude 14.10.
+ */
+export const EXPIRY = {
+  timeLimit: 25,
+  perfectSeconds: 15,
+  need: 2,              // годен не ранее: послезавтра
+  goodSpread: 2,
+  badDays: [0, 1, 1],   // сроки неподходящих штук (их столько же, сколько чисел здесь)
+  today: { day: 14, month: 10 }, // какая дата «сегодня» на этикетках, пока в игре нет календаря (M8)
 };
 
 /**

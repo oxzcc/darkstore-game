@@ -11,6 +11,7 @@ import { tsdOfferSecondsLeft } from '../rules/tsd';
 import { shelfContents } from '../rules/stock';
 import { takenPerLine } from '../rules/minigames/picking';
 import { callText, fillText, lineContext } from '../rules/calls';
+import { expiryDate } from '../rules/minigames/expiry';
 import { CALLS, DEPTH, RESULT_SHARE, RESULT_XP, SITUATION_BY_ID, TSD_GAMES, TSD_OPTION_ID, type CallOption } from '../config/calls';
 import type { RackRef } from '../model/minigame';
 import type { Call } from '../model/call';
@@ -214,7 +215,11 @@ export function resultView(game: GameState, card: ResultCard) {
     let picked = l.qty;
     let note: string | null = null;
     if (c && i === c.lineIndex && option?.cap) { picked = 0; note = 'позиция пропущена'; }
-    if (c && i === c.lineIndex && c.tsd === 'failed') { picked = 0; note = 'не достали с ТСД'; }
+    if (c && i === c.lineIndex && c.tsd === 'failed') {
+      // «Глубина» — товар не достали; «Срок» — товар есть, но срок короткий
+      if (tsdKind === 'expiry') note = 'взяли товар с коротким сроком';
+      else { picked = 0; note = 'не достали с ТСД'; }
+    }
     if (reveal.errorLine?.lineIndex === i) {
       picked = Math.min(picked, reveal.errorLine.picked);
       note = `${picker.name} ошибся с количеством — зависит от его точности`;
@@ -274,3 +279,24 @@ export function depthView(game: GameState) {
 }
 
 export type DepthView = NonNullable<ReturnType<typeof depthView>>;
+
+/** Что показывает экран «Срока» (10, раздел 11.3): что найти, какой срок нужен, штуки в лотке, поднятая штука. */
+export function expiryView(game: GameState) {
+  const g = game.tsdGame;
+  if (!g || g.kind !== 'expiry') return null;
+  const product = game.products[g.productId];
+  const unit = (i: number | null) => (i === null ? null : { index: i, ...g.units[i], date: expiryDate(g.units[i].days) });
+  return {
+    product: { name: product?.name ?? g.productId, look: product?.look ?? null },
+    need: expiryDate(g.need),
+    today: expiryDate(0),
+    secondsLeft: Math.max(0, g.timeLimit - g.elapsed),
+    timeLimit: g.timeLimit,
+    open: unit(g.open),
+    taken: unit(g.taken),
+    note: g.note,
+    result: g.result,
+  };
+}
+
+export type ExpiryView = NonNullable<ReturnType<typeof expiryView>>;

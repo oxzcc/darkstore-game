@@ -9,7 +9,7 @@ import { createInitialGame } from '../rules/game';
 import { acceptTsd, declineTsd, sendPicker } from '../rules/tsd';
 import { chooseRack, leaveRack, scanShelf } from '../rules/minigames/picking';
 import { answerCall, callText } from '../rules/calls';
-import { closeTsdGame, depthMovesFrom, moveDepthBox, tapDepthBox } from '../rules/tsdGame';
+import { closeExpiryUnit, closeTsdGame, depthMovesFrom, moveDepthBox, openExpiryUnit, takeExpiryUnit, tapDepthBox } from '../rules/tsdGame';
 import { TSD_OPTION_ID } from '../config/calls';
 import type { Call, OutcomeReveal } from '../model/call';
 import type { Address } from '../model/address';
@@ -61,6 +61,10 @@ type Store = {
   tapDepthBox: (cell: number) => void;
   moveDepthBox: (to: number) => void;
   closeTsdGame: () => void;
+  /** «Срок»: поднять штуку крупно, положить обратно, взять. */
+  openExpiryUnit: (index: number) => void;
+  closeExpiryUnit: () => void;
+  takeExpiryUnit: () => void;
   dismissToast: (id: number) => void;
   dismissFlash: (id: number) => void;
   /** Клик по «!» над сборщиком — открыть окно развилки; закрыть — мир идёт дальше, таймер «!» тоже. */
@@ -127,6 +131,9 @@ export const useGameStore = create<Store>((set) => ({
       return { game: moveDepthBox(s.game, from, to), ui: { ...s.ui, depthSelected: null } };
     }),
   closeTsdGame: () => set((s) => ({ game: closeTsdGame(s.game), ui: { ...s.ui, depthSelected: null } })),
+  openExpiryUnit: (index) => set((s) => (s.game.clock.paused ? s : { game: openExpiryUnit(s.game, index) })),
+  closeExpiryUnit: () => set((s) => (s.game.clock.paused ? s : { game: closeExpiryUnit(s.game) })),
+  takeExpiryUnit: () => set((s) => (s.game.clock.paused ? s : { game: takeExpiryUnit(s.game) })),
   scanShelf: (address, productId) => set((s) => ({ game: scanShelf(s.game, WAREHOUSE_MAP, address, productId) })),
 
   tick: (realDt) =>

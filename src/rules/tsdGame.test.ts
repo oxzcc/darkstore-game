@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { GameState } from '../model/game';
 import type { CallAnswer } from '../model/call';
+import type { DepthGame, ExpiryGame } from '../model/tsdGame';
 import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { TSD } from '../config/balance';
-import { DEPTH, SITUATION_BY_ID, TSD_OPTION_ID } from '../config/calls';
+import { DEPTH, EXPIRY, SITUATION_BY_ID, TSD_OPTION_ID } from '../config/calls';
 import { buildWarehouseMap } from './warehouse';
 import { createInitialGame } from './game';
 import { openTasks } from './tasks/generator';
@@ -13,7 +14,8 @@ import { pickerActivity } from './jobs';
 import type { Rng } from './random';
 import { answerCall, raiseCall, revealCalls } from './calls';
 import { sendPicker } from './tsd';
-import { closeTsdGame, depthMovesFrom, moveDepthBox, tapDepthBox } from './tsdGame';
+import { closeExpiryUnit, closeTsdGame, depthMovesFrom, moveDepthBox, openExpiryUnit, takeExpiryUnit, tapDepthBox } from './tsdGame';
+import { expiryDate } from './minigames/expiry';
 import { CALLS } from '../config/calls';
 
 const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
@@ -24,7 +26,7 @@ function runUntil(s: GameState, done: (s: GameState) => boolean, step = 0.1, max
 }
 
 /** Лаки на заказе, развилка «товар в глубине» на первой позиции; дошёл и зовёт. tsd — есть ли вариант «Взять ТСД». */
-function calling(tsd: 'depth' | null = 'depth') {
+function calling(tsd: 'depth' | 'expiry' | null = 'depth', situationId = tsd === 'expiry' ? 'expiring' : 'deep') {
   const g = createInitialGame(map, 1);
   const task = openTasks(g)[0];
   const s = dispatchTask(g, map, task.id, 'lucky');
@@ -32,15 +34,17 @@ function calling(tsd: 'depth' | null = 'depth') {
   const stepIndex = job.steps.findIndex((st) => st.kind === 'pick');
   const withCall: GameState = {
     ...s,
-    pickers: { ...s.pickers, lucky: { ...s.pickers.lucky, job: { ...job, call: { stepIndex, lineIndex: 0, situationId: 'deep', raised: false } } } },
+    pickers: { ...s.pickers, lucky: { ...s.pickers.lucky, job: { ...job, call: { stepIndex, lineIndex: 0, situationId, raised: false } } } },
   };
   const at = runUntil(withCall, (x) => x.calls.length > 0);
   return { s: { ...at, calls: at.calls.map((c) => ({ ...c, tsd })) }, taskId: task.id };
 }
 
 /** Игра с простой полкой: нужная коробка во втором ряду, перед ней пустой выход — лучший путь 1 ход. */
+const dg = (s: GameState) => s.tsdGame as DepthGame;
+
 function easyGame(s: GameState, exit = 0): GameState {
-  const g = s.tsdGame!;
+  const g = dg(s);
   return { ...s, tsdGame: { ...g, best: 1, board: { ...g.board, cells: [-1, 1, 2, 0, 3, 4, 5, 6, -1], exit } } };
 }
 
@@ -60,7 +64,8 @@ describe('«Взять ТСД» в развилке', () => {
     expect(deep).toContain('depth');
     if (!CALLS.forceTsd) expect(deep).toContain(null); // с флагом проверки вариант есть всегда
     expect(raisedFor('jam').every((x) => x === null)).toBe(true);     // у пробки игры нет
-    expect(raisedFor('expiring').every((x) => x === null)).toBe(true); // «Срок» ещё не сделан (N3)
+    expect(raisedFor('expiring')).toContain('expiry');                // «Срок» сделан (N3)
+    expect(raisedFor('barcode').every((x) => x === null)).toBe(true);  // «Штрихкод» ещё нет (N4)
     expect(call.optionIds).not.toContain(TSD_OPTION_ID);              // сборщик сам ТСД не выбирает
   });
 
@@ -76,7 +81,7 @@ describe('«Взять ТСД» в развилке', () => {
     expect(g.calls).toHaveLength(0);
     expect(g.tsdGame).toMatchObject({ kind: 'depth', pickerId: 'lucky', lineIndex: 0, moves: 0, result: null });
     expect(g.tsdGame!.rack).toEqual({ aisle: line!.address.aisle, rack: line!.address.rack });
-    expect(g.tsdGame!.board.boxes[0]).toBe(line!.productId);
+    expect(dg(g).board.boxes[0]).toBe(line!.productId);
     expect(pickerActivity(g, 'lucky').kind).toBe('tsdGame');
     const later = advanceWorld(g, map, 2).state;
     expect(later.pickers.lucky.position).toEqual(g.pickers.lucky.position);
@@ -107,7 +112,7 @@ describe('«Взять ТСД» в развилке', () => {
     const { s } = calling();
     const g0 = answerCall(s, s.calls[0].id, TSD_OPTION_ID);
     // нужная у задней стенки (клетка 7), вокруг неё коробки, пустые клетки — впереди слева
-    const g = { ...g0, tsdGame: { ...g0.tsdGame!, board: { ...g0.tsdGame!.board, cells: [-1, -1, 1, 2, 3, 4, 5, 0, 6] } } };
+    const g = { ...g0, tsdGame: { ...dg(g0), board: { ...dg(g0).board, cells: [-1, -1, 1, 2, 3, 4, 5, 0, 6] } } };
     expect(tapDepthBox(g, 7).tsdGame!.note).toBe('stuck');
     expect(closeTsdGame(g)).toBe(g);
   });
@@ -164,5 +169,58 @@ describe('предложение «Взять ТСД?» при отправке'
       expect(s.tsdOffer).toBe(null);
       expect(s.pickers.lucky.state).toBe('walking');
     }
+  });
+});
+
+describe('«Срок»', () => {
+  const eg = (s: GameState) => s.tsdGame as ExpiryGame;
+  const start = () => {
+    const { s, taskId } = calling('expiry');
+    return { g: answerCall(s, s.calls[0].id, TSD_OPTION_ID), taskId };
+  };
+  const goodIndex = (g: GameState) => eg(g).units.findIndex((u) => u.days >= eg(g).need);
+  const badIndex = (g: GameState) => eg(g).units.findIndex((u) => u.days < eg(g).need);
+
+  it('взял ТСД: в лотке штуки с разными сроками, подходит ровно одна, этикетки на разных сторонах', () => {
+    const { g } = start();
+    expect(eg(g)).toMatchObject({ kind: 'expiry', need: EXPIRY.need, open: null, result: null });
+    const units = eg(g).units;
+    expect(units).toHaveLength(EXPIRY.badDays.length + 1);
+    expect(units.filter((u) => u.days >= EXPIRY.need)).toHaveLength(1);
+    expect(new Set(units.map((u) => u.side)).size).toBe(units.length);
+    expect(g.pickers.lucky.state).toBe('playing');
+  });
+
+  it('поднять и положить обратно; взять подходящую быстро — идеально', () => {
+    let { g } = start();
+    g = openExpiryUnit(g, badIndex(g));
+    expect(eg(g).open).toBe(badIndex(g));
+    expect(eg(g).units[badIndex(g)].seen).toBe(true);
+    g = closeExpiryUnit(g);
+    expect(eg(g).open).toBe(null);
+    expect(takeExpiryUnit(g)).toBe(g); // ничего не поднято — брать нечего
+    g = takeExpiryUnit(openExpiryUnit(g, goodIndex(g)));
+    expect(eg(g)).toMatchObject({ result: 'perfect', note: 'taken', taken: goodIndex(g) });
+  });
+
+  it('не та штука — провал; подходящая, но долго — с ошибками; время вышло — провал', () => {
+    const { g } = start();
+    expect(eg(takeExpiryUnit(openExpiryUnit(g, badIndex(g)))).result).toBe('failed');
+    const slow = { ...g, tsdGame: { ...eg(g), elapsed: EXPIRY.perfectSeconds + 1 } };
+    expect(eg(takeExpiryUnit(openExpiryUnit(slow, goodIndex(slow)))).result).toBe('withErrors');
+    const late = runUntil(g, (x) => x.tsdGame?.result !== null, 0.5);
+    expect(eg(late)).toMatchObject({ result: 'failed', note: 'timeout', open: null });
+  });
+
+  it('«К складу» — итог в задании как ответ на развилку', () => {
+    const { g, taskId } = start();
+    const done = closeTsdGame(takeExpiryUnit(openExpiryUnit(g, goodIndex(g))));
+    expect(done.tsdGame).toBe(null);
+    expect(done.tasks[taskId].callLog).toEqual([{ situationId: 'expiring', lineIndex: 0, optionId: TSD_OPTION_ID, risk: 'low', auto: false, tsd: 'perfect' }]);
+  });
+
+  it('дата на этикетке: сегодня из config плюс дни', () => {
+    expect(expiryDate(0)).toBe(`${String(EXPIRY.today.day).padStart(2, '0')}.${String(EXPIRY.today.month).padStart(2, '0')}`);
+    expect(expiryDate(2, { ...EXPIRY, today: { day: 30, month: 10 } })).toBe('01.11');
   });
 });

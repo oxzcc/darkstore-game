@@ -2,16 +2,17 @@
 // Игрок выбрал «Взять ТСД» — сборщик стоит у полки, камера у стеллажа, мир идёт ×0,5 (rules/tsd.ts: worldSpeed).
 // Игра закончилась — итог записывается в задание как ответ на развилку, и сборщик дособирает заказ сам.
 import type { GameState } from '../model/game';
-import type { DepthGame } from '../model/tsdGame';
+import type { DepthGame, ExpiryGame, TsdGame } from '../model/tsdGame';
 import type { CallAnswer } from '../model/call';
-import { DEPTH, TSD_OPTION_ID } from '../config/calls';
+import { DEPTH, EXPIRY, TSD_OPTION_ID } from '../config/calls';
 import { createRng } from './random';
+import { createExpiryUnits, scoreExpiry } from './minigames/expiry';
 import { createDepthBoard, freeNeighbours, scoreDepth, slideBox, targetAtExit, targetCell, tooManyMoves, rowOf } from './minigames/depth';
 
-/** Начать игру по вызову: вызов уходит, сборщик «играете за него». null-ход (state без изменений) — нельзя. */
+/** Начать игру по вызову: вызов уходит, сборщик «играете за него». Нельзя — state без изменений. */
 export function startTsdGame(state: GameState, callId: string): GameState {
   const call = state.calls.find((c) => c.id === callId);
-  if (!call || call.expiresAt === null || call.tsd !== 'depth' || state.tsdGame || state.minigame) return state;
+  if (!call || call.expiresAt === null || !call.tsd || state.tsdGame || state.minigame) return state;
   const task = state.tasks[call.taskId];
   const picker = state.pickers[call.pickerId];
   if (task?.type !== 'order' || !picker?.job) return state;
@@ -19,10 +20,7 @@ export function startTsdGame(state: GameState, callId: string): GameState {
   if (!line) return state;
 
   const rng = createRng(state.rngSeed);
-  const fillers = Object.keys(state.products).filter((id) => id !== line.productId);
-  const { board, best } = createDepthBoard(rng, line.productId, fillers);
-  const game: DepthGame = {
-    kind: 'depth',
+  const common = {
     callId: call.id,
     taskId: task.id,
     pickerId: picker.id,
@@ -31,14 +29,20 @@ export function startTsdGame(state: GameState, callId: string): GameState {
     address: line.address,
     rack: { aisle: line.address.aisle, rack: line.address.rack },
     elapsed: 0,
-    timeLimit: DEPTH.timeLimit,
-    board,
-    best,
-    moves: 0,
-    note: null,
     noteAt: 0,
     result: null,
   };
+  let game: TsdGame;
+  if (call.tsd === 'depth') {
+    const fillers = Object.keys(state.products).filter((id) => id !== line.productId);
+    const { board, best } = createDepthBoard(rng, line.productId, fillers);
+    game = { ...common, kind: 'depth', timeLimit: DEPTH.timeLimit, board, best, moves: 0, note: null };
+  } else if (call.tsd === 'expiry') {
+    game = { ...common, kind: 'expiry', timeLimit: EXPIRY.timeLimit, productId: line.productId, need: EXPIRY.need,
+      units: createExpiryUnits(rng), open: null, taken: null, note: null };
+  } else {
+    return state; // «Штрихкод» — N4
+  }
   return {
     ...state,
     rngSeed: rng.seed(),
@@ -81,13 +85,41 @@ export function moveDepthBox(state: GameState, from: number, to: number): GameSt
   return withNote(state, g, 'moved', { board, moves });
 }
 
+// ---------- «Срок» ----------
+
+/** Поднять штуку крупно (её крутят и читают этикетку). Посмотренные помечаются. */
+export function openExpiryUnit(state: GameState, index: number): GameState {
+  const g = state.tsdGame;
+  if (!g || g.kind !== 'expiry' || g.result || !g.units[index]) return state;
+  const units = g.units.map((u, i) => (i === index ? { ...u, seen: true } : u));
+  return { ...state, tsdGame: { ...g, units, open: index } };
+}
+
+/** «Положить обратно». */
+export function closeExpiryUnit(state: GameState): GameState {
+  const g = state.tsdGame;
+  if (!g || g.kind !== 'expiry' || g.result || g.open === null) return state;
+  return { ...state, tsdGame: { ...g, open: null } };
+}
+
+/** «Взять» поднятую штуку — игра закончена: не тот срок — провал, подходящий — по времени. */
+export function takeExpiryUnit(state: GameState): GameState {
+  const g = state.tsdGame;
+  if (!g || g.kind !== 'expiry' || g.result || g.open === null) return state;
+  const unit = g.units[g.open];
+  const result = scoreExpiry(unit.days, g.need, g.elapsed, false);
+  const next: ExpiryGame = { ...g, taken: g.open, result, note: 'taken', noteAt: g.elapsed };
+  return { ...state, tsdGame: next };
+}
+
 /** Время игры идёт в обычном темпе; вышло — провал. */
 export function tickTsdGame(state: GameState, dt: number): GameState {
   const g = state.tsdGame;
   if (!g || g.result) return state;
   const elapsed = g.elapsed + dt;
   if (elapsed >= g.timeLimit) {
-    return { ...state, tsdGame: { ...g, elapsed: g.timeLimit, result: 'failed', note: 'timeout', noteAt: g.timeLimit } };
+    const done = { elapsed: g.timeLimit, result: 'failed' as const, note: 'timeout' as const, noteAt: g.timeLimit };
+    return { ...state, tsdGame: g.kind === 'depth' ? { ...g, ...done } : { ...g, ...done, open: null } };
   }
   return { ...state, tsdGame: { ...g, elapsed } };
 }
