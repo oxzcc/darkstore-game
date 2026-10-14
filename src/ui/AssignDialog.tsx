@@ -15,7 +15,7 @@ export default function AssignDialog() {
   const { choosePicker, closeAssign, sendChosenPicker } = useGameStore.getState();
 
   const task = taskId ? game.tasks[taskId] : null;
-  if (!task || task.type === 'writeoff') return null; // списание — M7e
+  if (!task) return null;
 
   return (
     <Vx className="assign" bodyClass="window">

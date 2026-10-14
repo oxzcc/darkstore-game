@@ -16,6 +16,7 @@ const PATHS = {
   work: '<rect x="3" y="3" width="18" height="18" fill="var(--f,#fff)" stroke="currentColor" stroke-width="2.5"/><path d="M7 7v10M10 7v10M13 7v10M17 7v10" stroke="currentColor" stroke-width="2"/>',
   truck: '<rect x="1.5" y="5" width="13" height="12" fill="var(--f,#fff)" stroke="currentColor" stroke-width="2.5"/><path d="M14.5 9h4.5l3.5 4v4h-8z" fill="var(--f,#fff)" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter"/><rect x="4" y="16.5" width="4.5" height="4.5" fill="currentColor"/><rect x="16" y="16.5" width="4.5" height="4.5" fill="currentColor"/>',
   rack: '<rect x="3" y="2" width="18" height="20" fill="var(--f,#fff)" stroke="currentColor" stroke-width="2.5"/><path d="M3 9h18M3 15.5h18" stroke="currentColor" stroke-width="2.5"/><rect x="6" y="5" width="4" height="4" fill="currentColor"/><rect x="13" y="11.5" width="5" height="4" fill="currentColor"/>',
+  scrap: '<path d="M4 7h16l-1.5 15h-13z" fill="var(--f,#fff)" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter"/><path d="M2 7h20M9 7V3h6v4" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M9 11l6 7M15 11l-6 7" stroke="#F0373B" stroke-width="2.5"/>',
 } as const;
 
 export type IconName = keyof typeof PATHS;

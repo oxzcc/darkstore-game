@@ -10,8 +10,9 @@ import { RATING_RANGE } from '../config/balance';
 import { RESULT_SHARE, SITUATION_BY_ID, WITH_ERRORS_MONEY_BY_TYPE } from '../config/calls';
 import { acceptDelivery } from './deliveries';
 import { completePutaway } from './putaway';
+import { completeWriteoff } from './writeoff';
 import { sameAddress } from './address';
-import { removeStock } from './stock';
+import { isExpiring, removeStock } from './stock';
 
 /**
  * Сколько денег и рейтинга даёт исход: доля от базовой награды задания (RESULT_SHARE).
@@ -42,10 +43,13 @@ export function pickedQty(task: OrderTask, reveal?: OutcomeReveal): number[] {
   });
 }
 
-/** Снять товар с полки: сначала партии с ближним сроком (как на настоящем складе). Больше, чем есть, не снимается. */
+/**
+ * Снять товар с полки: сначала партии с ближним сроком (как на настоящем складе). Больше, чем есть, не снимается.
+ * Партии «истекает сегодня» не берутся — их снимет списание (M7e1).
+ */
 export function takeFromShelf(stock: Stock, productId: string, address: Address, qty: number): Stock {
   const batches = Object.values(stock)
-    .filter((r) => r.productId === productId && sameAddress(r.address, address))
+    .filter((r) => r.productId === productId && sameAddress(r.address, address) && !isExpiring(r))
     .sort((a, b) => a.expiresAtShift - b.expiresAtShift);
   let s = stock;
   let left = qty;
@@ -96,5 +100,6 @@ export function applyTaskResult(state: GameState, taskId: string, outcome: Outco
   // Задания «Выкладка» на принятые паллеты создаёт advanceWorld — ему нужна карта склада.
   if (task.type === 'receiving') return acceptDelivery(next, task.payload.deliveryId);
   if (task.type === 'putaway') return completePutaway(next, task);
+  if (task.type === 'writeoff') return completeWriteoff(next, task);
   return next;
 }

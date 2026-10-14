@@ -47,6 +47,7 @@ export type GameState = {
   deliveries: Record<string, Delivery>; // поставки (M7b; 10, раздел 13.2)
   pallets: Record<string, Pallet>;
   nextDeliveryAt: number;               // когда приедет следующая поставка, игровое время
+  nextWriteoffAt: number;               // когда может появиться следующее задание «Списание» (M7e1)
   pickers: Record<string, Picker>;
 
   tsdOffer: TsdOffer | null;        // висит «Взять ТСД?» (одно за раз)

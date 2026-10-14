@@ -1,11 +1,11 @@
 // Работа сборщика над заданием: из каких шагов она состоит и что сейчас происходит.
 import type { Picker, PickerActivity, PickerJob } from '../model/picker';
-import type { OrderTask, PutawayTask, ReceivingTask, Task } from '../model/task';
+import type { OrderTask, PutawayTask, ReceivingTask, Task, WriteoffTask } from '../model/task';
 import type { GameState } from '../model/game';
 import type { WarehouseMap } from '../model/warehouse';
 import { formatAddress } from './address';
 import { accessSpotsForAddress, distancesFrom, zoneAccess, zoneCells } from './warehouse';
-import { loadSeconds, packSeconds, pickSeconds, placeSeconds, receiveSeconds, secondsPerCell, travelSeconds } from './time';
+import { dropSeconds, loadSeconds, packSeconds, pickSeconds, placeSeconds, receiveSeconds, secondsPerCell, takeDownSeconds, travelSeconds } from './time';
 import { DELIVERY } from '../config/balance';
 
 /**
@@ -59,19 +59,31 @@ export function buildPutawayJob(map: WarehouseMap, picker: Picker, task: Putaway
   return { taskId: task.id, steps, stepIndex: 0, stepElapsed: 0 };
 }
 
-/** Работа над заданием любого типа. Списание — в M7e. */
+/** Списание (10, раздел 13.4): к полке, снять партию, отнести в зону брака и сдать. */
+export function buildWriteoffJob(map: WarehouseMap, picker: Picker, task: WriteoffTask): PickerJob {
+  const at = accessSpotsForAddress(map, task.payload.address);
+  const steps: PickerJob['steps'] = [
+    { kind: 'walk', to: at[0], spots: at, label: `к ${formatAddress(task.payload.address)}` },
+    { kind: 'work', seconds: takeDownSeconds(picker), label: 'Снимает с полки' },
+    { kind: 'walk', to: zoneAccess(map, 'scrap'), spots: zoneCells(map, 'scrap'), label: 'в брак' },
+    { kind: 'work', seconds: dropSeconds(), label: 'Сдаёт в брак' },
+  ];
+  return { taskId: task.id, steps, stepIndex: 0, stepElapsed: 0 };
+}
+
+/** Работа над заданием любого типа. */
 export function buildJob(map: WarehouseMap, picker: Picker, task: Task): PickerJob {
   switch (task.type) {
     case 'order': return buildOrderJob(map, picker, task);
     case 'receiving': return buildReceivingJob(map, picker, task);
     case 'putaway': return buildPutawayJob(map, picker, task);
-    default: throw new Error(`Задания «${task.type}» пока не поддерживаются`);
+    case 'writeoff': return buildWriteoffJob(map, picker, task);
   }
 }
 
-/** Задания каких типов сборщика уже можно отправить выполнять. */
-export function canBuildJob(task: Task): boolean {
-  return task.type === 'order' || task.type === 'receiving' || task.type === 'putaway';
+/** Задания каких типов сборщика можно отправить выполнять (с M7e1 — все четыре). */
+export function canBuildJob(_task: Task): boolean {
+  return true;
 }
 
 /** Последние шаги заказа: отнести в зону фасовки и расфасовать. Общие для сборщика и для личной «Сборки». */

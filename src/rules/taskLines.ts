@@ -20,6 +20,6 @@ export function taskLines(state: GameState, task: Task): TaskLine[] {
         (state.pallets[id]?.items ?? []).map((it) => ({ productId: it.productId, qty: it.qty, pallet: i + 1 })));
     }
     case 'writeoff':
-      return []; // списание — M7e
+      return [{ productId: task.payload.productId, qty: task.payload.qty, address: task.payload.address }];
   }
 }

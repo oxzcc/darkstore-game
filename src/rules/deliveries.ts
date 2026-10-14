@@ -11,6 +11,7 @@ import type { Rng } from './random';
 import { createRng } from './random';
 import { reservedQty } from './rewards';
 import { addressKey } from './address';
+import { isExpiring } from './stock';
 
 /** Паллета ещё на складе (не разобрана до конца) — её товар «уже едет» на полки. */
 const palletPending = (p: Pallet) => p.state !== 'empty';
@@ -24,7 +25,7 @@ export function freeByProduct(state: GameState): Record<string, number> {
   for (const id of Object.keys(state.products)) free[id] = 0;
   const shelves = new Map<string, { productId: string; address: Address }>();
   for (const r of Object.values(state.stock)) {
-    free[r.productId] = (free[r.productId] ?? 0) + r.qty;
+    if (!isExpiring(r)) free[r.productId] = (free[r.productId] ?? 0) + r.qty; // истекающее не продаётся — его как будто нет
     shelves.set(`${r.productId}|${addressKey(r.address)}`, { productId: r.productId, address: r.address });
   }
   // обещанное заказам считается по полке, один раз на полку (партий на полке может быть несколько)

@@ -14,6 +14,7 @@ import { tickTsdGame } from './tsdGame';
 import { applyTaskResult } from './rewards';
 import { tickDeliveries } from './deliveries';
 import { createPutawayTasks } from './putaway';
+import { tickWriteoffs } from './writeoff';
 
 /** Перейти к следующему шагу работы. Состояние сборщика — по виду шага. */
 function nextStep(p: Picker): Picker {
@@ -203,6 +204,8 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
 
   // поставки: пришло время — у ворот грузовик и задание «Приёмка» (M7b)
   next = tickDeliveries(next);
+  // списания: по одной истекающей партии раз в WRITEOFF.everySeconds (M7e1)
+  next = tickWriteoffs(next);
 
   return { state: next, events };
 }
