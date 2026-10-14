@@ -13,6 +13,7 @@ import { expireCalls, raiseCall, revealCalls, showQueuedCalls } from './calls';
 import { tickTsdGame } from './tsdGame';
 import { applyTaskResult } from './rewards';
 import { tickDeliveries } from './deliveries';
+import { createPutawayTasks } from './putaway';
 
 /** Перейти к следующему шагу работы. Состояние сборщика — по виду шага. */
 function nextStep(p: Picker): Picker {
@@ -176,7 +177,13 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
     shiftLog: events.length ? [...state.shiftLog, ...events] : state.shiftLog,
   }, dt); // игра на ТСД идёт в обычном темпе, а не замедленного мира
   // закрытые задания: деньги, рейтинг, собранный товар уходит с полок (M6)
-  for (const e of events) if (e.kind === 'taskDone') next = applyTaskResult(next, e.taskId, e.outcome, e.reveal);
+  for (const e of events) {
+    if (e.kind !== 'taskDone') continue;
+    next = applyTaskResult(next, e.taskId, e.outcome, e.reveal);
+    // приёмка закрыта — на каждую принятую паллету появляется «Выкладка» (M7c)
+    const done = next.tasks[e.taskId];
+    if (done.type === 'receiving') next = createPutawayTasks(next, map, done.payload.deliveryId);
+  }
   // игрок не ответил на «Взять ТСД?» вовремя — сборщик работает сам
   if (next.tsdOffer && time >= next.tsdOffer.expiresAt) next = declineTsd(next);
 

@@ -9,6 +9,7 @@ import type { OrderTask, Outcome, Task } from '../model/task';
 import { RATING_RANGE } from '../config/balance';
 import { RESULT_SHARE, SITUATION_BY_ID, WITH_ERRORS_MONEY_BY_TYPE } from '../config/calls';
 import { acceptDelivery } from './deliveries';
+import { completePutaway } from './putaway';
 import { sameAddress } from './address';
 import { removeStock } from './stock';
 
@@ -91,6 +92,9 @@ export function applyTaskResult(state: GameState, taskId: string, outcome: Outco
     rating: clampRating(state.rating + reward.rating),
     stock,
   };
-  // приёмка: паллеты приняты при любом исходе, грузовик уезжает (10, раздел 11.6)
-  return task.type === 'receiving' ? acceptDelivery(next, task.payload.deliveryId) : next;
+  // приёмка: паллеты приняты при любом исходе, грузовик уезжает; выкладка: товар на полках (10, раздел 11.6).
+  // Задания «Выкладка» на принятые паллеты создаёт advanceWorld — ему нужна карта склада.
+  if (task.type === 'receiving') return acceptDelivery(next, task.payload.deliveryId);
+  if (task.type === 'putaway') return completePutaway(next, task);
+  return next;
 }

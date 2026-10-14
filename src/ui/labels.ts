@@ -14,12 +14,12 @@ export const OUTCOME_LOOK: Record<Outcome, { name: string; color: string; icon: 
 
 /**
  * Тип задания: название и значок (08, раздел 10.2). Название одного цвета у всех типов — различаются значком и подписью
- * (строгое цветовое кодирование, 10, раздел 13.1). Значки выкладки и списания — с M7c и M7e.
+ * (строгое цветовое кодирование, 10, раздел 13.1). Значок списания — с M7e.
  */
 export const TASK_TYPE_LOOK: Record<TaskType, { name: string; icon: IconName }> = {
   order: { name: 'Сборка', icon: 'pick' },
   receiving: { name: 'Приёмка', icon: 'truck' },
-  putaway: { name: 'Выкладка', icon: 'work' },
+  putaway: { name: 'Выкладка', icon: 'rack' },
   writeoff: { name: 'Списание', icon: 'fail' },
 };
 

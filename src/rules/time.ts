@@ -1,7 +1,7 @@
 // Время: сколько длятся ходьба и работа, и как реальное время превращается в игровое (09, раздел 7).
 import type { GameClock } from '../model/game';
 import type { Picker } from '../model/picker';
-import { DELIVERY, TIMING } from '../config/balance';
+import { DELIVERY, PUTAWAY, TIMING } from '../config/balance';
 
 /** Во сколько раз сборщик медленнее эталона: скорость 5 → 1, скорость 7 → ~0,71, скорость 3 → ~1,67. */
 export function speedFactor(picker: Picker): number {
@@ -26,6 +26,14 @@ export function pickSeconds(picker: Picker): number {
 /** Приёмка поставки: база + на каждую паллету, пропорционально скорости (10, раздел 13.2). */
 export function receiveSeconds(picker: Picker, pallets: number): number {
   return (DELIVERY.receiveBaseSeconds + DELIVERY.receivePerPalletSeconds * pallets) * speedFactor(picker);
+}
+
+/** Выкладка: загрузить тележку у паллеты и выложить одну позицию на полку. */
+export function loadSeconds(picker: Picker): number {
+  return PUTAWAY.loadSeconds * speedFactor(picker);
+}
+export function placeSeconds(picker: Picker): number {
+  return PUTAWAY.placeSeconds * speedFactor(picker);
 }
 
 /** Фасовка заказа. */
