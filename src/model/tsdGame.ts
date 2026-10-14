@@ -53,6 +53,9 @@ export type ExpiryUnit = { days: number; side: number; seen: boolean };
 /** Что ТСД сказал на последнее действие. */
 export type ExpiryNote = 'taken' | 'timeout';
 
+/** Что ищем в «Сроке»: подходящую свежую или именно просроченную (M7e2). */
+export type ExpiryMode = 'fresh' | 'expired';
+
 export type ExpiryGame = {
   kind: 'expiry';
   callId: string;
@@ -66,6 +69,8 @@ export type ExpiryGame = {
   timeLimit: number;
   productId: string;
   need: number;          // годен не ранее: столько дней от сегодня
+  /** fresh — найти штуку с хорошим сроком (сборка); expired — найти просроченную (списание, M7e2). */
+  mode: ExpiryMode;
   units: ExpiryUnit[];
   open: number | null;   // какая штука поднята крупно (её крутят и читают этикетку)
   taken: number | null;  // какую взяли — для итога

@@ -1,6 +1,7 @@
 // Развилки (docs/10-minigames-concept.md, раздел 3; 09, раздел 6).
 // Сборщик работает сам, но на одной из позиций задания может остановиться и позвать диспетчера.
-// Сборка — у полки перед сбором позиции, выкладка — у полки перед выкладкой, приёмка — перед приёмкой поставки (M7d1).
+// Сборка — у полки перед сбором позиции, выкладка — у полки перед выкладкой, приёмка — перед приёмкой поставки (M7d1),
+// списание — у полки перед тем, как снять партию, или в зоне брака (M7e2).
 // Всё здесь — чистые функции: план развилки при отправке, вызов, ответ игрока, ответ сборщика по таймеру, влияние на исход.
 import type { GameState } from '../model/game';
 import type { Call, CallAnswer, CallReveal, RiskLevel } from '../model/call';
@@ -33,10 +34,14 @@ export function planCall(job: PickerJob, task: Task, rng: Rng, chance = CALLS.ch
   const withGame = ofType.filter(hasReadyGame);
   const situations = CALLS.forceTsd && withGame.length > 0 ? withGame : ofType;
   const stops = job.steps.map((s, i) => ({ s, i })).filter(({ s }) =>
-    task.type === 'order' ? s.kind === 'pick' : task.type === 'putaway' ? s.kind === 'place' : task.type === 'receiving' ? s.kind === 'work' : false);
+    task.type === 'order' ? s.kind === 'pick' : task.type === 'putaway' ? s.kind === 'place' : s.kind === 'work');
   if (situations.length === 0 || stops.length === 0) return job;
   const situation = situations[Math.floor(rng.next() * situations.length)];
-  const { s, i } = stops[Math.floor(rng.next() * stops.length)];
+  // списание: у полки (первая работа) или, если ситуация про зону брака, — в ней (последняя работа)
+  const pickStop = rng.next();
+  const { s, i } = task.type === 'writeoff'
+    ? stops[situation.stopAtEnd ? stops.length - 1 : 0]
+    : stops[Math.floor(pickStop * stops.length)];
   const lineIndex = s.kind === 'pick' || s.kind === 'place' ? s.lineIndex : Math.floor(rng.next() * Math.max(1, lineCount));
   return { ...job, call: { stepIndex: i, lineIndex, situationId: situation.id, raised: false } };
 }
