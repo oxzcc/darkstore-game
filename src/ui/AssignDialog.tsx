@@ -2,7 +2,7 @@
 // Все числа — из selectors (а те — из rules); окно само ничего не считает.
 import type { CSSProperties } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { addressText, assignCheck, chancesFor, clockText, deliveryPallets, etaFor, money, pickerList, taskSummary } from '../store/selectors';
+import { addressText, assignCheck, chancesFor, clockText, etaFor, groupedLines, money, pickerList, taskSummary } from '../store/selectors';
 import { OUTCOME_LOOK, OUTCOMES_ORDER, TASK_TYPE_LOOK, taskTitle } from './labels';
 import { Avatar, StatBars } from './PickerBits';
 import Vx from './Vx';
@@ -34,21 +34,21 @@ export default function AssignDialog() {
           <div className="reward">+{money(task.reward.money)}</div>
         </Vx>
         <div className="order-lines">
-          {(task.type === 'order' || task.type === 'putaway') && task.payload.lines.map((l) => (
+          {/* сборка — по позициям с адресом; выкладка и приёмка — по товару, места мелко (правка автора 14.10) */}
+          {task.type === 'order' && task.payload.lines.map((l) => (
             <div key={`${l.productId}-${addressText(l.address)}`} className="order-line">
               <span className="tag">{addressText(l.address)}</span>
               <span>{game.products[l.productId]?.name ?? l.productId}</span>
               <span className="qty">×{l.qty}</span>
             </div>
           ))}
-          {/* приёмка: что на каждой паллете (П1, П2…) */}
-          {deliveryPallets(game, task).flatMap((p, i) => p.items.map((it) => (
-            <div key={`${p.id}-${it.productId}`} className="order-line">
-              <span className="tag">П{i + 1}</span>
-              <span>{game.products[it.productId]?.name ?? it.productId}</span>
-              <span className="qty">×{it.qty}</span>
+          {task.type !== 'order' && groupedLines(game, task).map((g) => (
+            <div key={g.productId} className="order-line">
+              <span>{g.name}</span>
+              <span className="qty">×{g.qty}</span>
+              <span className="places">{g.places.join(', ')}</span>
             </div>
-          )))}
+          ))}
         </div>
 
         {/* сборщики */}

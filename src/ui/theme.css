@@ -106,10 +106,15 @@ button { font-family: inherit; }
 .seg i.on { background: var(--seg-color, var(--failed)); }
 
 /* ---------- окно назначения (справа, ui_03) ---------- */
-.assign { position: absolute; right: 16px; top: 96px; width: 440px; max-height: calc(100% - 112px); }
-.assign > .vx-edge > .vx-body { display: flex; flex-direction: column; } /* только само окно */
-.assign-scroll { padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
-.order-lines { display: flex; flex-direction: column; gap: 6px; padding: 4px 4px 0; }
+.assign { position: absolute; right: 16px; top: 96px; width: 440px; max-height: calc(100% - 112px); display: flex; flex-direction: column; }
+/* окно не выше экрана: середина прокручивается, заголовок и кнопки всегда видны (правка автора 14.10) */
+.assign > .vx-edge { height: auto; min-height: 0; flex: 0 1 auto; display: flex; flex-direction: column; }
+.assign > .vx-edge > .vx-body { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; height: auto; } /* только само окно */
+.assign > .vx-edge > .vx-body > .panel-title, .assign .buttons { flex-shrink: 0; }
+.assign-scroll { padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+.assign-scroll > * { flex-shrink: 0; } /* карточки не сжимаются — середина прокручивается */
+.order-lines { display: flex; flex-direction: column; gap: 6px; padding: 4px 4px 0; flex-shrink: 0; max-height: 156px; overflow-y: auto; }
+.order-line .places { margin-left: auto; color: var(--text-mute); font-size: 13px; font-variant-numeric: tabular-nums; }
 .order-line { display: flex; align-items: center; gap: 8px; font-size: 15px; }
 .order-line .qty { color: var(--text-mute); }
 .tag { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; background: var(--tag); color: #fff;

@@ -1,6 +1,6 @@
 // Выкладка (M7c; docs/03-warehouse-flow.md, раздел 5; docs/10, раздел 13.3).
 // После приёмки на каждую паллету — задание «Выкладка». Куда класть, система решает сразу при появлении задания:
-// сначала полка, где этот товар уже лежит и есть место, иначе ближайшая к зоне приёмки пустая полка.
+// товар целиком на одну полку — свою, если влезает всё, иначе ближайшую к зоне приёмки пустую (planPutaway).
 // Товар появляется на полках разом, когда задание закрыто (склад меняется только при завершении задания).
 import type { GameState } from '../model/game';
 import type { Address } from '../model/address';
@@ -49,9 +49,10 @@ function shelvesByDistance(map: WarehouseMap): Address[] {
 export type PutawayPlan = { lines: PutawayLine[]; leftover: PalletItem[] };
 
 /**
- * Куда разложить товар паллеты. Для каждого товара: сначала полки, где он уже лежит (или обещан), пока есть место,
- * потом ближайшие пустые; не влез на одну полку — делится на несколько. Места не хватило совсем — остаток в leftover.
- * Позиции идут от ближней к зоне приёмки полки к дальней — так сборщик и обходит их.
+ * Куда разложить товар паллеты (правка автора 14.10: поменьше остановок).
+ * Каждый товар — целиком на одну полку: на полку с этим же товаром, если там хватает места на всё, иначе на ближайшую пустую.
+ * Больше вместимости полки — несколько пустых полок подряд. Пустых нет — доложить на полки с этим товаром, сколько влезет.
+ * Места не хватило совсем — остаток в leftover. Позиции идут от ближней к зоне приёмки полки к дальней — так сборщик и обходит их.
  */
 export function planPutaway(state: GameState, map: WarehouseMap, items: PalletItem[]): PutawayPlan {
   const shelves = shelvesByDistance(map);
@@ -63,23 +64,34 @@ export function planPutaway(state: GameState, map: WarehouseMap, items: PalletIt
   // что на полке будет после всех обещаний (включая уже разложенное из этой паллеты)
   const productAt = (a: Address) => productOnShelf(state.stock, a) ?? planned.get(addressKey(a))?.productId ?? null;
   const roomAt = (a: Address) => PUTAWAY.shelfCapacity - qtyAt(state.stock, a) - (planned.get(addressKey(a))?.qty ?? 0);
-  const promise = (a: Address, productId: string, qty: number) => {
+  const put = (a: Address, productId: string, qty: number) => {
     const k = addressKey(a);
     planned.set(k, { productId, qty: (planned.get(k)?.qty ?? 0) + qty });
+    lines.push({ productId, address: a, qty });
   };
 
   for (const item of items) {
     let left = item.qty;
-    const same = shelves.filter((a) => productAt(a) === item.productId);
-    const empty = shelves.filter((a) => productAt(a) === null);
-    for (const a of [...same, ...empty]) {
+    // 1) своя полка, куда влезает всё сразу
+    const whole = shelves.find((a) => productAt(a) === item.productId && roomAt(a) >= left);
+    if (whole) { put(whole, item.productId, left); continue; }
+    // 2) пустые полки, от ближней
+    for (const a of shelves) {
       if (left <= 0) break;
-      if (productAt(a) !== null && productAt(a) !== item.productId) continue; // пустую полку уже занял другой товар этой паллеты
-      const put = Math.min(left, roomAt(a));
-      if (put <= 0) continue;
-      lines.push({ productId: item.productId, address: a, qty: put });
-      promise(a, item.productId, put);
-      left -= put;
+      if (productAt(a) !== null) continue;
+      const q = Math.min(left, roomAt(a));
+      if (q <= 0) continue;
+      put(a, item.productId, q);
+      left -= q;
+    }
+    // 3) пустых не хватило — доложить на свои полки, сколько влезет
+    for (const a of shelves) {
+      if (left <= 0) break;
+      if (productAt(a) !== item.productId) continue;
+      const q = Math.min(left, roomAt(a));
+      if (q <= 0) continue;
+      put(a, item.productId, q);
+      left -= q;
     }
     if (left > 0) leftover.push({ productId: item.productId, qty: left });
   }

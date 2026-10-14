@@ -33,18 +33,21 @@ function afterReceiving(seed = 1): GameState {
 }
 
 describe('выбор полок', () => {
-  it('товар, который уже лежит на складе, едет к нему, если на полке есть место', () => {
+  it('товар целиком на свою полку, если там хватает места на всё', () => {
     const g = createInitialGame(map, 1);
-    // на 1.1.1 лежит 8 молока (config/initialStock.ts): влезет ещё 2, остальное — на другие полки
-    const plan = planPutaway(g, map, [{ productId: 'milk', qty: 5 }]);
-    const total = plan.lines.reduce((s, l) => s + l.qty, 0);
-    expect(total).toBe(5);
-    for (const l of plan.lines) {
-      expect(qtyAt(g.stock, l.address) + l.qty).toBeLessThanOrEqual(PUTAWAY.shelfCapacity);
-      const there = Object.values(g.stock).find((r) => addressKey(r.address) === addressKey(l.address));
-      expect(!there || there.productId === 'milk').toBe(true); // чужой товар на полку не кладём
-    }
-    expect(plan.lines.some((l) => qtyAt(g.stock, l.address, 'milk') > 0)).toBe(true);
+    // молоко лежит на 1.1.1 (8 шт.), 2.3.2 (6) и 4.5.1 (10): 2 штуки влезают целиком на свою полку
+    const plan = planPutaway(g, map, [{ productId: 'milk', qty: 2 }]);
+    expect(plan.lines).toHaveLength(1);
+    expect(qtyAt(g.stock, plan.lines[0].address, 'milk')).toBeGreaterThan(0);
+    expect(qtyAt(g.stock, plan.lines[0].address) + 2).toBeLessThanOrEqual(PUTAWAY.shelfCapacity);
+  });
+
+  it('на своих полках не хватает места на всё — одной позицией на пустую полку, без дробления', () => {
+    const g = createInitialGame(map, 1);
+    const plan = planPutaway(g, map, [{ productId: 'milk', qty: 5 }]); // свободно максимум 4 (на 2.3.2)
+    expect(plan.lines).toHaveLength(1);
+    expect(plan.lines[0].qty).toBe(5);
+    expect(qtyAt(g.stock, plan.lines[0].address)).toBe(0);
   });
 
   it('новый товар — на пустую полку; больше вместимости — делится на несколько полок', () => {
@@ -79,7 +82,7 @@ describe('выбор полок', () => {
     const shelves = map.racks.flatMap((r) => Array.from({ length: r.shelves }, (_, i) => `${r.aisle}.${r.rack}.${i + 1}`));
     const stock = Object.fromEntries(shelves.map((a) => [a, { id: a, productId: 'water', address: parseAddress(a), qty: PUTAWAY.shelfCapacity, expiresAtShift: 9 }]));
     const plan = planPutaway({ ...g, stock, tasks: {} }, map, [{ productId: 'milk', qty: 4 }]);
-    expect(plan.lines).toEqual([]);
+    expect(plan.lines).toEqual([]); // пустых полок нет, своих с местом тоже
     expect(plan.leftover).toEqual([{ productId: 'milk', qty: 4 }]);
   });
 });
@@ -142,5 +145,17 @@ describe('полный круг', () => {
 
     const order = createOrder(s, createRng(1), s.clock.time);
     expect(order).not.toBeNull();
+  });
+});
+
+describe('короткая выкладка (правка автора 14.10)', () => {
+  it('позиций не больше, чем товаров на паллете, если товар влезает на полку', () => {
+    for (let seed = 1; seed <= 10; seed++) {
+      const s = afterReceiving(seed);
+      for (const t of putaways(s)) {
+        const kinds = s.pallets[t.payload.palletId].items.length;
+        expect(t.payload.lines.length).toBe(kinds); // на паллете до 8 штук товара — влезает на одну полку
+      }
+    }
   });
 });

@@ -71,6 +71,25 @@ export function deliveryPallets(game: GameState, task: Task) {
   return d ? d.palletIds.map((id) => game.pallets[id]).filter(Boolean) : [];
 }
 
+/**
+ * Товары задания одной строкой на товар — для окна назначения у выкладки и приёмки (правка автора 14.10):
+ * «Кофе ×7» и мелко, где он: «1.1.2, 3.1.4» или «П1, П3». Порядок — как товары встречаются в задании.
+ */
+export function groupedLines(game: GameState, task: Task): { productId: string; name: string; qty: number; places: string[] }[] {
+  const out: { productId: string; name: string; qty: number; places: string[] }[] = [];
+  for (const l of taskLines(game, task)) {
+    const place = l.address ? formatAddress(l.address) : l.pallet ? `П${l.pallet}` : '';
+    const g = out.find((x) => x.productId === l.productId);
+    if (g) {
+      g.qty += l.qty;
+      if (place && !g.places.includes(place)) g.places.push(place);
+    } else {
+      out.push({ productId: l.productId, name: game.products[l.productId]?.name ?? l.productId, qty: l.qty, places: place ? [place] : [] });
+    }
+  }
+  return out;
+}
+
 /** Подпись под названием задания в панели и окне назначения — по типу задания. */
 export function taskSummary(game: GameState, task: Task): string {
   return task.type === 'receiving' ? deliverySummary(game, task) : orderSummary(task);
