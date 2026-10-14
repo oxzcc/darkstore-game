@@ -123,7 +123,7 @@ export const BARCODE = {
   hiddenCount: 4,
   attempts: 6,
   perfectWithin: 4,
-  timeLimit: 60,
+  timeLimit: 90,     // было 60 — мало для игры (правка автора 14.10)
   introSeconds: 2,   // подлёт камеры, подъём с полки, поворот наклейкой — время игры в это время не идёт
 };
 

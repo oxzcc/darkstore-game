@@ -33,7 +33,8 @@ const SHAPES: Record<ProductShape, ShapeModel> = {
   ] },
   bunch: { w: 0.13, h: 0.14, d: 0.045, round: false, topY: 0.14, topSize: 0.035, parts: [
     { kind: 'box', pos: [-0.042, 0.06, 0], size: [0.038, 0.12, 0.04], color: 'c' },
-    { kind: 'box', pos: [0, 0.065, 0.004], size: [0.04, 0.13, 0.042], color: 'c' },
+    // средний банан вровень с боковыми: раньше он выступал вперёд и закрывал наклейку со штрихкодом (баг, найден автором 14.10)
+    { kind: 'box', pos: [0, 0.065, 0], size: [0.04, 0.13, 0.04], color: 'c' },
     { kind: 'box', pos: [0.042, 0.06, 0], size: [0.038, 0.12, 0.04], color: 'c' },
     { kind: 'box', pos: [0, 0.135, 0], size: [0.02, 0.012, 0.02], color: 'a' },
   ] },
