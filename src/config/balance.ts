@@ -4,7 +4,7 @@ import type { OutcomeChances, TaskType } from '../model/task';
 import type { Cell } from '../model/warehouse';
 
 /** Версия формата GameState (09, раздел 12). */
-export const GAME_STATE_VERSION = 11; // 11: списание (M7e1)
+export const GAME_STATE_VERSION = 12; // 12: смены и кампания (M8a)
 
 /**
  * «Взять ТСД» (02, раздел 6; 06, разделы 2–3). Допущения из документов, автор их ещё не подтвердил.
@@ -118,4 +118,14 @@ export const WRITEOFF = {
   everySeconds: 40,    // следующее — через 40 с после предыдущего
   takeSeconds: 3,      // «Снимает с полки»
   dropSeconds: 2,      // «Сдаёт в брак»
+};
+
+/**
+ * Смена и кампания (02, разделы 2, 3, 11; решения автора 14.10).
+ * Звёзды — по доле закрытых заданий от всех, что были за смену; пороги — допущение Claude.
+ */
+export const SHIFT = {
+  durationSeconds: 600,   // 10 минут игрового времени (на паузе не идёт)
+  totalShifts: 5,
+  starThresholds: [0.4, 0.6, 0.8] as [number, number, number], // от 40% — 1 звезда, от 60% — 2, от 80% — 3
 };

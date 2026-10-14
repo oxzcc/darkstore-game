@@ -47,9 +47,9 @@ export function pickedQty(task: OrderTask, reveal?: OutcomeReveal): number[] {
  * Снять товар с полки: сначала партии с ближним сроком (как на настоящем складе). Больше, чем есть, не снимается.
  * Партии «истекает сегодня» не берутся — их снимет списание (M7e1).
  */
-export function takeFromShelf(stock: Stock, productId: string, address: Address, qty: number): Stock {
+export function takeFromShelf(stock: Stock, productId: string, address: Address, qty: number, shift?: number): Stock {
   const batches = Object.values(stock)
-    .filter((r) => r.productId === productId && sameAddress(r.address, address) && !isExpiring(r))
+    .filter((r) => r.productId === productId && sameAddress(r.address, address) && !isExpiring(r, shift))
     .sort((a, b) => a.expiresAtShift - b.expiresAtShift);
   let s = stock;
   let left = qty;
@@ -88,7 +88,7 @@ export function applyTaskResult(state: GameState, taskId: string, outcome: Outco
   let stock = state.stock;
   if (task.type === 'order') {
     const picked = pickedQty(task, reveal);
-    task.payload.lines.forEach((l, i) => { stock = takeFromShelf(stock, l.productId, l.address, picked[i]); });
+    task.payload.lines.forEach((l, i) => { stock = takeFromShelf(stock, l.productId, l.address, picked[i], state.campaign.shift); });
   }
   const next: GameState = {
     ...state,

@@ -16,6 +16,7 @@ import type { Address } from '../model/address';
 import { advanceWorld } from '../rules/advance';
 import { rewardFor } from '../rules/rewards';
 import { worldDt } from '../rules/time';
+import { finishCampaign, startNextShift } from '../rules/shift';
 
 /** Карта не меняется во время игры, поэтому строится один раз и не хранится в состоянии (09, 4.1а). */
 export const WAREHOUSE_MAP = buildWarehouseMap(WAREHOUSE_LAYOUT);
@@ -84,8 +85,18 @@ type Store = {
   /** Вызывается каждый кадр из GameLoop: двигает игровое время. */
   tick: (realDt: number) => void;
   togglePause: () => void;
+  /** Экран итогов смены (M8a): следующая смена; после последней — итоги кампании; «Начать заново». */
+  nextShift: () => void;
+  finishCampaign: () => void;
+  restartCampaign: () => void;
   setPlayerSpeed: (speed: 1 | 2) => void;
 };
+
+/** Окна и всплывашки, которые закрываются, когда кончилась смена или началась новая. */
+const clearWindows = (ui: UiState): UiState => ({
+  ...ui, assignTaskId: null, chosenPickerId: null, openCallId: null, callFlashes: [], results: [], toasts: [], gains: [],
+  depthSelected: null, barcodeInput: [],
+});
 
 /** Случайное зерно для новой игры. Math.random можно здесь, но не в rules (09, раздел 5.2). */
 const newSeed = () => Math.floor(Math.random() * 2 ** 32);
@@ -168,6 +179,8 @@ export const useGameStore = create<Store>((set) => ({
       const dt = worldDt(s.game.clock, realDt, s.ui.assignTaskId !== null || s.ui.openCallId !== null || resultShown);
       if (dt === 0) return s;
       const { state, events } = advanceWorld(s.game, WAREHOUSE_MAP, dt);
+      // смена кончилась — открытые окна закрываются, поверх всего экран итогов (M8a)
+      if (state.campaign.phase !== s.game.campaign.phase) return { game: state, ui: clearWindows(s.ui) };
       if (events.length === 0) return { game: state };
       let nextToastId = s.ui.nextToastId;
       const toasts: Toast[] = [];
@@ -204,6 +217,10 @@ export const useGameStore = create<Store>((set) => ({
         },
       };
     }),
+
+  nextShift: () => set((s) => ({ game: startNextShift(s.game, WAREHOUSE_MAP), ui: clearWindows(s.ui) })),
+  finishCampaign: () => set((s) => ({ game: finishCampaign(s.game) })),
+  restartCampaign: () => set((s) => ({ game: createInitialGame(WAREHOUSE_MAP, newSeed()), ui: clearWindows(s.ui) })),
 
   togglePause: () =>
     set((s) => ({ game: { ...s.game, clock: { ...s.game.clock, paused: !s.game.clock.paused } } })),

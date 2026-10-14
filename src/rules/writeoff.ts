@@ -16,7 +16,7 @@ function hasOpenWriteoff(state: GameState, recordId: string): boolean {
 /** Партии, которые истекают и ещё ждут задания (по порядку id — чтобы не зависеть от случайностей). */
 export function pendingWriteoffs(state: GameState): StockRecord[] {
   return Object.values(state.stock)
-    .filter((r) => r.qty > 0 && isExpiring(r) && !hasOpenWriteoff(state, r.id))
+    .filter((r) => r.qty > 0 && isExpiring(r, state.campaign.shift) && !hasOpenWriteoff(state, r.id))
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 

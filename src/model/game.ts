@@ -8,6 +8,7 @@ import type { Picker } from './picker';
 import type { Product } from './product';
 import type { Stock } from './stock';
 import type { Outcome, Task } from './task';
+import type { Campaign } from './campaign';
 
 /** Что случилось — для всплывающих сообщений и итогов смены. */
 export type ShiftEvent =
@@ -37,6 +38,7 @@ export type GameState = {
   rngSeed: number;   // текущее состояние генератора случайностей
   nextId: number;    // счётчик для новых id
 
+  campaign: Campaign;  // номер смены, фаза (идёт / итоги / кампания закончена), история смен (M8a)
   clock: GameClock;
   money: number;     // пока не меняется: деньги и рейтинг от исходов — M6
   rating: number;

@@ -8,7 +8,6 @@ import type { Pallet, PalletItem } from '../model/delivery';
 import type { PutawayLine, PutawayTask } from '../model/task';
 import type { WarehouseMap } from '../model/warehouse';
 import { PUTAWAY, REWARD } from '../config/balance';
-import { CAMPAIGN_START_SHIFT } from '../config/initialStock';
 import { addressKey } from './address';
 import { addStock, productOnShelf, qtyAt } from './stock';
 import { accessSpotsForAddress, distancesFrom, zoneAccess } from './warehouse';
@@ -148,13 +147,13 @@ export function createPutawayTasks(state: GameState, map: WarehouseMap, delivery
 /**
  * Выкладка закрыта: товар на полках (новыми партиями), паллета пустая и исчезает.
  * Не зависит от исхода (10, раздел 11.6). Что не влезло при планировании, остаётся на паллете.
- * Срок годности — от текущей смены; смен пока нет, поэтому от первой (M8).
+ * Срок годности — от текущей смены (M8a: календарь — номер смены).
  */
 export function completePutaway(state: GameState, task: PutawayTask): GameState {
   let stock = state.stock;
   for (const l of task.payload.lines) {
     const product = state.products[l.productId];
-    const expiresAtShift = CAMPAIGN_START_SHIFT + (product?.shelfLifeShifts ?? 0);
+    const expiresAtShift = state.campaign.shift + (product?.shelfLifeShifts ?? 0);
     stock = addStock(stock, { productId: l.productId, address: l.address, expiresAtShift }, l.qty);
   }
   const pallet = state.pallets[task.payload.palletId];

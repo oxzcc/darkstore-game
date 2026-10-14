@@ -1,9 +1,9 @@
 // Деньги и рейтинг сверху по центру (макет ui_01; 09, раздел 14: M6).
 // Числа берутся из состояния игры; под плашкой на миг всплывает, сколько прибавилось за задание.
-// Таймер смены («До конца смены») появится вместе со сменой (M8).
+// Слева — смена: «Смена 2 из 5» и сколько осталось (M8a).
 import { useEffect, type CSSProperties } from 'react';
 import { useGameStore, type Gain } from '../store/gameStore';
-import { money, ratingText, signedRating } from '../store/selectors';
+import { clockText, money, ratingText, shiftClock, signedRating } from '../store/selectors';
 import Vx from './Vx';
 import Icon from './icons';
 
@@ -27,8 +27,16 @@ export default function TopBar() {
   const cash = useGameStore((s) => s.game.money);
   const rating = useGameStore((s) => s.game.rating);
   const gains = useGameStore((s) => s.ui.gains);
+  const game = useGameStore((s) => s.game);
+  const sc = shiftClock(game);
   return (
     <div className="topbar">
+      <div className="topbar-slot">
+        <Vx className={`stat-tile${sc.secondsLeft <= 60 ? ' hurry' : ''}`}>
+          <Icon name="clock" />
+          <div><small>Смена {sc.shift} из {sc.total}</small><b>{clockText(sc.secondsLeft)}</b></div>
+        </Vx>
+      </div>
       <div className="topbar-slot">
         <Vx className="stat-tile">
           <Icon name="coin" />
