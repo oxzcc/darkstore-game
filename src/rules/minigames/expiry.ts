@@ -18,20 +18,24 @@ function shuffle<T>(rng: Rng, xs: T[]): T[] {
 
 /**
  * Штуки в лотке (rows × cols): ровно одна подходящая (need … need + goodSpread дней) на случайном месте,
- * у остальных — короткий срок из badDays. Стороны этикеток — все 6 по кругу, перемешанные: у соседей они разные.
+ * у остальных — короткий срок из badDays. Стороны этикеток — перед, право, зад, лево и низ по кругу, перемешанные;
+ * сверху наклейки нет — её было бы видно прямо из лотка (решение автора 14.10).
  */
 export function createExpiryUnits(rng: Rng, cfg = EXPIRY): ExpiryUnit[] {
   const n = cfg.rows * cfg.cols;
   const goodAt = Math.floor(rng.next() * n);
   const good = cfg.need + Math.floor(rng.next() * (cfg.goodSpread + 1));
   const sides: number[] = [];
-  while (sides.length < n) sides.push(...shuffle(rng, [0, 1, 2, 3, 4, 5]));
+  while (sides.length < n) sides.push(...shuffle(rng, [...EXPIRY_SIDES]));
   return Array.from({ length: n }, (_, i) => ({
     days: i === goodAt ? good : cfg.badDays[Math.floor(rng.next() * cfg.badDays.length)],
     side: sides[i],
     seen: false,
   }));
 }
+
+/** На каких сторонах бывает наклейка: 0 перед, 1 право, 2 зад, 3 лево, 5 низ; 4 (верх) — нет. */
+export const EXPIRY_SIDES = [0, 1, 2, 3, 5] as const;
 
 /** Срок подходит: не раньше нужного. */
 export const expiryOk = (days: number, need: number) => days >= need;
