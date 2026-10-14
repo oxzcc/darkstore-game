@@ -10,7 +10,7 @@ import { dispatchTask } from './tasks/lifecycle';
 import { advanceWorld } from './advance';
 import { pickerActivity } from './jobs';
 import { createRng, type Rng } from './random';
-import { answerCall, applyCalls, callText, optionsFor, planCall, raiseRisk, revealCalls } from './calls';
+import { answerCall, applyCalls, callText, complicationChance, optionsFor, planCall, raiseRisk, revealCalls } from './calls';
 
 const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
 
@@ -156,6 +156,31 @@ describe('развилки: влияние на исход', () => {
     expect(r.calls.map((c) => [c.complication, c.capped, c.after])).toEqual([[true, false, 'withErrors'], [false, false, 'withErrors']]);
     expect(r.final).toBe('withErrors');
     expect(r.calls[0].chance).toBe(CALLS.complication.medium);
+  });
+});
+
+describe('развилка заменяет бросок по характеристикам (решение автора 14.10)', () => {
+  it('риск ответа зависит от точности: точный реже ошибается, неточный чаще, в границах', () => {
+    const { ref, min, max } = CALLS.riskByAccuracy;
+    expect(complicationChance('low', ref)).toBeCloseTo(CALLS.complication.low);
+    expect(complicationChance('low', 10)).toBeLessThan(CALLS.complication.low);
+    expect(complicationChance('low', 1)).toBeGreaterThan(CALLS.complication.low);
+    expect(complicationChance('high', 100)).toBeCloseTo(CALLS.complication.high * min);
+    expect(complicationChance('high', -100)).toBeCloseTo(CALLS.complication.high * max);
+  });
+
+  it('заказ с развилкой: исход только от неё — без осложнения всегда «идеально»', () => {
+    // много разных зёрен: если бы бросок по характеристикам остался, часть заказов вышла бы хуже «идеально»
+    for (let seed = 1; seed <= 12; seed++) {
+      const { s, taskId } = sentWithCall('lucky', 'missing', createInitialGame(map, seed));
+      const at = runUntil(s, (x) => x.calls.length > 0);
+      let x = answerCall(at, at.calls[0].id, 'search');
+      for (let i = 0; i < 5000 && x.tasks[taskId].status !== 'done'; i++) x = advanceWorld(x, map, 0.1).state;
+      const done = x.shiftLog.find((e) => e.kind === 'taskDone' && e.taskId === taskId);
+      expect(done && done.kind === 'taskDone' && done.reveal?.base).toBe('perfect');
+      const call = done && done.kind === 'taskDone' ? done.reveal!.calls[0] : null;
+      expect(x.tasks[taskId].outcome).toBe(call!.complication ? 'withErrors' : 'perfect');
+    }
   });
 });
 
