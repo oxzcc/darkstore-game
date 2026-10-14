@@ -458,8 +458,15 @@ svg.i.sm { width: 18px; height: 18px; }
 @keyframes fade { from { opacity: 0; } }
 
 /* «Срок» на ТСД (N3; правки автора 14.10): штука — 3D на сцене; здесь только «Взять» и подсказка внизу по центру */
-.expiry-seen { pointer-events: none; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%;
-  background: var(--text-mute); color: #fff; font-size: 12px; font-weight: 700; }
+.expiry-time { display: flex; flex-direction: column; gap: 4px; }
+.expiry-time-zones { position: relative; display: flex; gap: 3px; height: 12px; }
+.expiry-time-zones i { opacity: 0.9; }
+.expiry-time-zones i.perfect { background: var(--perfect); }
+.expiry-time-zones i.good { background: var(--errors); }
+/* прошедшее время — светлой вуалью, где мы сейчас — тёмная черта; яркая часть — сколько осталось и в какой зоне */
+.expiry-time-fill { position: absolute; left: 0; top: -2px; bottom: -2px; background: rgba(255, 249, 236, 0.75); border-right: 3px solid var(--text); }
+.expiry-time-legend { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-mute); font-variant-numeric: tabular-nums; }
+.expiry-time-legend .on { color: var(--text); font-weight: 700; }
 .expiry-hold { position: absolute; left: 50%; bottom: 36px; transform: translateX(-50%); z-index: 6;
   display: flex; flex-direction: column; align-items: center; gap: 10px; pointer-events: none; animation: pop 0.2s ease-out; }
 .expiry-hold .btn { pointer-events: auto; flex: none; width: 240px; height: 56px; }

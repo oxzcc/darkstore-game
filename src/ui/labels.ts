@@ -3,12 +3,12 @@ import type { Outcome } from '../model/task';
 import type { PickerState } from '../model/picker';
 import type { IconName } from './icons';
 
-/** Порядок исходов на экране: идеально → с ошибками → провал. */
+/** Порядок исходов на экране: идеально → неплохо → провал (средний исход раньше назывался «С ошибками», переименован автором 14.10). */
 export const OUTCOMES_ORDER: Outcome[] = ['perfect', 'withErrors', 'failed'];
 
 export const OUTCOME_LOOK: Record<Outcome, { name: string; color: string; icon: IconName }> = {
   perfect: { name: 'Идеально', color: 'var(--perfect)', icon: 'perfect' },
-  withErrors: { name: 'С ошибками', color: 'var(--errors)', icon: 'errors' },
+  withErrors: { name: 'Неплохо', color: 'var(--errors)', icon: 'errors' },
   failed: { name: 'Провал', color: 'var(--failed)', icon: 'fail' },
 };
 

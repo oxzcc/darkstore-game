@@ -6,7 +6,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Group, Quaternion, Raycaster, Vector2, Vector3 } from 'three';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
 import type { WarehouseMap } from '../model/warehouse';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { PALETTE } from '../config/palette';
@@ -189,10 +188,7 @@ export default function ExpiryShelf({ map }: { map: WarehouseMap }) {
                     <boxGeometry args={[stepX * 0.95, size.h, stepZ * 0.95]} />
                     <meshBasicMaterial transparent opacity={0} depthWrite={false} />
                   </mesh>
-                  {/* посмотренные — с галочкой; ниже окон интерфейса, при итоге не рисуется */}
-                  {u.seen && !game.result && (
-                    <Html position={[0, size.h + 0.02, 0]} center zIndexRange={[5, 0]} className="expiry-seen">✓</Html>
-                  )}
+                  {/* посмотренные никак не отмечены: игрок запоминает сам (решение автора 14.10) */}
                 </group>
               )}
             </group>

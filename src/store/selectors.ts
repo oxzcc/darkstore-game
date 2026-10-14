@@ -12,7 +12,7 @@ import { shelfContents } from '../rules/stock';
 import { takenPerLine } from '../rules/minigames/picking';
 import { callText, fillText, lineContext } from '../rules/calls';
 import { expiryDate } from '../rules/minigames/expiry';
-import { CALLS, DEPTH, RESULT_SHARE, RESULT_XP, SITUATION_BY_ID, TSD_GAMES, TSD_OPTION_ID, type CallOption } from '../config/calls';
+import { CALLS, DEPTH, EXPIRY, RESULT_SHARE, RESULT_XP, SITUATION_BY_ID, TSD_GAMES, TSD_OPTION_ID, type CallOption } from '../config/calls';
 import type { RackRef } from '../model/minigame';
 import type { Call } from '../model/call';
 import type { CallFlash, ResultCard } from './gameStore';
@@ -291,7 +291,9 @@ export function expiryView(game: GameState) {
     need: expiryDate(g.need),
     today: expiryDate(0),
     secondsLeft: Math.max(0, g.timeLimit - g.elapsed),
+    elapsed: g.elapsed,
     timeLimit: g.timeLimit,
+    perfectSeconds: EXPIRY.perfectSeconds,
     open: unit(g.open),
     taken: unit(g.taken),
     note: g.note,

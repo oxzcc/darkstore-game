@@ -5,6 +5,7 @@
 // Только показывает данные из props и передаёт клики наверх (09, раздел 6.3).
 import { useEffect, type CSSProperties } from 'react';
 import type { ExpiryView } from '../../store/selectors';
+import { clockText } from '../../store/selectors';
 import { OUTCOME_LOOK } from '../../ui/labels';
 import Vx from '../../ui/Vx';
 
@@ -32,10 +33,11 @@ export default function ExpiryTsd({ view, onBack, onTake, onClose }: Props) {
   }, [done, holding, onBack, onTake, onClose]);
 
   const result = view.result ? OUTCOME_LOOK[view.result] : null;
+  const inPerfect = view.elapsed <= view.perfectSeconds;
   const resultText = view.note === 'timeout'
     ? 'Время вышло'
     : view.taken
-      ? (view.result === 'failed' ? `Срок до ${view.taken.date} — нужен не ранее ${view.need}` : `Срок до ${view.taken.date} — подходит${view.result === 'withErrors' ? ', но искали долго' : ''}`)
+      ? (view.result === 'failed' ? `Срок до ${view.taken.date} — нужен не ранее ${view.need}` : `Срок до ${view.taken.date} — подходит${view.result === 'withErrors' ? ', но не за время «идеально»' : ''}`)
       : '';
 
   return (
@@ -53,7 +55,18 @@ export default function ExpiryTsd({ view, onBack, onTake, onClose }: Props) {
           <div className="depth-hud-moves">
             <div className="depth-hud-moves-top"><span>Годен не ранее</span><b>{view.need}</b></div>
             <div className="depth-track-legend"><span>сегодня {view.today}</span></div>
-            <div className={`depth-time${view.secondsLeft <= 8 ? ' low' : ''}`}><b style={{ width: `${(view.secondsLeft / view.timeLimit) * 100}%` }} /></div>
+            {/* время: полоса заполняется слева; зелёная часть — «идеально», оранжевая — «неплохо», в конце — провал (решение автора 14.10) */}
+            <div className="expiry-time">
+              <div className="expiry-time-zones">
+                <i className="perfect" style={{ flex: view.perfectSeconds }} />
+                <i className="good" style={{ flex: view.timeLimit - view.perfectSeconds }} />
+                <b className="expiry-time-fill" style={{ width: `${Math.min(1, view.elapsed / view.timeLimit) * 100}%` }} />
+              </div>
+              <div className="expiry-time-legend">
+                <span className={inPerfect ? 'on' : ''}>идеально до {clockText(view.perfectSeconds)}</span>
+                <span className={!inPerfect ? 'on' : ''}>неплохо до {clockText(view.timeLimit)}</span>
+              </div>
+            </div>
           </div>
         </Vx>
       </div>
