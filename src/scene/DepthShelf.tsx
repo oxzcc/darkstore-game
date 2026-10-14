@@ -39,7 +39,7 @@ const CARTON_IN = '#B98F57';      // дно лотка изнутри
  * Товар — те же воксельные модели, что на полках склада (models/ProductItem), уменьшенные под лоток.
  * Борт подсвечивается: нужный — зелёный, выбранный — тёмный, под курсором — белый.
  */
-function Tray({ look, rim, label, labelTarget }: { look: ProductLook | null; rim: string; label: string; labelTarget: boolean }) {
+function Tray({ look, rim, label, labelTarget, showLabel }: { look: ProductLook | null; rim: string; label: string; labelTarget: boolean; showLabel: boolean }) {
   const s = V.box;
   const h = V.boxHeight;
   const t = 0.014; // толщина стенки
@@ -87,9 +87,12 @@ function Tray({ look, rim, label, labelTarget }: { look: ProductLook | null; rim
         </group>
       ))}
       {/* подпись товара на переднем борту */}
-      <Html position={[0, h, s / 2]} center className={`shelf-label depth-tray-label${labelTarget ? ' target' : ''}`}>
-        {label}
-      </Html>
+      {/* подписи — ниже окон интерфейса (zIndexRange), а при итоге не рисуются вовсе, чтобы не лезть поверх окна */}
+      {showLabel && (
+        <Html position={[0, h, s / 2]} center zIndexRange={[5, 0]} className={`shelf-label depth-tray-label${labelTarget ? ' target' : ''}`}>
+          {label}
+        </Html>
+      )}
     </group>
   );
 }
@@ -103,11 +106,12 @@ type BoxProps = {
   hover: boolean;
   selected: boolean;
   active: boolean;    // можно кликать (игра идёт, не пауза)
+  showLabel: boolean; // подпись товара (нет, пока открыто окно итога)
   onHover: (cell: number | null) => void;
   onTap: (cell: number) => void;
 };
 
-function Box({ index, cell, board, look, name, hover, selected, active, onHover, onTap }: BoxProps) {
+function Box({ index, cell, board, look, name, hover, selected, active, showLabel, onHover, onTap }: BoxProps) {
   const ref = useRef<Group>(null);
   const target = useRef(new Vector3());
   const [x, z] = cellPos(board, cell);
@@ -134,7 +138,7 @@ function Box({ index, cell, board, look, name, hover, selected, active, onHover,
         <boxGeometry args={[V.box, V.boxHeight * 2, V.box]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
-      <Tray look={look} rim={rim} label={name} labelTarget={isTarget} />
+      <Tray look={look} rim={rim} label={name} labelTarget={isTarget} showLabel={showLabel} />
     </group>
   );
 }
@@ -193,9 +197,11 @@ export default function DepthShelf({ map }: { map: WarehouseMap }) {
           <boxGeometry args={[V.cell, 0.004, V.cell]} />
           <meshBasicMaterial color={TARGET_FRAME} transparent opacity={0.45} depthWrite={false} />
         </mesh>
-        <Html position={[cellPos(b, b.exit)[0], 0, d / 2 + 0.07]} center className="shelf-label depth-front-label">
-          сюда
-        </Html>
+        {!game.result && (
+          <Html position={[cellPos(b, b.exit)[0], 0, d / 2 + 0.07]} center zIndexRange={[5, 0]} className="shelf-label depth-front-label">
+            сюда
+          </Html>
+        )}
 
         {/* куда можно сдвинуть выбранную коробку — прозрачные белые клетки, клик — ход */}
         {active && targets.map((cell) => {
@@ -228,6 +234,7 @@ export default function DepthShelf({ map }: { map: WarehouseMap }) {
               hover={hover === cell}
               selected={selected === cell}
               active={active}
+              showLabel={!game.result}
               onHover={setHover}
               onTap={tap}
             />
