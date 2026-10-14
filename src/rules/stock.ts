@@ -28,21 +28,17 @@ export function qtyAt(stock: Stock, address: Address, productId?: string): numbe
 }
 
 /**
- * Текущая смена. Календаря смен ещё нет (M8) — все считают от первой.
  * Партия с expiresAtShift не позже текущей смены истекает сегодня (или уже просрочена) и не продаётся (M7e1).
+ * Текущая смена — `state.campaign.shift` (M8a: календарь — номер смены); по умолчанию первая — для тестов.
  */
-export function currentShift(): number {
-  return CAMPAIGN_START_SHIFT;
-}
-
-export function isExpiring(r: StockRecord, shift = currentShift()): boolean {
+export function isExpiring(r: StockRecord, shift = CAMPAIGN_START_SHIFT): boolean {
   return r.expiresAtShift <= shift;
 }
 
 /** Сколько товара по адресу можно продать: без партий, которые истекают (их ждёт списание). */
-export function sellableQtyAt(stock: Stock, address: Address, productId?: string): number {
+export function sellableQtyAt(stock: Stock, address: Address, productId?: string, shift = CAMPAIGN_START_SHIFT): number {
   return recordsAt(stock, address)
-    .filter((r) => (!productId || r.productId === productId) && !isExpiring(r))
+    .filter((r) => (!productId || r.productId === productId) && !isExpiring(r, shift))
     .reduce((sum, r) => sum + r.qty, 0);
 }
 

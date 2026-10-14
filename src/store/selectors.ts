@@ -21,6 +21,7 @@ import type { CallFlash, ResultCard } from './gameStore';
 import type { Address } from '../model/address';
 import type { Stock } from '../model/stock';
 import { WAREHOUSE_MAP } from './gameStore';
+import { isLastShift, shiftSecondsLeft } from '../rules/shift';
 
 /** Открытые задания по порядку появления. */
 export function openTaskList(tasks: GameState['tasks']): Task[] {
@@ -407,3 +408,38 @@ export function barcodeView(game: GameState, input: number[]) {
 }
 
 export type BarcodeView = NonNullable<ReturnType<typeof barcodeView>>;
+
+// ---------- Смена и кампания (M8a) ----------
+
+/** Плашка смены сверху: «Смена 2 из 5 · 7:32». */
+export function shiftClock(game: GameState) {
+  return { shift: game.campaign.shift, total: game.campaign.totalShifts, secondsLeft: shiftSecondsLeft(game) };
+}
+
+/** Экран итогов смены: последняя запись истории и кто что сделал. null — смена идёт. */
+export function shiftSummaryView(game: GameState) {
+  if (game.campaign.phase !== 'summary') return null;
+  const r = game.campaign.history.at(-1);
+  if (!r) return null;
+  return {
+    ...r,
+    total: game.campaign.totalShifts,
+    last: isLastShift(game),
+    pickers: Object.values(game.pickers).map((p) => ({ picker: p, tasks: r.pickers[p.id] ?? 0 })),
+  };
+}
+
+/** Итоги кампании: все смены и сумма. null — кампания не закончена. */
+export function campaignSummaryView(game: GameState) {
+  if (game.campaign.phase !== 'over') return null;
+  const h = game.campaign.history;
+  return {
+    shifts: h,
+    stars: h.reduce((sum, r) => sum + r.stars, 0),
+    maxStars: h.length * 3,
+    closed: h.reduce((sum, r) => sum + r.closed, 0),
+    appeared: h.reduce((sum, r) => sum + r.appeared, 0),
+    money: game.money,
+    rating: game.rating,
+  };
+}

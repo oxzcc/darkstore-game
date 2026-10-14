@@ -15,6 +15,8 @@ import { applyTaskResult } from './rewards';
 import { tickDeliveries } from './deliveries';
 import { createPutawayTasks } from './putaway';
 import { tickWriteoffs } from './writeoff';
+import { endShift } from './shift';
+import { SHIFT } from '../config/balance';
 
 /** Перейти к следующему шагу работы. Состояние сборщика — по виду шага. */
 function nextStep(p: Picker): Picker {
@@ -108,6 +110,8 @@ const isJobDone = (p: Picker) => !!p.job && p.job.stepIndex >= p.job.steps.lengt
  */
 export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): { state: GameState; events: ShiftEvent[] } {
   if (dt <= 0) return { state, events: [] };
+  // смена закончилась (итоги) или кампания пройдена — мир стоит (M8a)
+  if (state.campaign.phase !== 'running') return { state, events: [] };
 
   const time = state.clock.time + dt * worldSpeed(state);
   const blocked = blockedCells(map);
@@ -206,6 +210,8 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
   next = tickDeliveries(next);
   // списания: по одной истекающей партии раз в WRITEOFF.everySeconds (M7e1)
   next = tickWriteoffs(next);
+  // время смены вышло — итоги (M8a)
+  if (next.clock.time >= SHIFT.durationSeconds) next = endShift(next);
 
   return { state: next, events };
 }

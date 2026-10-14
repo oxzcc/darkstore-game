@@ -29,7 +29,7 @@ export function createOrder(state: GameState, rng: Rng, now: number): { state: G
     if (seen.has(shelf)) continue;
     seen.add(shelf);
     // партии «истекает сегодня» не продаются — их ждёт списание (M7e1)
-    const free = sellableQtyAt(state.stock, r.address, r.productId) - reservedQty(state, r.productId, r.address);
+    const free = sellableQtyAt(state.stock, r.address, r.productId, state.campaign.shift) - reservedQty(state, r.productId, r.address);
     if (free <= 0) continue;
     byProduct.set(r.productId, [...(byProduct.get(r.productId) ?? []), { address: r.address, free }]);
   }

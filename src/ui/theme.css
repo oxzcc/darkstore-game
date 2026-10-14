@@ -539,3 +539,23 @@ svg.i.sm { width: 18px; height: 18px; }
 .gain.up { color: var(--primary); }
 .gain.down { color: var(--failed); }
 @keyframes gain-up { 0% { transform: translateY(-6px); opacity: 0; } 15% { transform: none; opacity: 1; } 70% { opacity: 1; } 100% { transform: translateY(14px); opacity: 0; } }
+
+/* ---------- итоги смены и кампании (M8a) ---------- */
+.summary-back { position: absolute; inset: 0; background: rgba(40, 30, 10, 0.35); z-index: 40; pointer-events: auto; }
+.summary { width: 520px; max-width: calc(100vw - 32px); }
+.summary > .vx-edge > .vx-body { display: flex; flex-direction: column; }
+.summary-body { padding: 16px 20px 8px; display: flex; flex-direction: column; gap: 14px; align-items: stretch; }
+.stars { display: flex; justify-content: center; gap: 10px; }
+.stars svg.i { width: 56px; height: 56px; }
+.stars.small { gap: 2px; }
+.stars.small svg.i { width: 18px; height: 18px; }
+.summary-big { text-align: center; font-size: 22px; font-weight: 700; }
+.summary-outcomes { display: flex; justify-content: center; gap: 16px; font-size: 15px; }
+.summary-outcomes span { display: inline-flex; align-items: center; gap: 6px; }
+.summary-sum { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--card); }
+.summary-sum > div { display: flex; justify-content: space-between; font-size: 16px; }
+.summary-sum b.bad, .summary-shift b.bad { color: var(--failed); }
+.summary-pickers, .summary-shifts { display: flex; flex-direction: column; gap: 6px; }
+.summary-picker, .summary-shift { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+.summary-shift b { min-width: 90px; text-align: right; }
+.stat-tile.hurry b { color: var(--failed); } /* последняя минута смены */
