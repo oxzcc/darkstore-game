@@ -4,10 +4,9 @@
 // закрытые варианты — серые с требованием. Мир на паузе; внизу — что сборщик выберет сам и через сколько.
 // × или Esc — закрыть, мир идёт дальше. После ответа окно ~1,5 с показывает выбор, потом открывается следующая развилка.
 import { useEffect, type CSSProperties, type ReactNode } from 'react';
-import { CALLS } from '../config/calls';
 import type { Picker } from '../model/picker';
 import { useGameStore } from '../store/gameStore';
-import { callsView, clockText, flashView, plural, type CallOptionView } from '../store/selectors';
+import { callsView, flashView, plural, type CallOptionView } from '../store/selectors';
 import { RISK_LOOK } from './labels';
 import Vx from './Vx';
 
@@ -70,39 +69,38 @@ function ForkCard(p: CardProps) {
           : 'Выберите вариант — кликом или клавишами 1–' + p.options.filter((o) => !o.locked).length}
       </div>
 
+      {/* варианты в один ряд, «Взять ТСД» — последним, тёмной карточкой (решение автора 14.10); описаний на карточках нет */}
       <div className="fork-options" style={{ '--n': p.options.length } as CSSProperties}>
         {p.options.map((o) => {
           const state = decided ? (o.id === p.chosenId ? ' chosen' : ' dim') : o.locked ? ' locked' : '';
           return (
-            <button key={o.id} className={`fork-option${state}`} disabled={decided || o.locked} onClick={() => p.onAnswer?.(o.id)}>
+            <button key={o.id} className={`fork-option${o.tsd ? ' tsd' : ''}${state}`} disabled={decided || o.locked} onClick={() => p.onAnswer?.(o.id)}>
               <div className="fork-option-head">
                 {o.number !== null && <span className="call-key">{o.number}</span>}
-                <span>{o.label}</span>
+                {o.tsd && <span className="fork-tsd-icon">ТСД</span>}
+                <span>{o.tsd ? 'Взять ТСД' : o.label}</span>
               </div>
-              <div className="fork-option-text">
-                {o.locked && o.requires ? `Нужна ${STAT_NAME[o.requires.stat]} ${o.requires.min} — у ${p.picker.name} меньше.` : o.text}
-              </div>
+              {o.locked && (
+                <div className="fork-option-text">
+                  {o.requires ? `Нужна ${STAT_NAME[o.requires.stat]} ${o.requires.min} — у ${p.picker.name} меньше.` : o.text}
+                </div>
+              )}
               <div className="fork-option-line" />
-              <div className="fork-option-row"><span>Время сборки</span><b className={o.seconds > 0 ? 'slow' : ''}>{secondsText(o.seconds)}</b></div>
-              <div className="fork-option-row"><span>{p.riskLabel}</span><Risk risk={o.risk} /></div>
+              {o.tsd ? (
+                <>
+                  <div className="fork-option-row"><span>Время сборки</span><b>пока играете</b></div>
+                  <div className="fork-option-row"><span>Исход</span><b className="tsd-yours">зависит от вас</b></div>
+                </>
+              ) : (
+                <>
+                  <div className="fork-option-row"><span>Время сборки</span><b className={o.seconds > 0 ? 'slow' : ''}>{secondsText(o.seconds)}</b></div>
+                  <div className="fork-option-row"><span>{p.riskLabel}</span><Risk risk={o.risk} /></div>
+                </>
+              )}
             </button>
           );
         })}
       </div>
-
-      {!decided && (
-        <div className="fork-foot">
-          <div className="fork-foot-text">
-            Игра на паузе. Если не ответить, {p.picker.name} выберет вариант {p.autoNumber ?? '—'}.
-            {p.waiting && p.waiting.length > 0 ? ` Ещё ждут помощи: ${p.waiting.join(', ')}.` : ''}
-          </div>
-          <div className="fork-foot-timer">
-            <span>{p.picker.name} решит сам через</span>
-            <div className="progress"><b style={{ width: `${((p.secondsLeft ?? 0) / CALLS.answerSeconds) * 100}%` }} /></div>
-            <b>{clockText(p.secondsLeft ?? 0)}</b>
-          </div>
-        </div>
-      )}
     </Vx>
     </div>
   );
@@ -132,7 +130,7 @@ export default function CallWindow() {
     const onKey = (e: KeyboardEvent) => {
       if (e.repeat) return;
       if (e.code === 'Escape') { closeCall(); return; }
-      const n = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code) + 1;
+      const n = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'].indexOf(e.code) + 1;
       const o = open.options.find((x) => x.number === n);
       if (o) answer(open.id, o.id);
     };

@@ -1,6 +1,6 @@
 // Пауза / ×1 / ×2 справа сверху (ui_01; 08, раздел 10.4: ×2 остаётся).
 // Пока открыто окно назначения, горит «пауза» — это автопауза (02, раздел 2).
-// Пока игрок с ТСД, горит «×0,2»: остальной мир замедлен (02, раздел 2; 08, раздел 10.4).
+// Пока игрок с ТСД, мир на паузе: остальной мир замедлен (02, раздел 2; 08, раздел 10.4).
 import { TSD } from '../config/balance';
 import { useGameStore } from '../store/gameStore';
 import Vx from './Vx';
@@ -8,7 +8,8 @@ import Icon from './icons';
 
 export default function SpeedControls() {
   const clock = useGameStore((s) => s.game.clock);
-  const autopause = useGameStore((s) => s.ui.assignTaskId !== null || s.ui.openCallId !== null || s.ui.results.length > 0);
+  // игра на ТСД — мир на паузе (решение автора 14.10)
+  const autopause = useGameStore((s) => s.ui.assignTaskId !== null || s.ui.openCallId !== null || s.ui.results.length > 0 || s.game.tsdGame !== null);
   const { togglePause, setPlayerSpeed } = useGameStore.getState();
   const slowed = useGameStore((s) => s.game.minigame !== null);
   const paused = clock.paused || autopause;

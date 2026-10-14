@@ -15,15 +15,16 @@ export default function ResultWindow() {
   const card = useGameStore((s) => s.ui.results[0]);
   const game = useGameStore((s) => s.game);
   const dismiss = useGameStore((s) => s.dismissResult);
+  const tsdPlaying = useGameStore((s) => s.game.tsdGame !== null); // итог прошлого заказа — только после игры на ТСД
 
   useEffect(() => {
-    if (!card) return;
+    if (!card || tsdPlaying) return;
     const onKey = (e: KeyboardEvent) => { if (e.code === 'Escape' || e.code === 'Enter') dismiss(card.id); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [card, dismiss]);
+  }, [card, dismiss, tsdPlaying]);
 
-  if (!card) return null;
+  if (!card || tsdPlaying) return null;
   const v = resultView(game, card);
   if (!v) return null;
   const look = OUTCOME_LOOK[v.outcome];
@@ -48,7 +49,7 @@ export default function ResultWindow() {
         <div className="outcome-chips">
           <span className="call-sub">{v.auto ? `${v.picker.name} решил сам:` : 'Вы решили:'}</span>
           <span className="chip pick">{v.optionLabel}</span>
-          <span className={`chip ${v.worked ? 'ok' : 'bad'}`}>{v.worked ? 'Сработало' : 'Не сработало'}</span>
+          <span className={`chip ${v.worked ? 'ok' : 'bad'}`}>{v.verdict in OUTCOME_LOOK ? OUTCOME_LOOK[v.verdict as keyof typeof OUTCOME_LOOK].name : v.verdict}</span>
         </div>
         <div className="outcome-title">{v.title}</div>
         <div className="outcome-text">{v.text}</div>

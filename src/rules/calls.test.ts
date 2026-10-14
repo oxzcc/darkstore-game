@@ -15,7 +15,7 @@ import { answerCall, applyCalls, callText, optionsFor, planCall, raiseRisk, reve
 const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
 
 /** Отправить сборщика и поставить ему развилку на первую позицию заказа. */
-function sentWithCall(pickerId = 'lucky', situationId = 'notVisible', g: GameState = createInitialGame(map, 1)) {
+function sentWithCall(pickerId = 'lucky', situationId = 'missing', g: GameState = createInitialGame(map, 1)) {
   const task = openTasks(g)[0];
   const s = dispatchTask(g, map, task.id, pickerId);
   const job = s.pickers[pickerId].job!;
@@ -66,7 +66,7 @@ describe('развилки: план и вызов', () => {
   });
 
   it('варианты зависят от сборщика: «проверить соседние полки» есть у Бурана (точность 7), у Лаки нет', () => {
-    const sit = SITUATION_BY_ID.notVisible;
+    const sit = SITUATION_BY_ID.missing;
     const g = createInitialGame(map, 1);
     expect(optionsFor(sit, g.pickers.buran).map((o) => o.id)).toContain('checkNear');
     expect(optionsFor(sit, g.pickers.lucky).map((o) => o.id)).not.toContain('checkNear');
@@ -87,7 +87,7 @@ describe('развилки: ответ', () => {
     const at = runUntil(s, (x) => x.calls.length > 0);
     const a = answerCall(at, at.calls[0].id, 'search');
     expect(a.calls).toHaveLength(0);
-    expect(a.tasks[taskId].callLog).toEqual([{ situationId: 'notVisible', lineIndex: 0, optionId: 'search', risk: 'medium', auto: false }]);
+    expect(a.tasks[taskId].callLog).toEqual([{ situationId: 'missing', lineIndex: 0, optionId: 'search', risk: 'medium', auto: false }]);
     const job = a.pickers.lucky.job!;
     expect(job.steps[job.stepIndex]).toMatchObject({ kind: 'delay', seconds: 15 });
     expect(pickerActivity(a, 'lucky').kind).toBe('busy');
@@ -115,7 +115,7 @@ describe('развилки: ответ', () => {
     const log = after.tasks[taskId].callLog!;
     expect(log).toHaveLength(1);
     expect(log[0].auto).toBe(true);
-    const base = SITUATION_BY_ID.notVisible.options.find((o) => o.id === log[0].optionId)!.risk;
+    const base = SITUATION_BY_ID.missing.options.find((o) => o.id === log[0].optionId)!.risk;
     expect(log[0].risk).toBe(raiseRisk(base));
     expect(answered).toEqual([log[0].optionId]);
     // выбрал ровно то, что окно обещало заранее («Лаки выберет вариант …»)
@@ -133,7 +133,7 @@ describe('развилки: ответ', () => {
 });
 
 describe('развилки: влияние на исход', () => {
-  const ans = (optionId: string, risk: CallAnswer['risk']): CallAnswer => ({ situationId: 'notVisible', lineIndex: 0, optionId, risk, auto: false });
+  const ans = (optionId: string, risk: CallAnswer['risk']): CallAnswer => ({ situationId: 'missing', lineIndex: 0, optionId, risk, auto: false });
 
   it('осложнение ухудшает исход на ступень, без осложнения исход тот же', () => {
     expect(applyCalls('perfect', [ans('search', 'medium')], fixed(0.1))).toBe('withErrors'); // 0,1 < 0,35

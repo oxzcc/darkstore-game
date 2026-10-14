@@ -35,6 +35,7 @@ export type PickerJob = {
 export type PickerActivity =
   | { kind: 'idle' }
   | { kind: 'waitingTsd'; secondsLeft: number } // висит «Взять ТСД?», сборщик стоит
+  | { kind: 'tsdGame' }                           // игрок взял ТСД из развилки: стоит у полки, пока идёт игра
   | { kind: 'atRack' }                            // личная «Сборка»: стоит, ждёт, куда отправит игрок, или у стеллажа
   | { kind: 'calling'; secondsLeft: number | null } // зовёт диспетчера (развилка); null — вызов ждёт в очереди
   | { kind: 'busy'; label: string; progress: number } // делает то, что решили в развилке

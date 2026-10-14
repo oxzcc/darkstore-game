@@ -7,6 +7,7 @@ export function activityLine(a: PickerActivity): { text: string; icon: IconName;
   switch (a.kind) {
     case 'idle': return { text: 'Свободен', icon: 'check', progress: null };
     case 'waitingTsd': return { text: `Ждёт: взять ТСД? · ${clockText(a.secondsLeft)}`, icon: 'pause', progress: null };
+    case 'tsdGame': return { text: 'ТСД у вас', icon: 'work', progress: null };
     case 'atRack': return { text: 'Ждёт указаний с ТСД', icon: 'pause', progress: null };
     case 'calling': return {
       text: a.secondsLeft === null ? 'Нужна помощь' : `Нужна помощь · ${clockText(a.secondsLeft)}`,

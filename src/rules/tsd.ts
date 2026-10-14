@@ -33,6 +33,7 @@ export function rollTsdOffer(state: GameState, taskId: string, rng: Rng, chance?
  */
 export function sendPicker(state: GameState, map: WarehouseMap, taskId: string, pickerId: string): GameState {
   const dispatched = dispatchTask(state, map, taskId, pickerId);
+  if (!TSD.offerOnDispatch) return dispatched; // выключено: ТСД — вариант в развилке (10, раздел 11)
   const rng = createRng(dispatched.rngSeed);
   const next = rollTsdOffer(dispatched, taskId, rng);
   return { ...next, rngSeed: rng.seed() };
@@ -87,11 +88,13 @@ export function acceptTsd(state: GameState): GameState {
 
 /** Во сколько раз замедлен мир для сборщика: свой сборщик в мини-игре — 1, остальные — TSD.worldSpeedDuringGame. */
 export function worldSpeedFor(state: GameState, pickerId: string): number {
+  if (state.tsdGame) return state.tsdGame.pickerId === pickerId ? 1 : TSD.worldSpeedDuringTsdGame;
   if (!state.minigame) return 1;
   return state.minigame.pickerId === pickerId ? 1 : TSD.worldSpeedDuringGame;
 }
 
 /** Множитель для часов смены и всего остального мира. */
 export function worldSpeed(state: GameState): number {
+  if (state.tsdGame) return TSD.worldSpeedDuringTsdGame;
   return state.minigame ? TSD.worldSpeedDuringGame : 1;
 }

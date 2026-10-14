@@ -12,6 +12,8 @@ export default function TsdHint() {
   const session = useGameStore((s) => s.game.minigame);
   const picker = useGameStore((s) => (s.game.minigame ? s.game.pickers[s.game.minigame.pickerId] : null));
   const leaveRack = useGameStore((s) => s.leaveRack);
+  const tsdGame = useGameStore((s) => s.game.tsdGame);
+  const tsdPicker = useGameStore((s) => (s.game.tsdGame ? s.game.pickers[s.game.tsdGame.pickerId] : null));
   const atFocus = session?.atFocus ?? false;
 
   useEffect(() => {
@@ -20,6 +22,23 @@ export default function TsdHint() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [atFocus, leaveRack]);
+
+  if (tsdGame && tsdPicker) {
+    // игра на ТСД из развилки: у стеллажа, уйти до конца игры нельзя (10, раздел 11)
+    return (
+      <div className="tsd-hint top" style={{ '--pc': tsdPicker.color } as CSSProperties}>
+        <div className="closeup-bar">
+          <Vx className="closeup-place">
+            <Avatar picker={tsdPicker} small />
+            <div>
+              <div className="closeup-title">Стеллаж {tsdGame.rack.aisle}.{tsdGame.rack.rack} · ТСД у вас</div>
+              <div className="closeup-sub">рядом с {tsdPicker.name}</div>
+            </div>
+          </Vx>
+        </div>
+      </div>
+    );
+  }
 
   if (!session || !picker) return null;
 

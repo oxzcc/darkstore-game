@@ -1,12 +1,17 @@
-// Панель ТСД справа во время личной мини-игры (06, раздел 2.4): подключает экран «Сборки» к store.
-// Видна и в общем виде склада, и у стеллажа. Другие мини-игры (M7) встанут сюда же.
+// Экран ТСД: игра из развилки («Глубина», N2 — плашка сверху по центру) или личная «Сборка» (M5e1, панель справа, выключена флагом).
+// Подключает экран игры к store. Другие игры («Срок», «Штрихкод») встанут сюда же.
 import { useGameStore } from '../store/gameStore';
-import { pickingView } from '../store/selectors';
+import { depthView, pickingView } from '../store/selectors';
 import PickingTsd from '../minigames/picking/PickingTsd';
+import DepthTsd from '../minigames/depth/DepthTsd';
 import Vx from './Vx';
 
 export default function TsdPanel() {
   const game = useGameStore((s) => s.game);
+  const closeTsdGame = useGameStore((s) => s.closeTsdGame);
+  const depth = depthView(game);
+  // «Глубина»: без панели справа — плашка сверху по центру и итог по центру (прототип, одобрен автором 14.10)
+  if (depth) return <DepthTsd key={game.tsdGame!.callId} view={depth} onClose={closeTsdGame} />;
   const view = pickingView(game);
   if (!view) return null;
   return (

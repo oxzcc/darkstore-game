@@ -11,7 +11,8 @@ import { tsdOfferSecondsLeft } from '../rules/tsd';
 import { shelfContents } from '../rules/stock';
 import { takenPerLine } from '../rules/minigames/picking';
 import { callText, fillText, lineContext } from '../rules/calls';
-import { CALLS, RESULT_SHARE, RESULT_XP, SITUATION_BY_ID, type CallOption } from '../config/calls';
+import { CALLS, DEPTH, RESULT_SHARE, RESULT_XP, SITUATION_BY_ID, TSD_GAMES, TSD_OPTION_ID, type CallOption } from '../config/calls';
+import type { RackRef } from '../model/minigame';
 import type { Call } from '../model/call';
 import type { CallFlash, ResultCard } from './gameStore';
 import type { Address } from '../model/address';
@@ -145,15 +146,27 @@ export type PickingView = NonNullable<ReturnType<typeof pickingView>>;
 
 /** Вариант для окна (ui_11): доступен ли он этому сборщику, описание с подстановками.
  *  Закрытые показываются серыми с требованием — как в Dispatch (13.10). */
-export type CallOptionView = CallOption & { locked: boolean; number: number | null; text: string };
+export type CallOptionView = CallOption & { locked: boolean; number: number | null; text: string; tsd?: boolean };
 
 function optionViews(game: GameState, call: Call): CallOptionView[] {
   const ctx = lineContext(game, call.taskId, call.lineIndex, call.pickerId);
   let n = 0;
-  return SITUATION_BY_ID[call.situationId].options.map((o) => {
+  const views: CallOptionView[] = SITUATION_BY_ID[call.situationId].options.map((o) => {
     const locked = !call.optionIds.includes(o.id);
     return { ...o, locked, number: locked ? null : ++n, text: fillText(o.description, { ...ctx, seconds: o.seconds }) };
   });
+  // «Взять ТСД» — последней карточкой, если выпала (10, раздел 11.1). Пока идёт другая игра, второй не начать.
+  if (call.tsd) {
+    const t = TSD_GAMES[call.tsd];
+    const busy = game.tsdGame !== null || game.minigame !== null;
+    views.push({
+      id: TSD_OPTION_ID, label: t.label, description: t.description, seconds: 0, risk: 'low', busyLabel: '',
+      okTitle: '', okText: '', badTitle: '', badText: '',
+      tsd: true, locked: busy, number: busy ? null : ++n,
+      text: busy ? 'ТСД сейчас занят другой игрой.' : fillText(t.description, ctx),
+    });
+  }
+  return views;
 }
 
 /** Окно развилки по центру (ui_11): реплика, варианты, что выберет сборщик сам, сколько ещё ждут помощи. */
@@ -194,10 +207,14 @@ export function resultView(game: GameState, card: ResultCard) {
   const option = c ? SITUATION_BY_ID[c.situationId]?.options.find((o) => o.id === c.optionId) : undefined;
   const ctx = c ? { ...lineContext(game, task.id, c.lineIndex, picker.id), seconds: option?.seconds ?? 0 } : {};
   const worked = c ? !c.complication : true;
+  // игрок брал ТСД: тексты — по итогу его игры (10, раздел 11.4)
+  const tsdKind = c?.tsd ? SITUATION_BY_ID[c.situationId]?.tsdGame : undefined;
+  const tsdText = c?.tsd && tsdKind ? TSD_GAMES[tsdKind].results[c.tsd] : undefined;
   const lines = task.payload.lines.map((l, i) => {
     let picked = l.qty;
     let note: string | null = null;
     if (c && i === c.lineIndex && option?.cap) { picked = 0; note = 'позиция пропущена'; }
+    if (c && i === c.lineIndex && c.tsd === 'failed') { picked = 0; note = 'не достали с ТСД'; }
     if (reveal.errorLine?.lineIndex === i) {
       picked = Math.min(picked, reveal.errorLine.picked);
       note = `${picker.name} ошибся с количеством — зависит от его точности`;
@@ -208,11 +225,13 @@ export function resultView(game: GameState, card: ResultCard) {
   return {
     taskNumber: task.number,
     picker,
-    optionLabel: option?.label ?? '',
+    optionLabel: tsdText ? 'Взяли ТСД' : option?.label ?? '',
     auto: c?.auto ?? false,
     worked,
-    title: option ? fillText(worked ? option.okTitle : option.badTitle, ctx) : '',
-    text: option ? fillText(worked ? option.okText : option.badText, ctx) : '',
+    /** Подпись итога решения: «Сработало» / «Не сработало», для игры на ТСД — её исход. */
+    verdict: c?.tsd ? c.tsd : worked ? 'Сработало' : 'Не сработало',
+    title: tsdText ? tsdText.title : option ? fillText(worked ? option.okTitle : option.badTitle, ctx) : '',
+    text: tsdText ? fillText(tsdText.text, ctx) : option ? fillText(worked ? option.okText : option.badText, ctx) : '',
     lines,
     money: { got: Math.round(task.reward.money * share.money), of: task.reward.money },
     rating: { got: task.reward.rating * share.rating, of: task.reward.rating },
@@ -220,3 +239,38 @@ export function resultView(game: GameState, card: ResultCard) {
     outcome: reveal.final,
   };
 }
+
+// ---------- Игра на ТСД из развилки (N2) ----------
+
+/** Куда смотрит камера вблизи: стеллаж игры на ТСД или стеллаж личной «Сборки» (M5e1, выключена). */
+export function closeupFocus(game: GameState): RackRef | null {
+  if (game.tsdGame) return game.tsdGame.rack;
+  return game.minigame?.atFocus ? game.minigame.focus : null;
+}
+
+/** Что показывает панель ТСД в «Глубине» (10, раздел 11.3). */
+export function depthView(game: GameState) {
+  const g = game.tsdGame;
+  if (!g || g.kind !== 'depth') return null;
+  const picker = game.pickers[g.pickerId];
+  const task = game.tasks[g.taskId];
+  const product = game.products[g.board.boxes[0]];
+  if (!picker || !task) return null;
+  return {
+    taskNumber: task.number,
+    picker: { name: picker.name, color: picker.color },
+    product: { name: product?.name ?? g.board.boxes[0], look: product?.look ?? null },
+    address: formatAddress(g.address),
+    secondsLeft: Math.max(0, g.timeLimit - g.elapsed),
+    timeLimit: g.timeLimit,
+    moves: g.moves,
+    best: g.best,
+    perfectUpTo: g.best + DEPTH.perfectExtra,
+    errorsUpTo: g.best + DEPTH.withErrorsExtra,
+    note: g.note,
+    noteAt: g.noteAt,
+    result: g.result,
+  };
+}
+
+export type DepthView = NonNullable<ReturnType<typeof depthView>>;
