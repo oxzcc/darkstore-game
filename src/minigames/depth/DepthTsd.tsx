@@ -40,7 +40,7 @@ export default function DepthTsd({ view, onClose }: { view: DepthView; onClose: 
           <div className="depth-hud-item">
             <span className="swatch" style={look ? ({ '--sw': look.color, '--sw2': look.accent } as CSSProperties) : undefined} />
             <div>
-              <div className="depth-hud-label">Достаньте</div>
+              <div className="depth-hud-label">{view.goal}</div>
               <div className="depth-hud-name">{view.product.name}</div>
             </div>
           </div>

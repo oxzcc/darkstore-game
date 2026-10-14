@@ -14,7 +14,7 @@ import { callText, fillText, lineContext } from '../rules/calls';
 import { taskLines } from '../rules/taskLines';
 import { expiryDate } from '../rules/minigames/expiry';
 import { pickedQty, rewardFor } from '../rules/rewards';
-import { CALLS, DEPTH, EXPIRY, RESULT_XP, SITUATION_BY_ID, TSD_GAMES, TSD_OPTION_ID, type CallOption } from '../config/calls';
+import { CALLS, DEPTH, EXPIRY, RESULT_XP, SITUATION_BY_ID, TSD_OPTION_ID, tsdTextFor, type CallOption } from '../config/calls';
 import type { RackRef } from '../model/minigame';
 import type { Call } from '../model/call';
 import type { CallFlash, ResultCard } from './gameStore';
@@ -219,7 +219,7 @@ function optionViews(game: GameState, call: Call): CallOptionView[] {
   });
   // «Взять ТСД» — последней карточкой, если выпала (10, раздел 11.1). Пока идёт другая игра, второй не начать.
   if (call.tsd) {
-    const t = TSD_GAMES[call.tsd];
+    const t = tsdTextFor(SITUATION_BY_ID[call.situationId], call.tsd);
     const busy = game.tsdGame !== null || game.minigame !== null;
     views.push({
       id: TSD_OPTION_ID, label: t.label, description: t.description, seconds: 0, risk: 'low', busyLabel: '',
@@ -272,14 +272,17 @@ export function resultView(game: GameState, card: ResultCard) {
   const worked = c ? !c.complication : true;
   // игрок брал ТСД: тексты — по итогу его игры (10, раздел 11.4)
   const tsdKind = c?.tsd ? SITUATION_BY_ID[c.situationId]?.tsdGame : undefined;
-  const tsdText = c?.tsd && tsdKind ? TSD_GAMES[tsdKind].results[c.tsd] : undefined;
+  const tsdText = c?.tsd && tsdKind ? tsdTextFor(SITUATION_BY_ID[c.situationId], tsdKind).results[c.tsd] : undefined;
   // сколько собрано — те же правила, что снимают товар с полок (rules/rewards.ts); приёмка и выкладка — всё целиком (10, раздел 11.6)
   const all = taskLines(game, task);
   const picked = task.type === 'order' ? pickedQty(task, reveal) : all.map((l) => l.qty);
   const lines = all.map((l, i) => {
     let note: string | null = null;
     if (c && i === c.lineIndex && option?.cap) note = 'позиция пропущена';
-    if (c && i === c.lineIndex && c.tsd === 'failed') {
+    if (c && i === c.lineIndex && c.tsd === 'failed' && task.type === 'putaway') {
+      // выкладка: товар на полке в любом случае (10, раздел 11.6) — страдает только порядок
+      note = tsdKind === 'depth' ? 'старая партия осталась в глубине' : 'выложили без скана — могли перепутать';
+    } else if (c && i === c.lineIndex && c.tsd === 'failed') {
       // «Глубина» — товар не достали; «Срок» — товар есть, но срок короткий
       if (tsdKind === 'expiry') note = 'взяли товар с коротким сроком';
       else if (tsdKind === 'barcode') note = 'взяли без скана — могли перепутать';
@@ -325,6 +328,7 @@ export function depthView(game: GameState) {
   const product = game.products[g.board.boxes[0]];
   if (!picker || !task) return null;
   return {
+    goal: task.type === 'putaway' ? 'Выведите вперёд' : 'Достаньте', // выкладка: старая партия вперёд (M7d2)
     taskNumber: task.number,
     picker: { name: picker.name, color: picker.color },
     product: { name: product?.name ?? g.board.boxes[0], look: product?.look ?? null },
