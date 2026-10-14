@@ -1,5 +1,6 @@
 // Развилки (docs/10-minigames-concept.md, раздел 3; 09, раздел 6).
-// Сборщик работает сам, но на одной из позиций заказа может остановиться и позвать диспетчера.
+// Сборщик работает сам, но на одной из позиций задания может остановиться и позвать диспетчера.
+// Сборка — у полки перед сбором позиции, выкладка — у полки перед выкладкой, приёмка — перед приёмкой поставки (M7d1).
 // Всё здесь — чистые функции: план развилки при отправке, вызов, ответ игрока, ответ сборщика по таймеру, влияние на исход.
 import type { GameState } from '../model/game';
 import type { Call, CallAnswer, CallReveal, RiskLevel } from '../model/call';
@@ -8,6 +9,7 @@ import type { Outcome, Task } from '../model/task';
 import { CALLS, SITUATION_BY_ID, SITUATIONS, TSD_GAMES_READY, TSD_OPTION_ID, type CallOption, type Situation } from '../config/calls';
 import { startTsdGame } from './tsdGame';
 import { formatAddress } from './address';
+import { taskLines } from './taskLines';
 import type { Rng } from './random';
 import { createRng } from './random';
 
@@ -21,17 +23,21 @@ export function raiseRisk(r: RiskLevel): RiskLevel {
 
 /**
  * При отправке сборщика: будет ли развилка и где (10, раздел 3: шанс на задание, не больше одной).
- * Развилка встаёт на шаг сбора случайной позиции заказа. `chance` — тесты передают 0 или 1.
+ * Сборка — на шаге сбора случайной позиции, выкладка — на шаге выкладки, приёмка — перед работой
+ * (про случайный товар поставки; сколько их — `lineCount`). `chance` — тесты передают 0 или 1.
  */
-export function planCall(job: PickerJob, task: Task, rng: Rng, chance = CALLS.chance): PickerJob {
-  if (task.type !== 'order' || rng.next() >= chance) return job;
-  // для проверки (CALLS.forceTsd) — только ситуации с готовой игрой на ТСД
-  const situations = SITUATIONS.filter((s) => s.taskType === task.type && (!CALLS.forceTsd || hasReadyGame(s)));
-  const picks = job.steps.map((s, i) => ({ s, i })).filter(({ s }) => s.kind === 'pick');
-  if (situations.length === 0 || picks.length === 0) return job;
+export function planCall(job: PickerJob, task: Task, rng: Rng, chance = CALLS.chance, lineCount = 1): PickerJob {
+  if (rng.next() >= chance) return job;
+  const ofType = SITUATIONS.filter((s) => s.taskType === task.type);
+  // для проверки (CALLS.forceTsd) — только ситуации с готовой игрой на ТСД, если у этого типа такие есть
+  const withGame = ofType.filter(hasReadyGame);
+  const situations = CALLS.forceTsd && withGame.length > 0 ? withGame : ofType;
+  const stops = job.steps.map((s, i) => ({ s, i })).filter(({ s }) =>
+    task.type === 'order' ? s.kind === 'pick' : task.type === 'putaway' ? s.kind === 'place' : task.type === 'receiving' ? s.kind === 'work' : false);
+  if (situations.length === 0 || stops.length === 0) return job;
   const situation = situations[Math.floor(rng.next() * situations.length)];
-  const { s, i } = picks[Math.floor(rng.next() * picks.length)];
-  const lineIndex = s.kind === 'pick' ? s.lineIndex : 0;
+  const { s, i } = stops[Math.floor(rng.next() * stops.length)];
+  const lineIndex = s.kind === 'pick' || s.kind === 'place' ? s.lineIndex : Math.floor(rng.next() * Math.max(1, lineCount));
   return { ...job, call: { stepIndex: i, lineIndex, situationId: situation.id, raised: false } };
 }
 
@@ -206,15 +212,15 @@ export function fillText(template: string, ctx: TextContext): string {
     .split('{seconds}').join(String(ctx.seconds ?? 0));
 }
 
-/** Подстановки для позиции заказа, к которой относится развилка. */
+/** Подстановки для позиции задания, к которой относится развилка. У приёмки адреса нет — {address} это «паллете 2» («на паллете 2»). */
 export function lineContext(state: GameState, taskId: string, lineIndex: number, pickerId: string): TextContext {
   const task = state.tasks[taskId];
-  const line = task?.type === 'order' ? task.payload.lines[lineIndex] : undefined;
+  const line = task ? taskLines(state, task)[lineIndex] : undefined;
   return {
     picker: state.pickers[pickerId]?.name,
     product: line ? state.products[line.productId]?.name ?? line.productId : undefined,
-    address: line ? formatAddress(line.address) : undefined,
-    aisle: line ? String(line.address.aisle) : undefined,
+    address: line?.address ? formatAddress(line.address) : line?.pallet ? `паллете ${line.pallet}` : undefined,
+    aisle: line?.address ? String(line.address.aisle) : undefined,
   };
 }
 

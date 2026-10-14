@@ -5,6 +5,7 @@ import type { WarehouseMap } from '../../model/warehouse';
 import { createRng } from '../random';
 import { buildJob, canBuildJob } from '../jobs';
 import { planCall } from '../calls';
+import { taskLines } from '../taskLines';
 import { topUpOrders } from './generator';
 
 export type AssignCheck = { ok: true } | { ok: false; reason: string };
@@ -34,7 +35,7 @@ export function dispatchTask(state: GameState, map: WarehouseMap, taskId: string
   const picker = state.pickers[pickerId];
   // развилка планируется сразу при отправке (10, раздел 3); при «Взять ТСД» работа заменится и развилки не будет
   const callRng = createRng(state.rngSeed);
-  const job = planCall(buildJob(map, picker, task), task, callRng); // развилки пока только у сборки (у приёмки — M7d)
+  const job = planCall(buildJob(map, picker, task), task, callRng, undefined, taskLines(state, task).length);
 
   let next: GameState = {
     ...state,

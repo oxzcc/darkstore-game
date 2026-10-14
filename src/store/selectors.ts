@@ -11,6 +11,7 @@ import { tsdOfferSecondsLeft } from '../rules/tsd';
 import { shelfContents } from '../rules/stock';
 import { takenPerLine } from '../rules/minigames/picking';
 import { callText, fillText, lineContext } from '../rules/calls';
+import { taskLines } from '../rules/taskLines';
 import { expiryDate } from '../rules/minigames/expiry';
 import { pickedQty, rewardFor } from '../rules/rewards';
 import { CALLS, DEPTH, EXPIRY, RESULT_XP, SITUATION_BY_ID, TSD_GAMES, TSD_OPTION_ID, type CallOption } from '../config/calls';
@@ -68,6 +69,25 @@ export function deliveryPallets(game: GameState, task: Task) {
   if (task.type !== 'receiving') return [];
   const d = game.deliveries[task.payload.deliveryId];
   return d ? d.palletIds.map((id) => game.pallets[id]).filter(Boolean) : [];
+}
+
+/**
+ * Товары задания одной строкой на товар — для окна назначения у выкладки и приёмки (правка автора 14.10):
+ * «Кофе ×7» и мелко, где он: «1.1.2, 3.1.4» или «П1, П3». Порядок — как товары встречаются в задании.
+ */
+export function groupedLines(game: GameState, task: Task): { productId: string; name: string; qty: number; places: string[] }[] {
+  const out: { productId: string; name: string; qty: number; places: string[] }[] = [];
+  for (const l of taskLines(game, task)) {
+    const place = l.address ? formatAddress(l.address) : l.pallet ? `П${l.pallet}` : '';
+    const g = out.find((x) => x.productId === l.productId);
+    if (g) {
+      g.qty += l.qty;
+      if (place && !g.places.includes(place)) g.places.push(place);
+    } else {
+      out.push({ productId: l.productId, name: game.products[l.productId]?.name ?? l.productId, qty: l.qty, places: place ? [place] : [] });
+    }
+  }
+  return out;
 }
 
 /** Подпись под названием задания в панели и окне назначения — по типу задания. */
@@ -217,6 +237,7 @@ function callCardView(game: GameState, call: Call, text: string) {
   return {
     picker: game.pickers[call.pickerId],
     taskNumber: game.tasks[call.taskId]?.number ?? 0,
+    taskType: game.tasks[call.taskId]?.type ?? 'order',
     text,
     riskLabel: SITUATION_BY_ID[call.situationId].riskLabel,
     options,
@@ -239,11 +260,11 @@ export function flashView(game: GameState, f: CallFlash) {
   return { id: f.id, ...callCardView(game, f.call, f.text), chosenId: f.optionId, auto: f.auto };
 }
 
-/** Окно итога заказа с развилкой (ui_12): что решили, что вышло, чек с позициями и наградой. */
+/** Окно итога задания с развилкой (ui_12): что решили, что вышло, чек с позициями и наградой. */
 export function resultView(game: GameState, card: ResultCard) {
   const task = game.tasks[card.taskId];
   const picker = game.pickers[card.pickerId];
-  if (!task || task.type !== 'order' || !picker) return null;
+  if (!task || !picker) return null;
   const { reveal } = card;
   const c = reveal.calls[0];
   const option = c ? SITUATION_BY_ID[c.situationId]?.options.find((o) => o.id === c.optionId) : undefined;
@@ -252,8 +273,10 @@ export function resultView(game: GameState, card: ResultCard) {
   // игрок брал ТСД: тексты — по итогу его игры (10, раздел 11.4)
   const tsdKind = c?.tsd ? SITUATION_BY_ID[c.situationId]?.tsdGame : undefined;
   const tsdText = c?.tsd && tsdKind ? TSD_GAMES[tsdKind].results[c.tsd] : undefined;
-  const picked = pickedQty(task, reveal); // сколько собрано — те же правила, что снимают товар с полок (rules/rewards.ts)
-  const lines = task.payload.lines.map((l, i) => {
+  // сколько собрано — те же правила, что снимают товар с полок (rules/rewards.ts); приёмка и выкладка — всё целиком (10, раздел 11.6)
+  const all = taskLines(game, task);
+  const picked = task.type === 'order' ? pickedQty(task, reveal) : all.map((l) => l.qty);
+  const lines = all.map((l, i) => {
     let note: string | null = null;
     if (c && i === c.lineIndex && option?.cap) note = 'позиция пропущена';
     if (c && i === c.lineIndex && c.tsd === 'failed') {
@@ -268,6 +291,7 @@ export function resultView(game: GameState, card: ResultCard) {
   const reward = rewardFor(task, reveal.final); // ровно то, что начислено (rules/rewards.ts)
   return {
     taskNumber: task.number,
+    taskType: task.type,
     picker,
     optionLabel: tsdText ? 'Взяли ТСД' : option?.label ?? '',
     auto: c?.auto ?? false,
