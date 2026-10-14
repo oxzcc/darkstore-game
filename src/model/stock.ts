@@ -5,8 +5,7 @@ export type StockRecord = {
   id: string;
   productId: string;
   address: Address;
-  bookQty: number;        // учётное количество: что думает система
-  actualQty: number;      // фактическое количество: что реально на полке
+  qty: number;            // сколько лежит на полке (учёт и факт не расходятся — решение автора 14.10, docs/10, раздел 11)
   expiresAtShift: number; // номер смены, после которой товар просрочен
 };
 

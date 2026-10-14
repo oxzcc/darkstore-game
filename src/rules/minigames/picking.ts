@@ -31,7 +31,7 @@ function takenFrom(session: MinigameSession, address: Address, productId: string
 }
 
 /**
- * Склад, каким его видно во время сессии: фактические остатки минус уже взятое в тележку.
+ * Склад, каким его видно во время сессии: остатки минус уже взятое в тележку.
  * Сам склад не меняется (это сделает M6 по итогу задания) — меняется только то, что рисуется на полках.
  */
 export function seenStock(stock: Stock, actions: PickingAction[] | undefined): Stock {
@@ -39,9 +39,9 @@ export function seenStock(stock: Stock, actions: PickingAction[] | undefined): S
   const out: Stock = { ...stock };
   for (const a of actions) {
     const rec = Object.values(out).find(
-      (r) => r.productId === a.productId && sameAddress(r.address, a.address) && r.actualQty > 0,
+      (r) => r.productId === a.productId && sameAddress(r.address, a.address) && r.qty > 0,
     );
-    if (rec) out[rec.id] = { ...rec, actualQty: rec.actualQty - 1 };
+    if (rec) out[rec.id] = { ...rec, qty: rec.qty - 1 };
   }
   return out;
 }
@@ -95,7 +95,7 @@ export function leaveRack(state: GameState): GameState {
 /**
  * Скан одной штуки товара на полке выбранного стеллажа (06, раздел 5, шаг 3).
  * ТСД сверяет только товар: есть в заказе — +1 к позиции, нет — «Товар не из заказа» (мелкая ошибка, только время).
- * Взять можно только то, что реально лежит на полке (фактический остаток минус уже взятое).
+ * Взять можно только то, что реально лежит на полке (остаток минус уже взятое).
  * Лишнюю штуку сверх заказа взять можно — убрать её «−1» можно будет в M5e2.
  */
 export function scanShelf(state: GameState, map: WarehouseMap, address: Address, productId: string): GameState {
