@@ -1,11 +1,12 @@
 // Игра на ТСД из развилки (docs/10-minigames-concept.md, раздел 11; решение автора 14.10).
 // Игрок выбрал «Взять ТСД» — сборщик стоит у полки, камера у стеллажа, мир идёт ×0,5 (rules/tsd.ts: worldSpeed).
-// Игра закончилась — итог записывается в задание как ответ на развилку, и сборщик дособирает заказ сам.
+// Игра закончилась — итог записывается в задание как ответ на развилку, и сборщик доделывает задание сам (сборку или выкладку).
 import type { GameState } from '../model/game';
 import type { BarcodeGame, DepthGame, ExpiryGame, TsdGame } from '../model/tsdGame';
 import type { CallAnswer } from '../model/call';
 import { BARCODE, DEPTH, EXPIRY, TSD_OPTION_ID } from '../config/calls';
 import { createRng } from './random';
+import { taskLines } from './taskLines';
 import { createExpiryUnits, scoreExpiry } from './minigames/expiry';
 import { createBarcode, hiddenDigits, markGuess, scoreBarcode } from './minigames/barcode';
 import { createDepthBoard, freeNeighbours, scoreDepth, slideBox, targetAtExit, targetCell, tooManyMoves, rowOf } from './minigames/depth';
@@ -16,9 +17,11 @@ export function startTsdGame(state: GameState, callId: string): GameState {
   if (!call || call.expiresAt === null || !call.tsd || state.tsdGame || state.minigame) return state;
   const task = state.tasks[call.taskId];
   const picker = state.pickers[call.pickerId];
-  if (task?.type !== 'order' || !picker?.job) return state;
-  const line = task.payload.lines[call.lineIndex];
-  if (!line) return state;
+  // игра у полки: сборка и выкладка (M7d2); у приёмки полки нет — там ТСД-игр нет (решение автора 14.10)
+  if (!task || !picker?.job) return state;
+  const line = taskLines(state, task)[call.lineIndex];
+  if (!line?.address) return state;
+  const address = line.address;
 
   const rng = createRng(state.rngSeed);
   const common = {
@@ -27,8 +30,8 @@ export function startTsdGame(state: GameState, callId: string): GameState {
     pickerId: picker.id,
     situationId: call.situationId,
     lineIndex: call.lineIndex,
-    address: line.address,
-    rack: { aisle: line.address.aisle, rack: line.address.rack },
+    address,
+    rack: { aisle: address.aisle, rack: address.rack },
     elapsed: 0,
     noteAt: 0,
     result: null,

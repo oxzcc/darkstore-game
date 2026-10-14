@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { GameState, ShiftEvent } from '../model/game';
 import type { PutawayTask, ReceivingTask } from '../model/task';
 import { WAREHOUSE_LAYOUT } from '../config/warehouse';
-import { SITUATIONS } from '../config/calls';
+import { CALLS, SITUATIONS, TSD_OPTION_ID } from '../config/calls';
 import { buildWarehouseMap } from './warehouse';
 import { createInitialGame } from './game';
 import { dispatchTask } from './tasks/lifecycle';
@@ -14,6 +14,7 @@ import { taskLines } from './taskLines';
 import { acceptDelivery } from './deliveries';
 import { createPutawayTasks } from './putaway';
 import { createRng } from './random';
+import { closeTsdGame } from './tsdGame';
 
 const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
 
@@ -121,5 +122,40 @@ describe('развилка в работе', () => {
     // приёмка закрыта при любом исходе: паллеты приняты, появились выкладки
     expect(res.s.deliveries[r.payload.deliveryId].status).toBe('received');
     expect(putaways(res.s).length).toBeGreaterThan(0);
+  });
+});
+
+describe('ТСД в развилках выкладки (M7d2)', () => {
+  it('у «штрихкода» и «старой партии» выкладки есть игры; у приёмки — нет (решение автора 14.10)', () => {
+    const byId = Object.fromEntries(SITUATIONS.map((x) => [x.id, x]));
+    expect(byId.p_barcode.tsdGame).toBe('barcode');
+    expect(byId.p_oldDeep.tsdGame).toBe('depth');
+    expect(SITUATIONS.filter((x) => x.taskType === 'receiving' && x.tsdGame)).toEqual([]);
+  });
+
+  it('«Взять ТСД» на выкладке: игра у полки этой позиции, итог — ответ на развилку, сборщик работает дальше', () => {
+    const s0 = afterReceiving();
+    const t = putaways(s0)[0];
+    let s = dispatchTask(s0, map, t.id, 'lucky');
+    const p = s.pickers.lucky;
+    // развилка «штрихкод» на первой позиции выкладки
+    const stepIndex = p.job!.steps.findIndex((x) => x.kind === 'place');
+    s = { ...s, pickers: { ...s.pickers, lucky: { ...p, job: { ...p.job!, call: { stepIndex, lineIndex: 0, situationId: 'p_barcode', raised: false } } } } };
+    ({ s } = runUntil(s, (x) => x.calls.some((c) => c.expiresAt !== null)));
+    const call = s.calls[0];
+    if (!CALLS.forceTsd && call.tsd === null) return; // вариант ТСД выпадает с шансом — тут его не было
+    expect(call.tsd).toBe('barcode');
+
+    s = answerCall(s, call.id, TSD_OPTION_ID);
+    expect(s.tsdGame?.kind).toBe('barcode');
+    expect(s.tsdGame?.address).toEqual(t.payload.lines[0].address);
+    expect(s.pickers.lucky.state).toBe('playing');
+
+    s = closeTsdGame({ ...s, tsdGame: { ...s.tsdGame!, result: 'perfect' } });
+    expect(s.tsdGame).toBeNull();
+    expect(s.tasks[t.id].callLog?.at(-1)).toMatchObject({ optionId: TSD_OPTION_ID, tsd: 'perfect' });
+    const res = runUntil(s, (x) => x.tasks[t.id].status === 'done');
+    expect(res.s.tasks[t.id].outcome).toBe('perfect');
+    expect(res.s.pallets[t.payload.palletId].state).toBe('empty');
   });
 });

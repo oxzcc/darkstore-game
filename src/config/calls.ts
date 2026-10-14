@@ -148,7 +148,11 @@ export type CallOption = {
  * tsdGame — у ситуации «про стеллаж» есть игра на ТСД (10, раздел 11.2).
  * Сборка — 7 ситуаций (решение автора 14.10); приёмка и выкладка — по 6 (M7d1, 10, раздел 13). Тексты — черновик Claude.
  */
-export type Situation = { id: string; taskType: TaskType; speech: string; riskLabel: string; options: CallOption[]; tsdGame?: TsdGameKind };
+export type Situation = {
+  id: string; taskType: TaskType; speech: string; riskLabel: string; options: CallOption[]; tsdGame?: TsdGameKind;
+  /** Свои тексты карточки «Взять ТСД» и итога игры, если общие (TSD_GAMES, про заказ) не подходят — например, у выкладки (M7d2). */
+  tsdText?: TsdGameText;
+};
 
 export const SITUATIONS: Situation[] = [
   {
@@ -512,7 +516,7 @@ export const SITUATIONS: Situation[] = [
     ],
   },
 
-  // ---------- Выкладка (M7d1; 10, раздел 13.3). Сборщик у полки {address}. ТСД — в M7d2. ----------
+  // ---------- Выкладка (M7d1; 10, раздел 13.3). Сборщик у полки {address}. ТСД (M7d2): «Штрихкод» и «Глубина». ----------
   {
     id: 'p_taken',
     taskType: 'putaway',
@@ -568,6 +572,16 @@ export const SITUATIONS: Situation[] = [
   {
     id: 'p_oldDeep',
     taskType: 'putaway',
+    tsdGame: 'depth', // M7d2: та же «Глубина» — вывести старую партию вперёд
+    tsdText: {
+      label: 'Взять ТСД — переставить самому',
+      description: 'Вы сами переставите лотки, как в пятнашках, и выведете старую партию «{product}» вперёд.',
+      results: {
+        perfect: { title: 'Переставили быстро', text: 'Старая партия «{product}» спереди, новая — за ней. {picker} выкладывает дальше.' },
+        withErrors: { title: 'Переставили, но долго', text: 'Лотки пришлось двигать лишний раз, но старая партия теперь спереди.' },
+        failed: { title: 'Не переставили', text: 'Старая партия «{product}» так и осталась в глубине — скоро в списание.' },
+      },
+    },
     speech: 'На {address} старая партия «{product}» стоит в глубине. Если поставить новую спереди, старая залежится. Как поступим?',
     riskLabel: 'Шанс, что старое залежится',
     options: [
@@ -588,6 +602,16 @@ export const SITUATIONS: Situation[] = [
   {
     id: 'p_barcode',
     taskType: 'putaway',
+    tsdGame: 'barcode', // M7d2
+    tsdText: {
+      label: 'Взять ТСД — ввести самому',
+      description: 'Вы сами подберёте стёртые цифры штрихкода и введёте код в ТСД.',
+      results: {
+        perfect: { title: 'Код подобран быстро', text: 'Вы восстановили стёртые цифры за пару попыток — {product} выложен на {address}.' },
+        withErrors: { title: 'Код подобран', text: 'Пришлось перебрать несколько вариантов, но {product} выложен на своё место.' },
+        failed: { title: 'Код не подобрали', text: '{product} выложили без скана — в учёте может оказаться не тот товар.' },
+      },
+    },
     speech: 'ТСД не читает штрихкод: {product}. Выкладываю без скана или ввожу код вручную?',
     riskLabel: 'Шанс перепутать товар',
     options: [
@@ -672,6 +696,11 @@ export const SITUATIONS: Situation[] = [
 ];
 
 export const SITUATION_BY_ID: Record<string, Situation> = Object.fromEntries(SITUATIONS.map((s) => [s.id, s]));
+
+/** Тексты «Взять ТСД» для ситуации: свои (tsdText) или общие для игры (TSD_GAMES). */
+export function tsdTextFor(situation: Situation | undefined, kind: TsdGameKind): TsdGameText {
+  return situation?.tsdText ?? TSD_GAMES[kind];
+}
 
 /**
  * Окно итога (ui_12): сколько денег и рейтинга от награды задания даёт исход. Пока только показывается —
