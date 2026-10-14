@@ -12,7 +12,8 @@ import { shelfContents } from '../rules/stock';
 import { takenPerLine } from '../rules/minigames/picking';
 import { callText, fillText, lineContext } from '../rules/calls';
 import { expiryDate } from '../rules/minigames/expiry';
-import { CALLS, DEPTH, EXPIRY, RESULT_SHARE, RESULT_XP, SITUATION_BY_ID, TSD_GAMES, TSD_OPTION_ID, type CallOption } from '../config/calls';
+import { pickedQty, rewardFor } from '../rules/rewards';
+import { CALLS, DEPTH, EXPIRY, RESULT_XP, SITUATION_BY_ID, TSD_GAMES, TSD_OPTION_ID, type CallOption } from '../config/calls';
 import type { RackRef } from '../model/minigame';
 import type { Call } from '../model/call';
 import type { CallFlash, ResultCard } from './gameStore';
@@ -63,6 +64,16 @@ export function plural(n: number, one: string, few: string, many: string): strin
 /** Деньги для экрана: 12 450 ₽ (08, раздел 10.4). */
 export function money(n: number): string {
   return `${Math.round(n).toLocaleString('ru-RU').replace(/ /g, ' ')} ₽`;
+}
+
+/** Рейтинг даркстора для верхней панели: «4,55». Два знака — иначе прибавка за одно задание (0,05) не видна. */
+export function ratingText(r: number): string {
+  return r.toFixed(2).replace('.', ',');
+}
+
+/** Изменение рейтинга со знаком: «+0,05», «−0,02». */
+export function signedRating(n: number): string {
+  return `${n >= 0 ? '+' : '−'}${Math.abs(n).toFixed(2).replace('.', ',')}`;
 }
 
 // ---------- время и работа (M4) ----------
@@ -211,23 +222,20 @@ export function resultView(game: GameState, card: ResultCard) {
   // игрок брал ТСД: тексты — по итогу его игры (10, раздел 11.4)
   const tsdKind = c?.tsd ? SITUATION_BY_ID[c.situationId]?.tsdGame : undefined;
   const tsdText = c?.tsd && tsdKind ? TSD_GAMES[tsdKind].results[c.tsd] : undefined;
+  const picked = pickedQty(task, reveal); // сколько собрано — те же правила, что снимают товар с полок (rules/rewards.ts)
   const lines = task.payload.lines.map((l, i) => {
-    let picked = l.qty;
     let note: string | null = null;
-    if (c && i === c.lineIndex && option?.cap) { picked = 0; note = 'позиция пропущена'; }
+    if (c && i === c.lineIndex && option?.cap) note = 'позиция пропущена';
     if (c && i === c.lineIndex && c.tsd === 'failed') {
       // «Глубина» — товар не достали; «Срок» — товар есть, но срок короткий
       if (tsdKind === 'expiry') note = 'взяли товар с коротким сроком';
       else if (tsdKind === 'barcode') note = 'взяли без скана — могли перепутать';
-      else { picked = 0; note = 'не достали с ТСД'; }
+      else note = 'не достали с ТСД';
     }
-    if (reveal.errorLine?.lineIndex === i) {
-      picked = Math.min(picked, reveal.errorLine.picked);
-      note = `${picker.name} ошибся с количеством — зависит от его точности`;
-    }
-    return { name: game.products[l.productId]?.name ?? l.productId, qty: l.qty, picked, note };
+    if (reveal.errorLine?.lineIndex === i) note = `${picker.name} ошибся с количеством — зависит от его точности`;
+    return { name: game.products[l.productId]?.name ?? l.productId, qty: l.qty, picked: picked[i], note };
   });
-  const share = RESULT_SHARE[reveal.final];
+  const reward = rewardFor(task, reveal.final); // ровно то, что начислено (rules/rewards.ts)
   return {
     taskNumber: task.number,
     picker,
@@ -239,8 +247,8 @@ export function resultView(game: GameState, card: ResultCard) {
     title: tsdText ? tsdText.title : option ? fillText(worked ? option.okTitle : option.badTitle, ctx) : '',
     text: tsdText ? fillText(tsdText.text, ctx) : option ? fillText(worked ? option.okText : option.badText, ctx) : '',
     lines,
-    money: { got: Math.round(task.reward.money * share.money), of: task.reward.money },
-    rating: { got: task.reward.rating * share.rating, of: task.reward.rating },
+    money: { got: reward.money, of: task.reward.money },
+    rating: { got: reward.rating, of: task.reward.rating },
     xp: RESULT_XP,
     outcome: reveal.final,
   };

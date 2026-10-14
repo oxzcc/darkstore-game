@@ -142,7 +142,7 @@ button { font-family: inherit; }
 .btn:disabled { cursor: not-allowed; opacity: 0.5; }
 
 /* ---------- всплывающие сообщения об исходе ---------- */
-.toasts { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.toasts { position: absolute; top: 104px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 10px; align-items: center; }
 .toast { --cut: 8px; animation: pop 0.25s ease-out; }
 .toast > .vx-edge { background: var(--oc); }
 .toast > .vx-edge > .vx-body { display: flex; align-items: center; gap: 10px; padding: 10px 16px; font-size: 16px; }
@@ -519,3 +519,18 @@ svg.i.sm { width: 18px; height: 18px; }
 .pdt-hw-ok { position: absolute; left: 39.9%; top: 87.9%; width: 20%; height: 3.9%; border: 0; background: transparent; cursor: pointer; border-radius: 6px; }
 .pdt-hw-ok:hover:not(:disabled) { background: rgba(255, 255, 255, 0.18); }
 .pdt-hw-ok:disabled { cursor: default; }
+
+/* ---------- Верхняя панель: деньги и рейтинг (ui_01; M6) ---------- */
+.topbar { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; pointer-events: none; }
+.topbar-slot { position: relative; }
+.stat-tile { --cut: 8px; }
+.stat-tile > .vx-edge > .vx-body { display: flex; align-items: center; gap: 12px; padding: 8px 18px 8px 12px; min-width: 150px; }
+.stat-tile svg.i { width: 34px; height: 34px; }
+.stat-tile small { display: block; font-size: 12px; color: var(--text-mute); line-height: 1.1; }
+.stat-tile b { display: block; font-size: 26px; font-weight: 700; line-height: 1.1; white-space: nowrap; }
+.gains { position: absolute; top: 100%; left: 0; right: 0; height: 0; }
+.gain { position: absolute; top: 6px; left: 0; right: 0; text-align: center; font-size: 18px; font-weight: 700;
+  animation: gain-up var(--ms, 1800ms) ease-out forwards; text-shadow: 0 1px 0 #fff, 0 0 6px #fff; }
+.gain.up { color: var(--primary); }
+.gain.down { color: var(--failed); }
+@keyframes gain-up { 0% { transform: translateY(-6px); opacity: 0; } 15% { transform: none; opacity: 1; } 70% { opacity: 1; } 100% { transform: translateY(14px); opacity: 0; } }

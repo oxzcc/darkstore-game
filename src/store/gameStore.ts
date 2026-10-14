@@ -14,12 +14,15 @@ import { TSD_OPTION_ID } from '../config/calls';
 import type { Call, OutcomeReveal } from '../model/call';
 import type { Address } from '../model/address';
 import { advanceWorld } from '../rules/advance';
+import { rewardFor } from '../rules/rewards';
 import { worldDt } from '../rules/time';
 
 /** Карта не меняется во время игры, поэтому строится один раз и не хранится в состоянии (09, 4.1а). */
 export const WAREHOUSE_MAP = buildWarehouseMap(WAREHOUSE_LAYOUT);
 
 export type Toast = { id: number; taskNumber: number; pickerName: string; outcome: Outcome };
+/** Всплывашка у денег и рейтинга в верхней панели: «+180 ₽», «+0,05» (M6). */
+export type Gain = { id: number; money: number; rating: number };
 
 /** Окно вызова после ответа: ~1,5 с подсвечен выбранный вариант — «Ваше решение» или «Лаки решил сам» (13.10).
  *  chain — после него открыть следующую развилку, если она ждёт (решение автора 13.10). */
@@ -33,6 +36,7 @@ export type UiState = {
   assignTaskId: string | null;  // для какого задания открыто окно «Кого отправить?»
   chosenPickerId: string | null;
   toasts: Toast[];
+  gains: Gain[];
   nextToastId: number;          // общий счётчик id для всплывашек, вспышек и окон результата
   callFlashes: CallFlash[];
   openCallId: string | null;    // открыто окно развилки (по клику на «!»): мир на паузе
@@ -71,6 +75,7 @@ type Store = {
   barcodeErase: () => void;
   barcodeEnter: () => void;
   dismissToast: (id: number) => void;
+  dismissGain: (id: number) => void;
   dismissFlash: (id: number) => void;
   /** Клик по «!» над сборщиком — открыть окно развилки; закрыть — мир идёт дальше, таймер «!» тоже. */
   openCall: (callId: string) => void;
@@ -87,7 +92,7 @@ const newSeed = () => Math.floor(Math.random() * 2 ** 32);
 
 export const useGameStore = create<Store>((set) => ({
   game: createInitialGame(WAREHOUSE_MAP, newSeed()),
-  ui: { assignTaskId: null, chosenPickerId: null, toasts: [], nextToastId: 1, callFlashes: [], openCallId: null, results: [], depthSelected: null, barcodeInput: [] },
+  ui: { assignTaskId: null, chosenPickerId: null, toasts: [], gains: [], nextToastId: 1, callFlashes: [], openCallId: null, results: [], depthSelected: null, barcodeInput: [] },
 
   openAssign: (taskId) => set((s) => ({ ui: { ...s.ui, assignTaskId: taskId, chosenPickerId: null } })),
   closeAssign: () => set((s) => ({ ui: { ...s.ui, assignTaskId: null, chosenPickerId: null } })),
@@ -168,7 +173,10 @@ export const useGameStore = create<Store>((set) => ({
       const toasts: Toast[] = [];
       const flashes: CallFlash[] = [];
       const results: ResultCard[] = [];
+      const gains: Gain[] = [];
       for (const e of events) {
+        // начисленное за задание — всплывашка у денег и рейтинга (те же числа, что прибавил applyTaskResult)
+        if (e.kind === 'taskDone') gains.push({ id: nextToastId++, ...rewardFor(state.tasks[e.taskId], e.outcome) });
         if (e.kind === 'callAnswered') {
           // таймер истёк — подсветить, что выбрал сборщик (текст — по прежнему состоянию, пока вызов был на экране)
           flashes.push({ id: nextToastId++, call: e.call, text: callText(s.game, e.call), optionId: e.optionId, auto: true, chain: false });
@@ -188,6 +196,7 @@ export const useGameStore = create<Store>((set) => ({
         ui: {
           ...s.ui,
           toasts: [...s.ui.toasts, ...toasts],
+          gains: [...s.ui.gains, ...gains],
           callFlashes: [...s.ui.callFlashes, ...flashes],
           results: [...s.ui.results, ...results],
           nextToastId,
@@ -201,6 +210,7 @@ export const useGameStore = create<Store>((set) => ({
     set((s) => ({ game: { ...s.game, clock: { ...s.game.clock, playerSpeed: speed, paused: false } } })),
 
   dismissToast: (id) => set((s) => ({ ui: { ...s.ui, toasts: s.ui.toasts.filter((t) => t.id !== id) } })),
+  dismissGain: (id) => set((s) => ({ ui: { ...s.ui, gains: s.ui.gains.filter((g) => g.id !== id) } })),
   dismissFlash: (id) =>
     set((s) => {
       const flash = s.ui.callFlashes.find((f) => f.id === id);
