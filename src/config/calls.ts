@@ -108,6 +108,9 @@ export const EXPIRY = {
   /** «Срок» наоборот — у списания (M7e2): одна штука со сроком expiredDays (сегодня), у остальных — чуть позже (similarDays). Допущение Claude. */
   expiredDays: [0],
   similarDays: [1, 2, 3],
+  /** «Наоборот» дольше: даты похожи, читать каждую (правка автора 14.10). Было как у обычного — 45 с и 28 с. */
+  expiredTimeLimit: 70,
+  expiredPerfectSeconds: 45,
 };
 
 /**

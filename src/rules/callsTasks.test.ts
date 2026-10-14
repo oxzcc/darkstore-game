@@ -215,6 +215,7 @@ describe('развилки списания (M7e2)', () => {
     const call = s.calls[0];
     if (!CALLS.forceTsd && call.tsd === null) return;
     s = answerCall(s, call.id, TSD_OPTION_ID);
-    expect(s.tsdGame).toMatchObject({ kind: 'expiry', mode: 'expired', address: t.payload.address });
+    expect(s.tsdGame).toMatchObject({ kind: 'expiry', mode: 'expired', address: t.payload.address,
+      timeLimit: EXPIRY.expiredTimeLimit, perfectSeconds: EXPIRY.expiredPerfectSeconds }); // у «наоборот» больше времени (правка автора 14.10)
   });
 });

@@ -43,7 +43,10 @@ export function startTsdGame(state: GameState, callId: string): GameState {
     game = { ...common, kind: 'depth', timeLimit: DEPTH.timeLimit, board, best, moves: 0, note: null };
   } else if (call.tsd === 'expiry') {
     const mode = task.type === 'writeoff' ? 'expired' : 'fresh'; // списание: найти просроченную (M7e2)
-    game = { ...common, kind: 'expiry', timeLimit: EXPIRY.timeLimit, productId: line.productId, need: EXPIRY.need, mode,
+    const expired = mode === 'expired';
+    game = { ...common, kind: 'expiry', productId: line.productId, need: EXPIRY.need, mode,
+      timeLimit: expired ? EXPIRY.expiredTimeLimit : EXPIRY.timeLimit,
+      perfectSeconds: expired ? EXPIRY.expiredPerfectSeconds : EXPIRY.perfectSeconds,
       units: createExpiryUnits(rng, EXPIRY, mode), open: null, taken: null, note: null };
   } else if (call.tsd === 'barcode') {
     const { code, side } = createBarcode(rng);
@@ -117,7 +120,7 @@ export function takeExpiryUnit(state: GameState): GameState {
   const g = state.tsdGame;
   if (!g || g.kind !== 'expiry' || g.result || g.open === null) return state;
   const unit = g.units[g.open];
-  const result = scoreExpiry(unit.days, g.need, g.elapsed, false, EXPIRY, g.mode ?? 'fresh');
+  const result = scoreExpiry(unit.days, g.need, g.elapsed, false, { ...EXPIRY, perfectSeconds: g.perfectSeconds ?? EXPIRY.perfectSeconds }, g.mode ?? 'fresh');
   const next: ExpiryGame = { ...g, taken: g.open, result, note: 'taken', noteAt: g.elapsed };
   return { ...state, tsdGame: next };
 }

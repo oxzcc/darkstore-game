@@ -372,7 +372,7 @@ export function expiryView(game: GameState) {
     secondsLeft: Math.max(0, g.timeLimit - g.elapsed),
     elapsed: g.elapsed,
     timeLimit: g.timeLimit,
-    perfectSeconds: EXPIRY.perfectSeconds,
+    perfectSeconds: g.perfectSeconds ?? EXPIRY.perfectSeconds,
     open: unit(g.open),
     taken: unit(g.taken),
     note: g.note,

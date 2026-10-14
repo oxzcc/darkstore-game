@@ -71,6 +71,7 @@ export type ExpiryGame = {
   need: number;          // годен не ранее: столько дней от сегодня
   /** fresh — найти штуку с хорошим сроком (сборка); expired — найти просроченную (списание, M7e2). */
   mode: ExpiryMode;
+  perfectSeconds: number; // до скольких секунд — «идеально» (у «наоборот» больше)
   units: ExpiryUnit[];
   open: number | null;   // какая штука поднята крупно (её крутят и читают этикетку)
   taken: number | null;  // какую взяли — для итога
