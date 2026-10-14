@@ -1,0 +1,24 @@
+# Автопроверка: на каждый PR и на каждое обновление main GitHub сам ставит пакеты,
+# проверяет типы и сборку (npm run build) и запускает тесты (npm test).
+# Результат — зелёная галочка или красный крестик в PR.
+name: Проверка
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - name: Типы и сборка
+        run: npm run build
+      - name: Тесты
+        run: npm test
