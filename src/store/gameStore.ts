@@ -21,7 +21,8 @@ import { finishCampaign, startNextShift } from '../rules/shift';
 /** Карта не меняется во время игры, поэтому строится один раз и не хранится в состоянии (09, 4.1а). */
 export const WAREHOUSE_MAP = buildWarehouseMap(WAREHOUSE_LAYOUT);
 
-export type Toast = { id: number; taskType: TaskType; taskNumber: number; pickerName: string; outcome: Outcome };
+/** Всплывашка об итоге задания; expired — срок взять задание вышел (M8b), тогда pickerName пустой. */
+export type Toast = { id: number; taskType: TaskType; taskNumber: number; pickerName: string; outcome: Outcome; expired?: boolean };
 /** Всплывашка у денег и рейтинга в верхней панели: «+180 ₽», «+0,05» (M6). */
 export type Gain = { id: number; money: number; rating: number };
 
@@ -188,6 +189,13 @@ export const useGameStore = create<Store>((set) => ({
       const results: ResultCard[] = [];
       const gains: Gain[] = [];
       for (const e of events) {
+        if (e.kind === 'taskExpired') {
+          // просрочка: штраф у денег и рейтинга и всплывашка (M8b)
+          const t = state.tasks[e.taskId];
+          gains.push({ id: nextToastId++, money: -e.money, rating: -e.rating });
+          toasts.push({ id: nextToastId++, taskType: t.type, taskNumber: t.number, pickerName: '', outcome: 'failed', expired: true });
+          continue;
+        }
         // начисленное за задание — всплывашка у денег и рейтинга (те же числа, что прибавил applyTaskResult)
         if (e.kind === 'taskDone') gains.push({ id: nextToastId++, ...rewardFor(state.tasks[e.taskId], e.outcome) });
         if (e.kind === 'callAnswered') {

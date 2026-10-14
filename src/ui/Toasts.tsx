@@ -18,7 +18,9 @@ function Toast({ toast }: { toast: ToastData }) {
   return (
     <Vx className="toast" style={{ '--oc': look.color } as CSSProperties} onClick={() => dismiss(toast.id)}>
       <Icon name={look.icon} />
-      <span>{taskTitle({ type: toast.taskType, number: toast.taskNumber })} · {toast.pickerName}: <b>{look.name}</b></span>
+      {toast.expired
+        ? <span>{taskTitle({ type: toast.taskType, number: toast.taskNumber })}: <b>не успели взять</b></span>
+        : <span>{taskTitle({ type: toast.taskType, number: toast.taskNumber })} · {toast.pickerName}: <b>{look.name}</b></span>}
     </Vx>
   );
 }

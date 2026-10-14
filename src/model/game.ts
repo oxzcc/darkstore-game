@@ -21,6 +21,14 @@ export type ShiftEvent =
       reveal?: OutcomeReveal; // была развилка — окно результата с раскрытием исхода (10, раздел 3)
     }
   | {
+      kind: 'taskExpired';    // срок взять задание вышел (M8b): штраф; kept — задание осталось (выкладка, списание)
+      taskId: string;
+      at: number;
+      money: number;          // сколько денег списано (уже с учётом, что ниже 0 не бывает)
+      rating: number;         // на сколько упал рейтинг (положительное число)
+      kept: boolean;
+    }
+  | {
       kind: 'callAnswered';   // таймер развилки истёк, сборщик решил сам — окно подсветит его выбор
       call: Call;
       optionId: string;

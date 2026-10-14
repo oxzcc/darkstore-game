@@ -19,6 +19,7 @@ import { isExpiring, removeStock } from './stock';
  * У приёмки и выкладки «неплохо» даёт меньше денег (WITH_ERRORS_MONEY_BY_TYPE, решение автора 14.10).
  */
 export function rewardFor(task: Task, outcome: Outcome): { money: number; rating: number } {
+  if (task.overdue) return { money: 0, rating: 0 }; // просроченная выкладка или списание — без награды (M8b)
   const share = RESULT_SHARE[outcome];
   const moneyShare = outcome === 'withErrors' ? WITH_ERRORS_MONEY_BY_TYPE[task.type] ?? share.money : share.money;
   return { money: Math.round(task.reward.money * moneyShare), rating: task.reward.rating * share.rating };

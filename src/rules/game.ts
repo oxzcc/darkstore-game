@@ -12,6 +12,7 @@ import { createRng } from './random';
 import { topUpOrders } from './tasks/generator';
 import { tickDeliveries } from './deliveries';
 import { newCampaign } from './shift';
+import { assignDeadlines } from './deadline';
 
 /** Доложить на полки партии «истекает сегодня» (M7e1, решение автора 14.10): срок — текущая (первая) смена. */
 function withExpiring(stock: GameState['stock']): GameState['stock'] {
@@ -49,5 +50,5 @@ export function createInitialGame(map: WarehouseMap, seed: number): GameState {
   };
   const rng = createRng(seed);
   const withOrders = topUpOrders(base, rng, 0);
-  return tickDeliveries({ ...withOrders, rngSeed: rng.seed() });
+  return assignDeadlines(tickDeliveries({ ...withOrders, rngSeed: rng.seed() }), map);
 }

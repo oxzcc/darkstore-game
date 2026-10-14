@@ -30,7 +30,7 @@ export function createWriteoff(state: GameState, record: StockRecord, now: numbe
     type: 'writeoff',
     status: 'new',
     createdAt: now,
-    deadline: now, // ВРЕМЕННО: сроков ещё нет (M8)
+    deadline: null, // срок посчитает advanceWorld (rules/deadline.ts, M8b)
     difficulty,
     reward: {
       money: REWARD.moneyPerDifficulty * difficulty * REWARD.typeFactor.writeoff,

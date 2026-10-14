@@ -16,6 +16,7 @@ import { tickDeliveries } from './deliveries';
 import { createPutawayTasks } from './putaway';
 import { tickWriteoffs } from './writeoff';
 import { endShift } from './shift';
+import { assignDeadlines, expireTasks } from './deadline';
 import { SHIFT } from '../config/balance';
 
 /** Перейти к следующему шагу работы. Состояние сборщика — по виду шага. */
@@ -210,6 +211,13 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
   next = tickDeliveries(next);
   // списания: по одной истекающей партии раз в WRITEOFF.everySeconds (M7e1)
   next = tickWriteoffs(next);
+  // сроки новым заданиям и просрочка тех, что не успели взять (M8b)
+  next = assignDeadlines(next, map);
+  const expired = expireTasks(next);
+  if (expired.events.length > 0) {
+    next = { ...expired.state, shiftLog: [...next.shiftLog, ...expired.events] };
+    events.push(...expired.events);
+  }
   // время смены вышло — итоги (M8a)
   if (next.clock.time >= SHIFT.durationSeconds) next = endShift(next);
 

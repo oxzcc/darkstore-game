@@ -23,7 +23,13 @@ type TaskBase = {
   number: number;                  // номер для игрока: «Сборка №12»
   status: TaskStatus;
   createdAt: number;               // игровое время, секунды
-  deadline: number;                // пока не используется: время и сроки появятся в M4
+  /**
+   * До какого времени задание надо взять (отправить сборщика), игровые секунды (M8b; решение автора 14.10:
+   * взятое задание уже не просрочивается). null — срок ещё не посчитан (считает advanceWorld, ему нужна карта).
+   */
+  deadline: number | null;
+  /** Выкладка или списание просрочены: штраф уже взят, задание осталось, но награды за него нет (M8b). */
+  overdue?: boolean;
   difficulty: 1 | 2 | 3;
   reward: { money: number; rating: number };
   location: TaskLocation;

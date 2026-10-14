@@ -53,7 +53,7 @@ export function createOrder(state: GameState, rng: Rng, now: number): { state: G
     type: 'order',
     status: 'new',
     createdAt: now,
-    deadline: now, // ВРЕМЕННО: сроков ещё нет, появятся с ходом времени (M4)
+    deadline: null, // срок посчитает advanceWorld (rules/deadline.ts, M8b)
     difficulty,
     reward: {
       money: REWARD.moneyPerDifficulty * difficulty * REWARD.typeFactor.order,

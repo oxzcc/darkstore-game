@@ -11,10 +11,11 @@ import { createRng } from './random';
 import { topUpOrders } from './tasks/generator';
 import { tickDeliveries } from './deliveries';
 import { createPutawayTasks } from './putaway';
+import { assignDeadlines } from './deadline';
 
 /** Кампания на старте. */
 export function newCampaign(money: number, rating: number): Campaign {
-  return { shift: 1, totalShifts: SHIFT.totalShifts, phase: 'running', startMoney: money, startRating: rating, history: [] };
+  return { shift: 1, totalShifts: SHIFT.totalShifts, phase: 'running', startMoney: money, startRating: rating, history: [], lost: false };
 }
 
 /** Сколько игровых секунд осталось до конца смены. */
@@ -38,18 +39,23 @@ export function shiftResult(state: GameState): ShiftResult {
   const byOutcome: Record<Outcome, number> = { perfect: 0, withErrors: 0, failed: 0 };
   const pickers: Record<string, number> = {};
   let closed = 0;
+  let expired = 0;
   for (const e of state.shiftLog) {
+    if (e.kind === 'taskExpired') expired++;
     if (e.kind !== 'taskDone') continue;
     closed++;
     byOutcome[e.outcome]++;
     pickers[e.pickerId] = (pickers[e.pickerId] ?? 0) + 1;
   }
+  // просроченные выкладки и списания остаются открытыми — их считаем один раз (среди открытых или закрытых)
+  const keptOverdue = Object.values(state.tasks).filter((t) => t.overdue).length;
   const open = Object.values(state.tasks).filter(isOpen).length;
-  const appeared = closed + open;
+  const appeared = closed + open + expired - keptOverdue;
   return {
     shift: state.campaign.shift,
     appeared,
     closed,
+    expired,
     byOutcome,
     stars: starsFor(closed, appeared),
     money: state.money - state.campaign.startMoney,
@@ -65,7 +71,8 @@ export function endShift(state: GameState): GameState {
   return {
     ...state,
     clock: { ...state.clock, time: Math.min(state.clock.time, SHIFT.durationSeconds) },
-    campaign: { ...state.campaign, phase: 'summary', history: [...state.campaign.history, result] },
+    // рейтинг ниже порога — кампания проиграна (решение автора 14.10: проверка в конце смены)
+    campaign: { ...state.campaign, phase: 'summary', history: [...state.campaign.history, result], lost: state.rating < SHIFT.loseRating },
   };
 }
 
@@ -80,7 +87,7 @@ export function isLastShift(state: GameState): boolean {
  * Истекающие партии дадут «Списания» сами (по новому номеру смены). Заказы набираются заново, поставка — как в начале смены.
  */
 export function startNextShift(state: GameState, map: WarehouseMap): GameState {
-  if (state.campaign.phase !== 'summary' || isLastShift(state)) return state;
+  if (state.campaign.phase !== 'summary' || isLastShift(state) || state.campaign.lost) return state;
 
   // поставки у ворот уезжают вместе с непринятыми паллетами
   const deliveries = { ...state.deliveries };
@@ -116,11 +123,11 @@ export function startNextShift(state: GameState, map: WarehouseMap): GameState {
   const rng = createRng(next.rngSeed);
   next = topUpOrders(next, rng, 0);
   next = { ...next, rngSeed: rng.seed() };
-  return tickDeliveries(next);
+  return assignDeadlines(tickDeliveries(next), map);
 }
 
-/** После итогов последней смены — итоги кампании. */
+/** После итогов последней смены (или если кампания проиграна) — итоги кампании. */
 export function finishCampaign(state: GameState): GameState {
-  if (state.campaign.phase !== 'summary' || !isLastShift(state)) return state;
+  if (state.campaign.phase !== 'summary' || (!isLastShift(state) && !state.campaign.lost)) return state;
   return { ...state, campaign: { ...state.campaign, phase: 'over' } };
 }
