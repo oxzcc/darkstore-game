@@ -3,7 +3,7 @@
 import type { GameState } from '../../model/game';
 import type { WarehouseMap } from '../../model/warehouse';
 import { createRng } from '../random';
-import { buildOrderJob } from '../jobs';
+import { buildJob, canBuildJob } from '../jobs';
 import { planCall } from '../calls';
 import { topUpOrders } from './generator';
 
@@ -30,11 +30,11 @@ export function dispatchTask(state: GameState, map: WarehouseMap, taskId: string
   const check = canAssign(state, taskId, pickerId);
   if (!check.ok) throw new Error(check.reason);
   const task = state.tasks[taskId];
-  if (task.type !== 'order') throw new Error('Пока поддерживаются только заказы на сборку');
+  if (!canBuildJob(task)) throw new Error(`Задания «${task.type}» пока не поддерживаются`);
   const picker = state.pickers[pickerId];
   // развилка планируется сразу при отправке (10, раздел 3); при «Взять ТСД» работа заменится и развилки не будет
   const callRng = createRng(state.rngSeed);
-  const job = planCall(buildOrderJob(map, picker, task), task, callRng);
+  const job = planCall(buildJob(map, picker, task), task, callRng); // развилки пока только у сборки (у приёмки — M7d)
 
   let next: GameState = {
     ...state,

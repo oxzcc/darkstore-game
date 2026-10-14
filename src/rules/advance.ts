@@ -12,6 +12,7 @@ import { declineTsd, worldSpeed, worldSpeedFor } from './tsd';
 import { expireCalls, raiseCall, revealCalls, showQueuedCalls } from './calls';
 import { tickTsdGame } from './tsdGame';
 import { applyTaskResult } from './rewards';
+import { tickDeliveries } from './deliveries';
 
 /** Перейти к следующему шагу работы. Состояние сборщика — по виду шага. */
 function nextStep(p: Picker): Picker {
@@ -192,6 +193,9 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
     }
     next = { ...next, shiftLog: [...state.shiftLog, ...events] };
   }
+
+  // поставки: пришло время — у ворот грузовик и задание «Приёмка» (M7b)
+  next = tickDeliveries(next);
 
   return { state: next, events };
 }

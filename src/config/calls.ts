@@ -375,5 +375,11 @@ export const RESULT_SHARE: Record<Outcome, { money: number; rating: number }> = 
   failed: { money: 0, rating: -1 / 3 },
 };
 
+/**
+ * «Неплохо» у приёмки и выкладки даёт меньше денег, чем у сборки: ошибка не портит склад (10, раздел 11.6),
+ * поэтому наказывается в самом задании сильнее (решение автора 14.10, 10, раздел 13.6). Рейтинг — как в RESULT_SHARE.
+ */
+export const WITH_ERRORS_MONEY_BY_TYPE: Partial<Record<TaskType, number>> = { receiving: 0.4, putaway: 0.4 };
+
 /** Опыт за задание — пока только строка в чеке (прогрессия сборщиков — M8). */
 export const RESULT_XP = 1;

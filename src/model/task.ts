@@ -35,7 +35,7 @@ type TaskBase = {
 export type OrderLine = { productId: string; address: Address; qty: number };
 export type OrderPayload = { lines: OrderLine[] };
 export type PutawayPayload = { palletId: string };
-export type ReceivingPayload = { deliveryId: string };
+export type ReceivingPayload = { deliveryId: string; palletCount: number };
 export type WriteoffPayload = { stockRecordId: string; qty: number };
 
 export type Task =
@@ -45,3 +45,4 @@ export type Task =
   | (TaskBase & { type: 'writeoff'; payload: WriteoffPayload });
 
 export type OrderTask = Extract<Task, { type: 'order' }>;
+export type ReceivingTask = Extract<Task, { type: 'receiving' }>;

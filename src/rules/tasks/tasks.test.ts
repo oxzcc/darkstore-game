@@ -15,7 +15,7 @@ const newGame = (seed = 1) => createInitialGame(map, seed);
 describe('заказы', () => {
   it('на старте в очереди нужное число заказов', () => {
     const g = newGame();
-    expect(openTasks(g)).toHaveLength(ORDER.openOrdersTarget);
+    expect(openTasks(g).filter((t) => t.type === 'order')).toHaveLength(ORDER.openOrdersTarget);
   });
 
   it('заказ только из товаров, которые есть по учёту, в пределах остатка', () => {
@@ -78,7 +78,7 @@ describe('назначение', () => {
     expect(p.taskId).toBe(task.id);
     const lines = task.type === 'order' ? task.payload.lines.length : 0;
     expect(p.job!.steps).toHaveLength(lines * 2 + 2); // к каждому адресу + сбор, потом фасовка
-    expect(openTasks(s)).toHaveLength(ORDER.openOrdersTarget);
+    expect(openTasks(s).filter((t) => t.type === 'order')).toHaveLength(ORDER.openOrdersTarget); // приёмка (M7b) не в счёт
   });
 
   it('назначение не меняет остатки, деньги и рейтинг и не портит исходное состояние', () => {

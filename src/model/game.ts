@@ -1,8 +1,9 @@
 // Состояние игры целиком (docs/09-architecture.md, раздел 4.6). Обычный JSON: без классов и функций.
-// Часть полей из 09 (кампания, поставки, паллеты) добавится на своих этапах.
+// Часть полей из 09 (кампания) добавится на своих этапах. Поставки и паллеты — с M7b.
 import type { MinigameSession, TsdOffer } from './minigame';
 import type { TsdGame } from './tsdGame';
 import type { Call, OutcomeReveal } from './call';
+import type { Delivery, Pallet } from './delivery';
 import type { Picker } from './picker';
 import type { Product } from './product';
 import type { Stock } from './stock';
@@ -43,6 +44,9 @@ export type GameState = {
   products: Record<string, Product>;
   stock: Stock;
   tasks: Record<string, Task>;
+  deliveries: Record<string, Delivery>; // поставки (M7b; 10, раздел 13.2)
+  pallets: Record<string, Pallet>;
+  nextDeliveryAt: number;               // когда приедет следующая поставка, игровое время
   pickers: Record<string, Picker>;
 
   tsdOffer: TsdOffer | null;        // висит «Взять ТСД?» (одно за раз)

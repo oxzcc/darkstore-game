@@ -14,6 +14,7 @@ const PATHS = {
   walk: '<path d="M3 10h11V5l8 7-8 7v-5H3z" fill="var(--f,#fff)" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter"/>',
   check: '<path d="M3 12l6 6L21 6" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="miter"/>',
   work: '<rect x="3" y="3" width="18" height="18" fill="var(--f,#fff)" stroke="currentColor" stroke-width="2.5"/><path d="M7 7v10M10 7v10M13 7v10M17 7v10" stroke="currentColor" stroke-width="2"/>',
+  truck: '<rect x="1.5" y="5" width="13" height="12" fill="var(--f,#fff)" stroke="currentColor" stroke-width="2.5"/><path d="M14.5 9h4.5l3.5 4v4h-8z" fill="var(--f,#fff)" stroke="currentColor" stroke-width="2.5" stroke-linejoin="miter"/><rect x="4" y="16.5" width="4.5" height="4.5" fill="currentColor"/><rect x="16" y="16.5" width="4.5" height="4.5" fill="currentColor"/>',
 } as const;
 
 export type IconName = keyof typeof PATHS;
