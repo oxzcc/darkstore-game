@@ -287,6 +287,9 @@ export function resultView(game: GameState, card: ResultCard) {
     if (c && i === c.lineIndex && c.tsd === 'failed' && task.type === 'putaway') {
       // выкладка: товар на полке в любом случае (10, раздел 11.6) — страдает только порядок
       note = tsdKind === 'depth' ? 'старая партия осталась в глубине' : 'выложили без скана — могли перепутать';
+    } else if (c && i === c.lineIndex && c.tsd === 'failed' && task.type === 'writeoff') {
+      // списание (M7e2): партия уходит в любом случае — страдает только порядок
+      note = tsdKind === 'expiry' ? 'сняли годную, просрочка осталась' : tsdKind === 'depth' ? 'просрочку не достали' : 'списали без скана — могли перепутать';
     } else if (c && i === c.lineIndex && c.tsd === 'failed') {
       // «Глубина» — товар не достали; «Срок» — товар есть, но срок короткий
       if (tsdKind === 'expiry') note = 'взяли товар с коротким сроком';
@@ -362,10 +365,14 @@ export function expiryView(game: GameState) {
     product: { name: product?.name ?? g.productId, look: product?.look ?? null },
     need: expiryDate(g.need),
     today: expiryDate(0),
+    // списание (M7e2): ищем просроченную — другие подписи
+    expired: g.mode === 'expired',
+    goal: g.mode === 'expired' ? 'Найдите просроченный' : 'Найдите',
+    rule: g.mode === 'expired' ? { label: 'Срок истёк', value: `до ${expiryDate(0)}` } : { label: 'Годен не ранее', value: expiryDate(g.need) },
     secondsLeft: Math.max(0, g.timeLimit - g.elapsed),
     elapsed: g.elapsed,
     timeLimit: g.timeLimit,
-    perfectSeconds: EXPIRY.perfectSeconds,
+    perfectSeconds: g.perfectSeconds ?? EXPIRY.perfectSeconds,
     open: unit(g.open),
     taken: unit(g.taken),
     note: g.note,

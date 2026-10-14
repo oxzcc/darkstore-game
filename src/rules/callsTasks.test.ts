@@ -1,20 +1,23 @@
 // Развилки приёмки и выкладки (M7d1; docs/10, раздел 13).
 import { describe, expect, it } from 'vitest';
 import type { GameState, ShiftEvent } from '../model/game';
-import type { PutawayTask, ReceivingTask } from '../model/task';
+import type { PutawayTask, ReceivingTask, WriteoffTask } from '../model/task';
 import { WAREHOUSE_LAYOUT } from '../config/warehouse';
-import { CALLS, SITUATIONS, TSD_OPTION_ID } from '../config/calls';
+import { CALLS, EXPIRY, SITUATIONS, TSD_OPTION_ID } from '../config/calls';
+import { WRITEOFF } from '../config/balance';
 import { buildWarehouseMap } from './warehouse';
 import { createInitialGame } from './game';
 import { dispatchTask } from './tasks/lifecycle';
 import { advanceWorld } from './advance';
-import { buildPutawayJob, buildReceivingJob } from './jobs';
+import { buildPutawayJob, buildReceivingJob, buildWriteoffJob } from './jobs';
 import { answerCall, callText, fillText, lineContext, planCall } from './calls';
 import { taskLines } from './taskLines';
 import { acceptDelivery } from './deliveries';
 import { createPutawayTasks } from './putaway';
 import { createRng } from './random';
 import { closeTsdGame } from './tsdGame';
+import { tickWriteoffs } from './writeoff';
+import { createExpiryUnits, scoreExpiry } from './minigames/expiry';
 
 const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
 
@@ -157,5 +160,62 @@ describe('ТСД в развилках выкладки (M7d2)', () => {
     const res = runUntil(s, (x) => x.tasks[t.id].status === 'done');
     expect(res.s.tasks[t.id].outcome).toBe('perfect');
     expect(res.s.pallets[t.payload.palletId].state).toBe('empty');
+  });
+});
+
+describe('развилки списания (M7e2)', () => {
+  const withWriteoff = () => {
+    const g = createInitialGame(map, 1);
+    const s = tickWriteoffs({ ...g, clock: { ...g.clock, time: WRITEOFF.firstAtSeconds } });
+    return { s, t: Object.values(s.tasks).find((x): x is WriteoffTask => x.type === 'writeoff')! };
+  };
+
+  it('у полки — перед «Снимает с полки»; «зона брака заставлена» — в зоне брака', () => {
+    const { s, t } = withWriteoff();
+    const job0 = buildWriteoffJob(map, s.pickers.lucky, t);
+    for (let seed = 1; seed <= 30; seed++) {
+      const job = planCall(job0, t, createRng(seed), 1, 1);
+      const sit = SITUATIONS.find((x) => x.id === job.call!.situationId)!;
+      expect(sit.taskType).toBe('writeoff');
+      const step = job.steps[job.call!.stepIndex];
+      expect(step).toMatchObject({ kind: 'work', label: sit.stopAtEnd ? 'Сдаёт в брак' : 'Снимает с полки' });
+    }
+  });
+
+  it('тексты всех 5 ситуаций заполняются целиком', () => {
+    const { s, t } = withWriteoff();
+    const sits = SITUATIONS.filter((x) => x.taskType === 'writeoff');
+    expect(sits).toHaveLength(5);
+    for (const sit of sits) {
+      const ctx = { ...lineContext(s, t.id, 0, 'lucky'), seconds: 10 };
+      const texts = [sit.speech, ...sit.options.flatMap((o) => [o.description, o.okTitle, o.okText, o.badTitle, o.badText])];
+      if (sit.tsdText) texts.push(sit.tsdText.label, sit.tsdText.description, ...Object.values(sit.tsdText.results).flatMap((r) => [r.title, r.text]));
+      for (const text of texts) expect(fillText(text, ctx).includes('{')).toBe(false);
+    }
+  });
+
+  it('«Срок» наоборот: ровно одна просроченная, только она — успех', () => {
+    for (let seed = 1; seed <= 10; seed++) {
+      const units = createExpiryUnits(createRng(seed), EXPIRY, 'expired');
+      const expired = units.filter((u) => u.days <= 0);
+      expect(expired).toHaveLength(1);
+      for (const u of units) {
+        const r = scoreExpiry(u.days, EXPIRY.need, 1, false, EXPIRY, 'expired');
+        expect(r).toBe(u.days <= 0 ? 'perfect' : 'failed');
+      }
+    }
+  });
+
+  it('«Взять ТСД» на списании: «Срок» у полки партии, в режиме «найти просроченную»', () => {
+    const { s: s0, t } = withWriteoff();
+    let s = dispatchTask(s0, map, t.id, 'lucky');
+    const p = s.pickers.lucky;
+    s = { ...s, pickers: { ...s.pickers, lucky: { ...p, job: { ...p.job!, call: { stepIndex: 1, lineIndex: 0, situationId: 'w_similar', raised: false } } } } };
+    ({ s } = runUntil(s, (x) => x.calls.some((c) => c.expiresAt !== null)));
+    const call = s.calls[0];
+    if (!CALLS.forceTsd && call.tsd === null) return;
+    s = answerCall(s, call.id, TSD_OPTION_ID);
+    expect(s.tsdGame).toMatchObject({ kind: 'expiry', mode: 'expired', address: t.payload.address,
+      timeLimit: EXPIRY.expiredTimeLimit, perfectSeconds: EXPIRY.expiredPerfectSeconds }); // у «наоборот» больше времени (правка автора 14.10)
   });
 });

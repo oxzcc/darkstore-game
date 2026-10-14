@@ -37,7 +37,9 @@ export default function ExpiryTsd({ view, onBack, onTake, onClose }: Props) {
   const resultText = view.note === 'timeout'
     ? 'Время вышло'
     : view.taken
-      ? (view.result === 'failed' ? `Срок до ${view.taken.date} — нужен не ранее ${view.need}` : `Срок до ${view.taken.date} — подходит${view.result === 'withErrors' ? ', но не за время «идеально»' : ''}`)
+      ? (view.result === 'failed'
+        ? (view.expired ? `Срок до ${view.taken.date} — этот ещё годен` : `Срок до ${view.taken.date} — нужен не ранее ${view.need}`)
+        : `Срок до ${view.taken.date} — ${view.expired ? 'просрочен, верно' : 'подходит'}${view.result === 'withErrors' ? ', но не за время «идеально»' : ''}`)
       : '';
 
   return (
@@ -47,13 +49,13 @@ export default function ExpiryTsd({ view, onBack, onTake, onClose }: Props) {
           <div className="depth-hud-item">
             <span className="swatch" style={look ? ({ '--sw': look.color, '--sw2': look.accent } as CSSProperties) : undefined} />
             <div>
-              <div className="depth-hud-label">Найдите</div>
+              <div className="depth-hud-label">{view.goal}</div>
               <div className="depth-hud-name">{view.product.name}</div>
             </div>
           </div>
           <div className="depth-hud-sep" />
           <div className="depth-hud-moves">
-            <div className="depth-hud-moves-top"><span>Годен не ранее</span><b>{view.need}</b></div>
+            <div className="depth-hud-moves-top"><span>{view.rule.label}</span><b>{view.rule.value}</b></div>
             <div className="depth-track-legend"><span>сегодня {view.today}</span></div>
             {/* время: полоса заполняется слева; зелёная часть — «идеально», оранжевая — «неплохо», в конце — провал (решение автора 14.10) */}
             <div className="expiry-time">
