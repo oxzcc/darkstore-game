@@ -92,6 +92,11 @@ export function groupedLines(game: GameState, task: Task): { productId: string; 
 
 /** Подпись под названием задания в панели и окне назначения — по типу задания. */
 export function taskSummary(game: GameState, task: Task): string {
+  if (task.type === 'writeoff') {
+    // «Сыр ×3 · 3.4.2» (M7e1)
+    const name = game.products[task.payload.productId]?.name ?? task.payload.productId;
+    return `${name} ×${task.payload.qty} · ${formatAddress(task.payload.address)}`;
+  }
   return task.type === 'receiving' ? deliverySummary(game, task) : orderSummary(task);
 }
 

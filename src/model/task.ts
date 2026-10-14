@@ -39,7 +39,8 @@ export type OrderPayload = { lines: OrderLine[] };
 export type PutawayLine = { productId: string; address: Address; qty: number };
 export type PutawayPayload = { palletId: string; palletCell: Cell; lines: PutawayLine[] };
 export type ReceivingPayload = { deliveryId: string; palletCount: number };
-export type WriteoffPayload = { stockRecordId: string; qty: number };
+/** Списание: какая партия (запись остатков), какой товар, где и сколько снять (M7e1). */
+export type WriteoffPayload = { stockRecordId: string; productId: string; address: Address; qty: number };
 
 export type Task =
   | (TaskBase & { type: 'order'; payload: OrderPayload })
@@ -50,3 +51,4 @@ export type Task =
 export type OrderTask = Extract<Task, { type: 'order' }>;
 export type ReceivingTask = Extract<Task, { type: 'receiving' }>;
 export type PutawayTask = Extract<Task, { type: 'putaway' }>;
+export type WriteoffTask = Extract<Task, { type: 'writeoff' }>;

@@ -40,3 +40,15 @@ export const INITIAL_STOCK: InitialStockEntry[] = [
   { productId: 'water',   address: '2.6.3', qty: 10 },
   { productId: 'water',   address: '4.1.4', qty: 9 },
 ];
+
+/**
+ * Партии «истекает сегодня» на старте (M7e1; решение автора 14.10, вариант «а»: пока в игре нет календаря смен).
+ * Докладываются к тем же товарам на полки, где есть место; по ним приходят задания «Списание».
+ * Такие партии не продаются: заказы их не обещают и не берут. С M8 просрочка будет считаться по настоящему сроку.
+ */
+export const EXPIRING_STOCK: InitialStockEntry[] = [
+  { productId: 'cheese',  address: '3.4.2', qty: 3 },
+  { productId: 'bread',   address: '4.4.2', qty: 2 },
+  { productId: 'yogurt',  address: '3.6.1', qty: 3 },
+  { productId: 'bananas', address: '3.2.3', qty: 2 },
+];

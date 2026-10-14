@@ -1,7 +1,7 @@
 // Время: сколько длятся ходьба и работа, и как реальное время превращается в игровое (09, раздел 7).
 import type { GameClock } from '../model/game';
 import type { Picker } from '../model/picker';
-import { DELIVERY, PUTAWAY, TIMING } from '../config/balance';
+import { DELIVERY, PUTAWAY, TIMING, WRITEOFF } from '../config/balance';
 
 /** Во сколько раз сборщик медленнее эталона: скорость 5 → 1, скорость 7 → ~0,71, скорость 3 → ~1,67. */
 export function speedFactor(picker: Picker): number {
@@ -34,6 +34,14 @@ export function loadSeconds(picker: Picker): number {
 }
 export function placeSeconds(picker: Picker): number {
   return PUTAWAY.placeSeconds * speedFactor(picker);
+}
+
+/** Списание: снять партию с полки (от скорости) и сдать в брак (как фасовка — не зависит). */
+export function takeDownSeconds(picker: Picker): number {
+  return WRITEOFF.takeSeconds * speedFactor(picker);
+}
+export function dropSeconds(): number {
+  return WRITEOFF.dropSeconds;
 }
 
 /** Фасовка заказа. */

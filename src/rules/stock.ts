@@ -6,6 +6,7 @@ import type { Product } from '../model/product';
 import type { Stock, StockRecord } from '../model/stock';
 import type { WarehouseMap } from '../model/warehouse';
 import { addressKey, isValidAddress, parseAddress, sameAddress } from './address';
+import { CAMPAIGN_START_SHIFT } from '../config/initialStock';
 
 /** Партия: какой товар, на какой полке и с каким сроком. Одна партия — одна запись. */
 export type Batch = { productId: string; address: Address; expiresAtShift: number };
@@ -23,6 +24,25 @@ export function recordsAt(stock: Stock, address: Address): StockRecord[] {
 export function qtyAt(stock: Stock, address: Address, productId?: string): number {
   return recordsAt(stock, address)
     .filter((r) => !productId || r.productId === productId)
+    .reduce((sum, r) => sum + r.qty, 0);
+}
+
+/**
+ * Текущая смена. Календаря смен ещё нет (M8) — все считают от первой.
+ * Партия с expiresAtShift не позже текущей смены истекает сегодня (или уже просрочена) и не продаётся (M7e1).
+ */
+export function currentShift(): number {
+  return CAMPAIGN_START_SHIFT;
+}
+
+export function isExpiring(r: StockRecord, shift = currentShift()): boolean {
+  return r.expiresAtShift <= shift;
+}
+
+/** Сколько товара по адресу можно продать: без партий, которые истекают (их ждёт списание). */
+export function sellableQtyAt(stock: Stock, address: Address, productId?: string): number {
+  return recordsAt(stock, address)
+    .filter((r) => (!productId || r.productId === productId) && !isExpiring(r))
     .reduce((sum, r) => sum + r.qty, 0);
 }
 
