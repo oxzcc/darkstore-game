@@ -43,5 +43,36 @@ export type DepthGame = {
   result: Outcome | null; // игра закончена: что вышло (окно ещё открыто, пока игрок не нажмёт «К складу»)
 };
 
-/** Игра, которая идёт сейчас (одна за раз). Другие виды добавятся сюда же. */
-export type TsdGame = DepthGame;
+/**
+ * «Срок» (N3; прототип одобрен автором 14.10): в лотке несколько штук товара, у каждой свой срок годности.
+ * Этикетка со сроком — на одной стороне штуки: 0 — перед, 1 — право, 2 — зад, 3 — лево, 5 — низ; сверху — никогда (решения автора 14.10).
+ * Сроки — в днях от сегодня (0 — сегодня). Подходит ровно одна штука: срок не раньше need.
+ */
+export type ExpiryUnit = { days: number; side: number; seen: boolean };
+
+/** Что ТСД сказал на последнее действие. */
+export type ExpiryNote = 'taken' | 'timeout';
+
+export type ExpiryGame = {
+  kind: 'expiry';
+  callId: string;
+  taskId: string;
+  pickerId: string;
+  situationId: string;
+  lineIndex: number;
+  address: Address;
+  rack: RackRef;
+  elapsed: number;
+  timeLimit: number;
+  productId: string;
+  need: number;          // годен не ранее: столько дней от сегодня
+  units: ExpiryUnit[];
+  open: number | null;   // какая штука поднята крупно (её крутят и читают этикетку)
+  taken: number | null;  // какую взяли — для итога
+  note: ExpiryNote | null;
+  noteAt: number;
+  result: Outcome | null;
+};
+
+/** Игра, которая идёт сейчас (одна за раз). */
+export type TsdGame = DepthGame | ExpiryGame;

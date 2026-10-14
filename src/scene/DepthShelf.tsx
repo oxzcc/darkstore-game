@@ -13,8 +13,7 @@ import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { PALETTE } from '../config/palette';
 import { useGameStore } from '../store/gameStore';
 import { depthMovesFrom } from '../rules/tsdGame';
-import { closeupEye, closeupLook } from './closeupView';
-import { rackFront } from './rackGeometry';
+import { tsdShelfPose } from './closeupView';
 import { productParts } from './models/ProductItem';
 import type { ProductLook } from '../model/product';
 
@@ -165,11 +164,7 @@ export default function DepthShelf({ map }: { map: WarehouseMap }) {
   if (!rack) return null;
 
   // полка — на линии взгляда, на distance метров от глаз; «лицом» к игроку
-  const eye = closeupEye(rack);
-  const look = closeupLook(rack);
-  const center = eye.clone().add(look.clone().sub(eye).normalize().multiplyScalar(V.distance));
-  const [fx, fz] = rackFront(rack);
-  const yaw = Math.atan2(fx, fz);
+  const { center, yaw } = tsdShelfPose(rack);
   const b = game.board;
   const w = b.cols * V.cell;
   const d = b.rows * V.cell;

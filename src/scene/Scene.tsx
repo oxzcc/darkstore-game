@@ -11,6 +11,7 @@ import CameraRig from './CameraRig';
 import RackPicking from './RackPicking';
 import RackCloseup from './RackCloseup';
 import DepthShelf from './DepthShelf';
+import ExpiryShelf from './ExpiryShelf';
 
 type Props = { map: WarehouseMap; stock: Stock };
 
@@ -33,6 +34,7 @@ export default function Scene({ map, stock }: Props) {
       <RackPicking map={map} />
       <RackCloseup map={map} stock={stock} />
       <DepthShelf map={map} />
+      <ExpiryShelf map={map} />
     </Canvas>
   );
 }

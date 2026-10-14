@@ -1,5 +1,5 @@
 // Экран ТСД в «Глубине» (docs/10-minigames-concept.md, раздел 11.3; вид — по прототипу, одобрен автором 14.10).
-// Сверху по центру одна плашка: что достать и ходы (дорожка: зелёные клетки — «идеально», оранжевые — «с ошибками»,
+// Сверху по центру одна плашка: что достать и ходы (дорожка: зелёные клетки — «идеально», оранжевые — «неплохо»,
 // крестик — дальше провал) и тонкая полоса времени. Итог — окно по центру, фон затемнён.
 // Сама полка с лотками — на сцене (scene/DepthShelf.tsx). Только показывает данные из props (09, раздел 6.3).
 import { useEffect, type CSSProperties } from 'react';
@@ -59,7 +59,7 @@ export default function DepthTsd({ view, onClose }: { view: DepthView; onClose: 
             </div>
             <div className="depth-track-legend">
               <span>идеально до {view.perfectUpTo}</span>
-              <span>с ошибками до {view.errorsUpTo}</span>
+              <span>неплохо до {view.errorsUpTo}</span>
             </div>
             <div className={`depth-time${view.secondsLeft <= 8 ? ' low' : ''}`}><b style={{ width: `${timeShare * 100}%` }} /></div>
           </div>

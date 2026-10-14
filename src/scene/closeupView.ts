@@ -30,3 +30,15 @@ export function blocksCloseup(rack: Rack, pos: [number, number, number]): boolea
   const { eyeDistance, hideRadius } = WAREHOUSE_VIEW.closeup;
   return ahead > 0 && ahead < eyeDistance + hideRadius && aside < hideRadius;
 }
+
+/**
+ * Где висит полка игры на ТСД (N2, N3): на линии взгляда, на distance метров от глаз; yaw — поворот «лицом» к игроку.
+ * Полку как будто выдвинули и наклонили к игроку, чтобы было видно всё, что на ней.
+ */
+export function tsdShelfPose(rack: Rack): { center: Vector3; yaw: number } {
+  const eye = closeupEye(rack);
+  const look = closeupLook(rack);
+  const center = eye.clone().add(look.clone().sub(eye).normalize().multiplyScalar(WAREHOUSE_VIEW.depthShelf.distance));
+  const [fx, fz] = rackFront(rack);
+  return { center, yaw: Math.atan2(fx, fz) };
+}
