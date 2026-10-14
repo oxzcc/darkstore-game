@@ -45,11 +45,12 @@ export function assignCheck(game: GameState, taskId: string, pickerId: string) {
 /** Адрес в виде для экрана: 3.2.1. */
 export const addressText = formatAddress;
 
-/** Короткое описание заказа: «3 товара · аллеи 1, 4». */
+/** Короткое описание заказа или выкладки: «3 товара · аллеи 1, 4». */
 export function orderSummary(task: Task): string {
-  if (task.type !== 'order') return '';
-  const n = task.payload.lines.length;
-  const aisles = [...new Set(task.payload.lines.map((l) => l.address.aisle))].sort((a, b) => a - b);
+  if (task.type !== 'order' && task.type !== 'putaway') return '';
+  const lines: { address: Address }[] = task.payload.lines;
+  const n = lines.length;
+  const aisles = [...new Set(lines.map((l) => l.address.aisle))].sort((a, b) => a - b);
   return `${n} ${plural(n, 'товар', 'товара', 'товаров')} · ${aisles.length > 1 ? 'аллеи' : 'аллея'} ${aisles.join(', ')}`;
 }
 

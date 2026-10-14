@@ -16,6 +16,7 @@ export function activityLine(a: PickerActivity): { text: string; icon: IconName;
     case 'busy': return { text: a.label, icon: 'work', progress: a.progress };
     case 'walking': return { text: `Идёт ${a.to} · ${clockText(a.secondsLeft)}`, icon: 'walk', progress: a.progress };
     case 'picking': return { text: `Собирает ${a.line} из ${a.lines}`, icon: 'work', progress: a.progress };
+    case 'placing': return { text: `Выкладывает ${a.line} из ${a.lines}`, icon: 'work', progress: a.progress };
     case 'packing': return { text: 'Фасует заказ', icon: 'work', progress: a.progress };
   }
 }

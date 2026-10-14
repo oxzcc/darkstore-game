@@ -15,7 +15,7 @@ export default function AssignDialog() {
   const { choosePicker, closeAssign, sendChosenPicker } = useGameStore.getState();
 
   const task = taskId ? game.tasks[taskId] : null;
-  if (!task || (task.type !== 'order' && task.type !== 'receiving')) return null;
+  if (!task || task.type === 'writeoff') return null; // списание — M7e
 
   return (
     <Vx className="assign" bodyClass="window">
@@ -34,8 +34,8 @@ export default function AssignDialog() {
           <div className="reward">+{money(task.reward.money)}</div>
         </Vx>
         <div className="order-lines">
-          {task.type === 'order' && task.payload.lines.map((l) => (
-            <div key={l.productId} className="order-line">
+          {(task.type === 'order' || task.type === 'putaway') && task.payload.lines.map((l) => (
+            <div key={`${l.productId}-${addressText(l.address)}`} className="order-line">
               <span className="tag">{addressText(l.address)}</span>
               <span>{game.products[l.productId]?.name ?? l.productId}</span>
               <span className="qty">×{l.qty}</span>

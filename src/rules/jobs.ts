@@ -1,11 +1,11 @@
 // Работа сборщика над заданием: из каких шагов она состоит и что сейчас происходит.
 import type { Picker, PickerActivity, PickerJob } from '../model/picker';
-import type { OrderTask, ReceivingTask, Task } from '../model/task';
+import type { OrderTask, PutawayTask, ReceivingTask, Task } from '../model/task';
 import type { GameState } from '../model/game';
 import type { WarehouseMap } from '../model/warehouse';
 import { formatAddress } from './address';
 import { accessSpotsForAddress, distancesFrom, zoneAccess, zoneCells } from './warehouse';
-import { packSeconds, pickSeconds, receiveSeconds, secondsPerCell, travelSeconds } from './time';
+import { loadSeconds, packSeconds, pickSeconds, placeSeconds, receiveSeconds, secondsPerCell, travelSeconds } from './time';
 import { DELIVERY } from '../config/balance';
 
 /**
@@ -37,18 +37,41 @@ export function buildReceivingJob(map: WarehouseMap, picker: Picker, task: Recei
   return { taskId: task.id, steps, stepIndex: 0, stepElapsed: 0 };
 }
 
-/** Работа над заданием любого типа. Выкладка и списание — в M7c и M7e. */
+/**
+ * Выкладка (10, раздел 13.3): подойти к паллете, загрузить тележку, обойти адреса и выложить товар.
+ * У паллеты встаёт на соседнюю клетку зоны приёмки, не занятую паллетами.
+ */
+export function buildPutawayJob(map: WarehouseMap, picker: Picker, task: PutawayTask): PickerJob {
+  const slots = new Set(DELIVERY.palletSlots.map((c) => `${c.x},${c.z}`));
+  const pc = task.payload.palletCell;
+  const zone = zoneCells(map, 'receiving').filter((c) => !slots.has(`${c.x},${c.z}`));
+  const near = zone.filter((c) => Math.abs(c.x - pc.x) + Math.abs(c.z - pc.z) === 1);
+  const spots = near.length > 0 ? near : zone;
+  const steps: PickerJob['steps'] = [
+    { kind: 'walk', to: spots[0] ?? zoneAccess(map, 'receiving'), spots, label: 'к паллете' },
+    { kind: 'work', seconds: loadSeconds(picker), label: 'Грузит тележку' },
+  ];
+  task.payload.lines.forEach((line, i) => {
+    const at = accessSpotsForAddress(map, line.address);
+    steps.push({ kind: 'walk', to: at[0], spots: at, label: `к ${formatAddress(line.address)}` });
+    steps.push({ kind: 'place', lineIndex: i, seconds: placeSeconds(picker) });
+  });
+  return { taskId: task.id, steps, stepIndex: 0, stepElapsed: 0 };
+}
+
+/** Работа над заданием любого типа. Списание — в M7e. */
 export function buildJob(map: WarehouseMap, picker: Picker, task: Task): PickerJob {
   switch (task.type) {
     case 'order': return buildOrderJob(map, picker, task);
     case 'receiving': return buildReceivingJob(map, picker, task);
+    case 'putaway': return buildPutawayJob(map, picker, task);
     default: throw new Error(`Задания «${task.type}» пока не поддерживаются`);
   }
 }
 
 /** Задания каких типов сборщика уже можно отправить выполнять. */
 export function canBuildJob(task: Task): boolean {
-  return task.type === 'order' || task.type === 'receiving';
+  return task.type === 'order' || task.type === 'receiving' || task.type === 'putaway';
 }
 
 /** Последние шаги заказа: отнести в зону фасовки и расфасовать. Общие для сборщика и для личной «Сборки». */
@@ -105,6 +128,11 @@ export function pickerActivity(game: GameState, pickerId: string): PickerActivit
     const task = game.tasks[job.taskId];
     const lines = task?.type === 'order' ? task.payload.lines.length : 1;
     return { kind: 'picking', line: step.lineIndex + 1, lines, progress };
+  }
+  if (step.kind === 'place') {
+    const task = game.tasks[job.taskId];
+    const lines = task?.type === 'putaway' ? task.payload.lines.length : 1;
+    return { kind: 'placing', line: step.lineIndex + 1, lines, progress };
   }
   return { kind: 'packing', progress };
 }

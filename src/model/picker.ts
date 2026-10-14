@@ -18,6 +18,8 @@ export type JobStep =
   | { kind: 'walk'; to: Cell; spots: Cell[]; label: string }
   | { kind: 'pick'; lineIndex: number; seconds: number }
   | { kind: 'pack'; seconds: number }
+  // выложить позицию выкладки на полку (M7c)
+  | { kind: 'place'; lineIndex: number; seconds: number }
   // работа на месте без позиций заказа: «Принимает поставку» (M7b)
   | { kind: 'work'; seconds: number; label: string }
   // задержка из-за ответа на развилку: «Ищет рядом», «Ждёт, пока освободится проход» (10, раздел 3)
@@ -43,6 +45,7 @@ export type PickerActivity =
   | { kind: 'busy'; label: string; progress: number } // делает то, что решили в развилке
   | { kind: 'walking'; to: string; secondsLeft: number; progress: number }
   | { kind: 'picking'; line: number; lines: number; progress: number }
+  | { kind: 'placing'; line: number; lines: number; progress: number }
   | { kind: 'packing'; progress: number };
 
 export type Picker = {

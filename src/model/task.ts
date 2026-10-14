@@ -1,6 +1,7 @@
 // Задания (docs/04-tasks.md; окончательная модель — docs/09-architecture.md, раздел 4.4).
 import type { Address } from './address';
 import type { CallAnswer } from './call';
+import type { Cell } from './warehouse';
 
 export type TaskType = 'order' | 'putaway' | 'receiving' | 'writeoff';
 
@@ -34,7 +35,9 @@ type TaskBase = {
 
 export type OrderLine = { productId: string; address: Address; qty: number };
 export type OrderPayload = { lines: OrderLine[] };
-export type PutawayPayload = { palletId: string };
+/** Позиция выкладки: какой товар, сколько и на какую полку (адрес выбирает система при появлении задания; 10, раздел 13.3). */
+export type PutawayLine = { productId: string; address: Address; qty: number };
+export type PutawayPayload = { palletId: string; palletCell: Cell; lines: PutawayLine[] };
 export type ReceivingPayload = { deliveryId: string; palletCount: number };
 export type WriteoffPayload = { stockRecordId: string; qty: number };
 
@@ -46,3 +49,4 @@ export type Task =
 
 export type OrderTask = Extract<Task, { type: 'order' }>;
 export type ReceivingTask = Extract<Task, { type: 'receiving' }>;
+export type PutawayTask = Extract<Task, { type: 'putaway' }>;
