@@ -181,13 +181,14 @@ describe('«Срок»', () => {
   const goodIndex = (g: GameState) => eg(g).units.findIndex((u) => u.days >= eg(g).need);
   const badIndex = (g: GameState) => eg(g).units.findIndex((u) => u.days < eg(g).need);
 
-  it('взял ТСД: в лотке штуки с разными сроками, подходит ровно одна, этикетки на разных сторонах', () => {
+  it('взял ТСД: в лотке 4 ряда по 3 штуки, подходит ровно одна, этикетки на всех 6 сторонах по кругу', () => {
     const { g } = start();
     expect(eg(g)).toMatchObject({ kind: 'expiry', need: EXPIRY.need, open: null, result: null });
     const units = eg(g).units;
-    expect(units).toHaveLength(EXPIRY.badDays.length + 1);
+    expect(units).toHaveLength(EXPIRY.rows * EXPIRY.cols);
     expect(units.filter((u) => u.days >= EXPIRY.need)).toHaveLength(1);
-    expect(new Set(units.map((u) => u.side)).size).toBe(units.length);
+    expect(units.every((u) => u.side >= 0 && u.side <= 5)).toBe(true);
+    expect(new Set(units.slice(0, 6).map((u) => u.side)).size).toBe(6); // первые шесть — все стороны
     expect(g.pickers.lucky.state).toBe('playing');
   });
 

@@ -457,31 +457,10 @@ svg.i.sm { width: 18px; height: 18px; }
 .depth-tray-label.target { background: var(--perfect); color: #fff; }
 @keyframes fade { from { opacity: 0; } }
 
-/* «Срок» на ТСД (N3; прототип одобрен автором 14.10): штука крупно, крутится; этикетка со сроком на одной стороне */
-.expiry-num { pointer-events: none; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%;
-  background: var(--tag); color: #fff; font-size: 14px; font-weight: 700; }
-.expiry-num.seen { background: var(--text-mute); }
-.expiry-inspect { position: absolute; inset: 0; z-index: 6; /* выше подписей на сцене (у них zIndexRange до 5) */ display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 40px; padding-top: 90px; background: rgba(243, 239, 228, 0.82); animation: fade 0.2s ease-out; }
-.expiry-spin { perspective: 1100px; cursor: grab; touch-action: none; padding: 30px; }
-.expiry-spin:active { cursor: grabbing; }
-.expiry-cube { position: relative; transform-style: preserve-3d; transition: transform 0.35s cubic-bezier(.2, .8, .3, 1); }
-.expiry-turning .expiry-cube { transition: none; }
-.expiry-face { position: absolute; top: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-  background: var(--pc1); box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.08); backface-visibility: hidden; }
-.expiry-face.narrow { filter: brightness(0.92); }
-.expiry-cap { position: absolute; left: 0; background: var(--pc1); filter: brightness(0.96); transform: rotateX(90deg); box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.08); }
-.expiry-brand { width: 100%; padding: 16px 8px; background: var(--pc2); color: #fff; text-align: center; }
-.expiry-brand b { font-size: 26px; letter-spacing: 0.05em; }
-.expiry-facts { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 14px; font-size: 12px; color: rgba(0, 0, 0, 0.5); text-align: center; }
-.expiry-facts i, .expiry-lines i { display: block; width: 120px; max-width: 80%; height: 9px; background: rgba(0, 0, 0, 0.12); }
-.expiry-lines { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
-.expiry-lines i:nth-child(2) { width: 60px; } .expiry-lines i:nth-child(3) { width: 90px; }
-.expiry-sticker { padding: 10px 12px; background: #fff; border: 2px dashed #9AA3B0; text-align: center; transform: rotate(-2deg); }
-.expiry-sticker span { display: block; font-size: 12px; letter-spacing: 0.08em; color: var(--text-mute); }
-.expiry-sticker b { display: block; font-size: 32px; color: var(--text); font-variant-numeric: tabular-nums; }
-.expiry-face.narrow .expiry-sticker b { font-size: 24px; }
-.expiry-controls { display: flex; gap: 10px; align-items: center; }
-.expiry-controls .btn { flex: none; width: 240px; }
-.expiry-controls .btn.primary { width: 160px; }
-.expiry-controls .btn.sq { width: 60px; height: 52px; }
+/* «Срок» на ТСД (N3; правки автора 14.10): штука — 3D на сцене; здесь только «Взять» и подсказка внизу по центру */
+.expiry-seen { pointer-events: none; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%;
+  background: var(--text-mute); color: #fff; font-size: 12px; font-weight: 700; }
+.expiry-hold { position: absolute; left: 50%; bottom: 36px; transform: translateX(-50%); z-index: 6;
+  display: flex; flex-direction: column; align-items: center; gap: 10px; pointer-events: none; animation: pop 0.2s ease-out; }
+.expiry-hold .btn { pointer-events: auto; flex: none; width: 240px; height: 56px; }
+.expiry-hold-hint { padding: 6px 12px; background: rgba(58, 52, 42, 0.75); color: #fff; font-size: 14px; }

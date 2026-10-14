@@ -16,12 +16,21 @@ function shuffle<T>(rng: Rng, xs: T[]): T[] {
   return a;
 }
 
-/** Штуки в лотке: одна подходящая (need … need + goodSpread дней), остальные — с коротким сроком; стороны этикеток у всех разные. */
+/**
+ * Штуки в лотке (rows × cols): ровно одна подходящая (need … need + goodSpread дней) на случайном месте,
+ * у остальных — короткий срок из badDays. Стороны этикеток — все 6 по кругу, перемешанные: у соседей они разные.
+ */
 export function createExpiryUnits(rng: Rng, cfg = EXPIRY): ExpiryUnit[] {
+  const n = cfg.rows * cfg.cols;
+  const goodAt = Math.floor(rng.next() * n);
   const good = cfg.need + Math.floor(rng.next() * (cfg.goodSpread + 1));
-  const days = shuffle(rng, [...cfg.badDays, good]);
-  const sides = shuffle(rng, [0, 1, 2, 3]);
-  return days.map((d, i) => ({ days: d, side: sides[i % 4], seen: false }));
+  const sides: number[] = [];
+  while (sides.length < n) sides.push(...shuffle(rng, [0, 1, 2, 3, 4, 5]));
+  return Array.from({ length: n }, (_, i) => ({
+    days: i === goodAt ? good : cfg.badDays[Math.floor(rng.next() * cfg.badDays.length)],
+    side: sides[i],
+    seen: false,
+  }));
 }
 
 /** Срок подходит: не раньше нужного. */
