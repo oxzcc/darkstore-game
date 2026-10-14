@@ -2,7 +2,8 @@
 // Задание в работе остаётся в списке с аватаром сборщика, пока не завершится.
 import { useMemo } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { assigneeOf, money, orderSummary, panelTaskList } from '../store/selectors';
+import { assigneeOf, money, panelTaskList, taskSummary } from '../store/selectors';
+import { TASK_TYPE_LOOK, taskTitle } from './labels';
 import { Avatar } from './PickerBits';
 import Vx from './Vx';
 import Icon from './icons';
@@ -30,10 +31,10 @@ export default function TaskPanel() {
               className={`task-card${t.id === selectedId ? ' selected' : ''}${isNew ? '' : ' busy'}`}
               onClick={isNew ? () => openAssign(t.id) : undefined}
             >
-              <Vx className="task-icon"><Icon name="pick" /></Vx>
+              <Vx className="task-icon"><Icon name={TASK_TYPE_LOOK[t.type].icon} /></Vx>
               <div className="task-main">
-                <div className="task-name">Сборка №{t.number}</div>
-                <div className="task-sub">{isNew ? orderSummary(t) : `В работе · ${who?.name ?? ''}`}</div>
+                <div className="task-name">{taskTitle(t)}</div>
+                <div className="task-sub">{isNew ? taskSummary(game, t) : `В работе · ${who?.name ?? ''}`}</div>
               </div>
               {isNew || !who ? <div className="reward">+{money(t.reward.money)}</div> : <Avatar picker={who} small />}
             </Vx>

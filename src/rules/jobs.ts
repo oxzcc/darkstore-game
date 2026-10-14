@@ -1,11 +1,12 @@
 // Работа сборщика над заданием: из каких шагов она состоит и что сейчас происходит.
 import type { Picker, PickerActivity, PickerJob } from '../model/picker';
-import type { OrderTask } from '../model/task';
+import type { OrderTask, ReceivingTask, Task } from '../model/task';
 import type { GameState } from '../model/game';
 import type { WarehouseMap } from '../model/warehouse';
 import { formatAddress } from './address';
 import { accessSpotsForAddress, distancesFrom, zoneAccess, zoneCells } from './warehouse';
-import { packSeconds, pickSeconds, secondsPerCell, travelSeconds } from './time';
+import { packSeconds, pickSeconds, receiveSeconds, secondsPerCell, travelSeconds } from './time';
+import { DELIVERY } from '../config/balance';
 
 /**
  * Маршрут заказа (03, раздел 6): по адресам позиций в том порядке, как они идут в заказе (07, раздел 7),
@@ -22,6 +23,34 @@ export function buildOrderJob(map: WarehouseMap, picker: Picker, task: OrderTask
   return { taskId: task.id, steps, stepIndex: 0, stepElapsed: 0 };
 }
 
+/**
+ * Приёмка (10, раздел 13.2): дойти до зоны приёмки и принять поставку.
+ * Встаёт на свободную клетку зоны, но не туда, где стоят паллеты.
+ */
+export function buildReceivingJob(map: WarehouseMap, picker: Picker, task: ReceivingTask): PickerJob {
+  const slots = new Set(DELIVERY.palletSlots.map((c) => `${c.x},${c.z}`));
+  const spots = zoneCells(map, 'receiving').filter((c) => !slots.has(`${c.x},${c.z}`));
+  const steps: PickerJob['steps'] = [
+    { kind: 'walk', to: spots[0] ?? zoneAccess(map, 'receiving'), spots, label: 'на приёмку' },
+    { kind: 'work', seconds: receiveSeconds(picker, task.payload.palletCount), label: 'Принимает поставку' },
+  ];
+  return { taskId: task.id, steps, stepIndex: 0, stepElapsed: 0 };
+}
+
+/** Работа над заданием любого типа. Выкладка и списание — в M7c и M7e. */
+export function buildJob(map: WarehouseMap, picker: Picker, task: Task): PickerJob {
+  switch (task.type) {
+    case 'order': return buildOrderJob(map, picker, task);
+    case 'receiving': return buildReceivingJob(map, picker, task);
+    default: throw new Error(`Задания «${task.type}» пока не поддерживаются`);
+  }
+}
+
+/** Задания каких типов сборщика уже можно отправить выполнять. */
+export function canBuildJob(task: Task): boolean {
+  return task.type === 'order' || task.type === 'receiving';
+}
+
 /** Последние шаги заказа: отнести в зону фасовки и расфасовать. Общие для сборщика и для личной «Сборки». */
 export function packSteps(map: WarehouseMap): PickerJob['steps'] {
   return [
@@ -30,12 +59,13 @@ export function packSteps(map: WarehouseMap): PickerJob['steps'] {
   ];
 }
 
-/** Время до первой точки задания (ближайшего места у стеллажа) из того места, где сборщик стоит. null — дойти нельзя. */
-export function etaToTask(map: WarehouseMap, picker: Picker, task: OrderTask): number | null {
-  const first = task.payload.lines[0];
-  if (!first) return 0;
+/** Время до первой точки задания (ближайшего места, куда можно встать) из того места, где сборщик стоит. null — дойти нельзя. */
+export function etaToTask(map: WarehouseMap, picker: Picker, task: Task): number | null {
+  if (!canBuildJob(task)) return null;
+  const first = buildJob(map, picker, task).steps.find((s) => s.kind === 'walk');
+  if (!first || first.kind !== 'walk') return 0;
   const dist = distancesFrom(map, picker.position);
-  const cells = accessSpotsForAddress(map, first.address)
+  const cells = first.spots
     .map((c) => dist.get(`${c.x},${c.z}`))
     .filter((d): d is number => d !== undefined);
   return cells.length ? travelSeconds(picker, Math.min(...cells)) : null;
@@ -57,7 +87,7 @@ export function pickerActivity(game: GameState, pickerId: string): PickerActivit
     const left = call?.expiresAt != null ? Math.max(0, call.expiresAt - game.clock.time) : null;
     return { kind: 'calling', secondsLeft: left };
   }
-  if (step.kind === 'delay') {
+  if (step.kind === 'delay' || step.kind === 'work') {
     return { kind: 'busy', label: step.label, progress: Math.min(1, job.stepElapsed / step.seconds) };
   }
   if (step.kind === 'walk') {

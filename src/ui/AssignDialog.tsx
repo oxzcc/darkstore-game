@@ -2,8 +2,8 @@
 // Все числа — из selectors (а те — из rules); окно само ничего не считает.
 import type { CSSProperties } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { addressText, assignCheck, chancesFor, clockText, etaFor, money, orderSummary, pickerList } from '../store/selectors';
-import { OUTCOME_LOOK, OUTCOMES_ORDER } from './labels';
+import { addressText, assignCheck, chancesFor, clockText, deliveryPallets, etaFor, money, pickerList, taskSummary } from '../store/selectors';
+import { OUTCOME_LOOK, OUTCOMES_ORDER, TASK_TYPE_LOOK, taskTitle } from './labels';
 import { Avatar, StatBars } from './PickerBits';
 import Vx from './Vx';
 import Icon from './icons';
@@ -15,7 +15,7 @@ export default function AssignDialog() {
   const { choosePicker, closeAssign, sendChosenPicker } = useGameStore.getState();
 
   const task = taskId ? game.tasks[taskId] : null;
-  if (!task || task.type !== 'order') return null;
+  if (!task || (task.type !== 'order' && task.type !== 'receiving')) return null;
 
   return (
     <Vx className="assign" bodyClass="window">
@@ -26,21 +26,29 @@ export default function AssignDialog() {
       <div className="assign-scroll">
         {/* задание */}
         <Vx className="task-card">
-          <Vx className="task-icon"><Icon name="pick" /></Vx>
+          <Vx className="task-icon"><Icon name={TASK_TYPE_LOOK[task.type].icon} /></Vx>
           <div className="task-main">
-            <div className="task-name">Сборка №{task.number}</div>
-            <div className="task-sub">{orderSummary(task)}</div>
+            <div className="task-name">{taskTitle(task)}</div>
+            <div className="task-sub">{taskSummary(game, task)}</div>
           </div>
           <div className="reward">+{money(task.reward.money)}</div>
         </Vx>
         <div className="order-lines">
-          {task.payload.lines.map((l) => (
+          {task.type === 'order' && task.payload.lines.map((l) => (
             <div key={l.productId} className="order-line">
               <span className="tag">{addressText(l.address)}</span>
               <span>{game.products[l.productId]?.name ?? l.productId}</span>
               <span className="qty">×{l.qty}</span>
             </div>
           ))}
+          {/* приёмка: что на каждой паллете (П1, П2…) */}
+          {deliveryPallets(game, task).flatMap((p, i) => p.items.map((it) => (
+            <div key={`${p.id}-${it.productId}`} className="order-line">
+              <span className="tag">П{i + 1}</span>
+              <span>{game.products[it.productId]?.name ?? it.productId}</span>
+              <span className="qty">×{it.qty}</span>
+            </div>
+          )))}
         </div>
 
         {/* сборщики */}

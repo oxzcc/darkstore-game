@@ -2,7 +2,7 @@
 // Действия — тонкие обёртки: взять состояние, вызвать чистую функцию из rules, положить результат.
 import { create } from 'zustand';
 import type { GameState } from '../model/game';
-import type { Outcome } from '../model/task';
+import type { Outcome, TaskType } from '../model/task';
 import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { buildWarehouseMap } from '../rules/warehouse';
 import { createInitialGame } from '../rules/game';
@@ -20,7 +20,7 @@ import { worldDt } from '../rules/time';
 /** Карта не меняется во время игры, поэтому строится один раз и не хранится в состоянии (09, 4.1а). */
 export const WAREHOUSE_MAP = buildWarehouseMap(WAREHOUSE_LAYOUT);
 
-export type Toast = { id: number; taskNumber: number; pickerName: string; outcome: Outcome };
+export type Toast = { id: number; taskType: TaskType; taskNumber: number; pickerName: string; outcome: Outcome };
 /** Всплывашка у денег и рейтинга в верхней панели: «+180 ₽», «+0,05» (M6). */
 export type Gain = { id: number; money: number; rating: number };
 
@@ -185,6 +185,7 @@ export const useGameStore = create<Store>((set) => ({
         } else {
           toasts.push({
             id: nextToastId++,
+            taskType: state.tasks[e.taskId].type,
             taskNumber: state.tasks[e.taskId].number,
             pickerName: state.pickers[e.pickerId].name,
             outcome: e.outcome,

@@ -1,5 +1,5 @@
 // Подписи и цвета для экрана. Цвета исходов зарезервированы (08, раздел 3.2).
-import type { Outcome } from '../model/task';
+import type { Outcome, TaskType } from '../model/task';
 import type { PickerState } from '../model/picker';
 import type { IconName } from './icons';
 
@@ -11,6 +11,22 @@ export const OUTCOME_LOOK: Record<Outcome, { name: string; color: string; icon: 
   withErrors: { name: 'Неплохо', color: 'var(--errors)', icon: 'errors' },
   failed: { name: 'Провал', color: 'var(--failed)', icon: 'fail' },
 };
+
+/**
+ * Тип задания: название и значок (08, раздел 10.2). Название одного цвета у всех типов — различаются значком и подписью
+ * (строгое цветовое кодирование, 10, раздел 13.1). Значки выкладки и списания — с M7c и M7e.
+ */
+export const TASK_TYPE_LOOK: Record<TaskType, { name: string; icon: IconName }> = {
+  order: { name: 'Сборка', icon: 'pick' },
+  receiving: { name: 'Приёмка', icon: 'truck' },
+  putaway: { name: 'Выкладка', icon: 'work' },
+  writeoff: { name: 'Списание', icon: 'fail' },
+};
+
+/** «Сборка №12», «Приёмка №15». */
+export function taskTitle(task: { type: TaskType; number: number }): string {
+  return `${TASK_TYPE_LOOK[task.type].name} №${task.number}`;
+}
 
 export const PICKER_STATE_NAME: Record<PickerState, string> = {
   idle: 'Свободен',

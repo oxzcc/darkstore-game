@@ -18,6 +18,8 @@ export type JobStep =
   | { kind: 'walk'; to: Cell; spots: Cell[]; label: string }
   | { kind: 'pick'; lineIndex: number; seconds: number }
   | { kind: 'pack'; seconds: number }
+  // работа на месте без позиций заказа: «Принимает поставку» (M7b)
+  | { kind: 'work'; seconds: number; label: string }
   // задержка из-за ответа на развилку: «Ищет рядом», «Ждёт, пока освободится проход» (10, раздел 3)
   | { kind: 'delay'; seconds: number; label: string };
 

@@ -13,6 +13,13 @@ export const PALETTE = {
   metal: '#554B4E',
   road: '#656971',
   closeupFog: '#F3EFE4', // дымка вдали в виде стеллажа вблизи (светлая и тёплая) и фон за ней
+  // грузовик по art/reference/world_transport_truck.png (M7b)
+  truckCab: '#76BE34',   // зелёная кабина
+  truckBody: '#F3F3F1',  // белый фургон
+  truckTrim: '#C9C9CC',  // серые уголки фургона, бампер, диски
+  truckDark: '#34373C',  // шины, стёкла, рама
+  truckLight: '#FFFFFF', // фары
+  boxTape: '#F4E6C8',    // скотч на коробках паллеты (art/reference/world_palete.png)
 };
 
 /** Как выглядит зона на полу (08, раздел 6). */

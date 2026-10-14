@@ -53,6 +53,35 @@ export function orderSummary(task: Task): string {
   return `${n} ${plural(n, 'товар', 'товара', 'товаров')} · ${aisles.length > 1 ? 'аллеи' : 'аллея'} ${aisles.join(', ')}`;
 }
 
+/** Короткое описание поставки: «2 паллеты · 34 шт.». */
+export function deliverySummary(game: GameState, task: Task): string {
+  if (task.type !== 'receiving') return '';
+  const pallets = deliveryPallets(game, task);
+  const qty = pallets.reduce((sum, p) => sum + p.items.reduce((s, it) => s + it.qty, 0), 0);
+  const n = pallets.length;
+  return `${n} ${plural(n, 'паллета', 'паллеты', 'паллет')} · ${qty} шт.`;
+}
+
+/** Паллеты поставки по заданию «Приёмка» (по порядку). */
+export function deliveryPallets(game: GameState, task: Task) {
+  if (task.type !== 'receiving') return [];
+  const d = game.deliveries[task.payload.deliveryId];
+  return d ? d.palletIds.map((id) => game.pallets[id]).filter(Boolean) : [];
+}
+
+/** Подпись под названием задания в панели и окне назначения — по типу задания. */
+export function taskSummary(game: GameState, task: Task): string {
+  return task.type === 'receiving' ? deliverySummary(game, task) : orderSummary(task);
+}
+
+/** Грузовики у ворот и паллеты в зоне приёмки — для сцены (M7b). */
+export function trucksAtGate(deliveries: GameState['deliveries']) {
+  return Object.values(deliveries).filter((d) => d.status === 'atGate');
+}
+export function palletsOnFloor(pallets: GameState['pallets']) {
+  return Object.values(pallets).filter((p) => p.state !== 'empty');
+}
+
 /** Русское склонение по числу: 1 товар, 2 товара, 5 товаров. */
 export function plural(n: number, one: string, few: string, many: string): string {
   const d10 = n % 10, d100 = n % 100;
@@ -87,7 +116,7 @@ export function activityOf(game: GameState, pickerId: string): PickerActivity {
 export function etaFor(game: GameState, pickerId: string, taskId: string): number | null {
   const task = game.tasks[taskId];
   const picker = game.pickers[pickerId];
-  if (!task || !picker || task.type !== 'order') return null;
+  if (!task || !picker) return null;
   return etaToTask(WAREHOUSE_MAP, picker, task);
 }
 

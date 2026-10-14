@@ -7,14 +7,19 @@ import type { Address } from '../model/address';
 import type { Stock } from '../model/stock';
 import type { OrderTask, Outcome, Task } from '../model/task';
 import { RATING_RANGE } from '../config/balance';
-import { RESULT_SHARE, SITUATION_BY_ID } from '../config/calls';
+import { RESULT_SHARE, SITUATION_BY_ID, WITH_ERRORS_MONEY_BY_TYPE } from '../config/calls';
+import { acceptDelivery } from './deliveries';
 import { sameAddress } from './address';
 import { removeStock } from './stock';
 
-/** Сколько денег и рейтинга даёт исход: доля от базовой награды задания (RESULT_SHARE). */
+/**
+ * Сколько денег и рейтинга даёт исход: доля от базовой награды задания (RESULT_SHARE).
+ * У приёмки и выкладки «неплохо» даёт меньше денег (WITH_ERRORS_MONEY_BY_TYPE, решение автора 14.10).
+ */
 export function rewardFor(task: Task, outcome: Outcome): { money: number; rating: number } {
   const share = RESULT_SHARE[outcome];
-  return { money: Math.round(task.reward.money * share.money), rating: task.reward.rating * share.rating };
+  const moneyShare = outcome === 'withErrors' ? WITH_ERRORS_MONEY_BY_TYPE[task.type] ?? share.money : share.money;
+  return { money: Math.round(task.reward.money * moneyShare), rating: task.reward.rating * share.rating };
 }
 
 /**
@@ -68,7 +73,7 @@ export function clampRating(r: number): number {
 }
 
 /**
- * Применить итог закрытого задания: деньги, рейтинг, собранный товар уходит с полок.
+ * Применить итог закрытого задания: деньги, рейтинг, собранный товар уходит с полок, принятые паллеты ждут выкладки.
  * Зовётся один раз — в момент, когда задание стало «done» (advanceWorld).
  */
 export function applyTaskResult(state: GameState, taskId: string, outcome: Outcome, reveal?: OutcomeReveal): GameState {
@@ -80,10 +85,12 @@ export function applyTaskResult(state: GameState, taskId: string, outcome: Outco
     const picked = pickedQty(task, reveal);
     task.payload.lines.forEach((l, i) => { stock = takeFromShelf(stock, l.productId, l.address, picked[i]); });
   }
-  return {
+  const next: GameState = {
     ...state,
     money: state.money + reward.money,
     rating: clampRating(state.rating + reward.rating),
     stock,
   };
+  // приёмка: паллеты приняты при любом исходе, грузовик уезжает (10, раздел 11.6)
+  return task.type === 'receiving' ? acceptDelivery(next, task.payload.deliveryId) : next;
 }
