@@ -9,7 +9,7 @@ import { createInitialGame } from '../rules/game';
 import { acceptTsd, declineTsd, sendPicker } from '../rules/tsd';
 import { chooseRack, leaveRack, scanShelf } from '../rules/minigames/picking';
 import { answerCall, callText } from '../rules/calls';
-import { closeExpiryUnit, closeTsdGame, depthMovesFrom, moveDepthBox, openExpiryUnit, takeExpiryUnit, tapDepthBox } from '../rules/tsdGame';
+import { submitBarcodeGuess, closeExpiryUnit, closeTsdGame, depthMovesFrom, moveDepthBox, openExpiryUnit, takeExpiryUnit, tapDepthBox } from '../rules/tsdGame';
 import { TSD_OPTION_ID } from '../config/calls';
 import type { Call, OutcomeReveal } from '../model/call';
 import type { Address } from '../model/address';
@@ -38,6 +38,7 @@ export type UiState = {
   openCallId: string | null;    // открыто окно развилки (по клику на «!»): мир на паузе
   results: ResultCard[];        // очередь окон результата: показывается первое (не во время игры на ТСД)
   depthSelected: number | null; // «Глубина»: выбранная коробка (клетка) — сцена подсвечивает, куда её можно сдвинуть
+  barcodeInput: number[];       // «Штрихкод»: цифры текущей попытки, которые игрок уже набрал
 };
 
 type Store = {
@@ -65,6 +66,10 @@ type Store = {
   openExpiryUnit: (index: number) => void;
   closeExpiryUnit: () => void;
   takeExpiryUnit: () => void;
+  /** «Штрихкод»: цифра, стереть, «Ввод». */
+  barcodeType: (digit: number) => void;
+  barcodeErase: () => void;
+  barcodeEnter: () => void;
   dismissToast: (id: number) => void;
   dismissFlash: (id: number) => void;
   /** Клик по «!» над сборщиком — открыть окно развилки; закрыть — мир идёт дальше, таймер «!» тоже. */
@@ -82,7 +87,7 @@ const newSeed = () => Math.floor(Math.random() * 2 ** 32);
 
 export const useGameStore = create<Store>((set) => ({
   game: createInitialGame(WAREHOUSE_MAP, newSeed()),
-  ui: { assignTaskId: null, chosenPickerId: null, toasts: [], nextToastId: 1, callFlashes: [], openCallId: null, results: [], depthSelected: null },
+  ui: { assignTaskId: null, chosenPickerId: null, toasts: [], nextToastId: 1, callFlashes: [], openCallId: null, results: [], depthSelected: null, barcodeInput: [] },
 
   openAssign: (taskId) => set((s) => ({ ui: { ...s.ui, assignTaskId: taskId, chosenPickerId: null } })),
   closeAssign: () => set((s) => ({ ui: { ...s.ui, assignTaskId: null, chosenPickerId: null } })),
@@ -130,7 +135,20 @@ export const useGameStore = create<Store>((set) => ({
       if (s.game.clock.paused || from === null) return s;
       return { game: moveDepthBox(s.game, from, to), ui: { ...s.ui, depthSelected: null } };
     }),
-  closeTsdGame: () => set((s) => ({ game: closeTsdGame(s.game), ui: { ...s.ui, depthSelected: null } })),
+  closeTsdGame: () => set((s) => ({ game: closeTsdGame(s.game), ui: { ...s.ui, depthSelected: null, barcodeInput: [] } })),
+  barcodeType: (digit) =>
+    set((s) => {
+      const g = s.game.tsdGame;
+      if (s.game.clock.paused || g?.kind !== 'barcode' || g.result || s.ui.barcodeInput.length >= g.hiddenCount) return s;
+      return { ui: { ...s.ui, barcodeInput: [...s.ui.barcodeInput, digit] } };
+    }),
+  barcodeErase: () => set((s) => ({ ui: { ...s.ui, barcodeInput: s.ui.barcodeInput.slice(0, -1) } })),
+  barcodeEnter: () =>
+    set((s) => {
+      if (s.game.clock.paused) return s;
+      const game = submitBarcodeGuess(s.game, s.ui.barcodeInput);
+      return game === s.game ? s : { game, ui: { ...s.ui, barcodeInput: [] } };
+    }),
   openExpiryUnit: (index) => set((s) => (s.game.clock.paused ? s : { game: openExpiryUnit(s.game, index) })),
   closeExpiryUnit: () => set((s) => (s.game.clock.paused ? s : { game: closeExpiryUnit(s.game) })),
   takeExpiryUnit: () => set((s) => (s.game.clock.paused ? s : { game: takeExpiryUnit(s.game) })),

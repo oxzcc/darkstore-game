@@ -177,7 +177,7 @@ export default function ExpiryShelf({ map }: { map: WarehouseMap }) {
             <group key={i} position={slot(i)} ref={(el: Group | null) => { slotRefs.current[i] = el; }}>
               {!lifted && (
                 <group position={[0, up, 0]}>
-                  <ProductLowPoly look={look} name={name} side={u.side} date={null} />
+                  <ProductLowPoly look={look} name={name} side={u.side} sticker={{ kind: 'expiry', date: null }} />
                   {/* зона клика по габариту штуки */}
                   <mesh
                     position={[0, size.h / 2, 0]}
@@ -199,7 +199,7 @@ export default function ExpiryShelf({ map }: { map: WarehouseMap }) {
         {heldUnit && (
           <group ref={heldRef}>
             <group>
-              <ProductLowPoly look={look} name={name} side={heldUnit.side} date={expiryDate(heldUnit.days)} />
+              <ProductLowPoly look={look} name={name} side={heldUnit.side} sticker={{ kind: 'expiry', date: expiryDate(heldUnit.days) }} />
             </group>
           </group>
         )}

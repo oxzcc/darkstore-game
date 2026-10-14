@@ -12,6 +12,7 @@ import RackPicking from './RackPicking';
 import RackCloseup from './RackCloseup';
 import DepthShelf from './DepthShelf';
 import ExpiryShelf from './ExpiryShelf';
+import BarcodeShelf from './BarcodeShelf';
 
 type Props = { map: WarehouseMap; stock: Stock };
 
@@ -35,6 +36,7 @@ export default function Scene({ map, stock }: Props) {
       <RackCloseup map={map} stock={stock} />
       <DepthShelf map={map} />
       <ExpiryShelf map={map} />
+      <BarcodeShelf map={map} />
     </Canvas>
   );
 }

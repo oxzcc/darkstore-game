@@ -28,7 +28,7 @@ export const CALLS = {
 export const TSD_OPTION_ID = 'tsd';
 
 /** Какие игры на ТСД уже сделаны: у остальных ситуаций вариант «Взять ТСД» пока не появляется. */
-export const TSD_GAMES_READY: TsdGameKind[] = ['depth', 'expiry'];
+export const TSD_GAMES_READY: TsdGameKind[] = ['depth', 'expiry', 'barcode'];
 
 /** Тексты карточки «Взять ТСД» и окна итога для каждой игры. {picker}, {product}, {address}. */
 export type TsdGameText = {
@@ -58,11 +58,11 @@ export const TSD_GAMES: Record<TsdGameKind, TsdGameText> = {
   },
   barcode: {
     label: 'Взять ТСД — ввести самому',
-    description: 'Вы сами найдёте штрихкод на упаковке и введёте код в ТСД.',
+    description: 'Вы сами подберёте стёртые цифры штрихкода и введёте код в ТСД.',
     results: {
-      perfect: { title: 'Код верный', text: 'Код введён с первого раза.' },
-      withErrors: { title: 'Со второй попытки', text: 'Код ввели не сразу.' },
-      failed: { title: 'Код не подошёл', text: 'Товар взяли без скана — могли перепутать.' },
+      perfect: { title: 'Код подобран быстро', text: 'Вы восстановили стёртые цифры за пару попыток — {product} отсканирован.' },
+      withErrors: { title: 'Код подобран', text: 'Пришлось перебрать несколько вариантов, но {product} отсканирован.' },
+      failed: { title: 'Код не подобрали', text: '{product} взяли без скана — могли перепутать товар.' },
     },
   },
 };
@@ -99,6 +99,23 @@ export const EXPIRY = {
   goodSpread: 2,
   badDays: [0, 1],      // из каких сроков выбираются неподходящие
   today: { day: 14, month: 10 }, // какая дата «сегодня» на этикетках, пока в игре нет календаря (M8)
+};
+
+/**
+ * «Штрихкод» (10, раздел 11.3; прототип одобрен автором 14.10). Код — 13 цифр (как у настоящих товаров), начинается на prefix;
+ * затёрты hiddenCount цифр посередине. Игрок подбирает их за attempts попыток, после каждой — отметки как в играх
+ * с угадыванием слов. Угадал за perfectWithin — идеально, позже — неплохо; попытки или время кончились — провал.
+ * Числа попыток и времени — допущения Claude 14.10.
+ */
+export const BARCODE = {
+  length: 13,
+  prefix: [4, 6],
+  hiddenFrom: 5,
+  hiddenCount: 4,
+  attempts: 6,
+  perfectWithin: 4,
+  timeLimit: 60,
+  introSeconds: 2,   // подлёт камеры, подъём с полки, поворот наклейкой — время игры в это время не идёт
 };
 
 /**

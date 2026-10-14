@@ -114,6 +114,62 @@ function stickerTexture(date: string | null): CanvasTexture {
   }, 256, 160);
 }
 
+/**
+ * Наклейка со штрихкодом (N4): полосы по цифрам кода, под ними 13 цифр; середина затёрта — пятно, царапины и потёртости
+ * поверх цифр hiddenFrom…hiddenFrom + hiddenCount − 1 и полос над ними (решение автора 14.10).
+ */
+function barcodeTexture(code: number[], hiddenFrom: number, hiddenCount: number): CanvasTexture {
+  return texture(`barcode:${code.join('')}:${hiddenFrom}:${hiddenCount}`, (ctx, w, h) => {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    const pad = 16;
+    const step = (w - pad * 2) / code.length;
+    // полосы: у каждой цифры свой рисунок из 4 полос разной толщины
+    ctx.fillStyle = '#1E1E1E';
+    code.forEach((d, i) => {
+      let x = pad + i * step;
+      for (let k = 0; k < 4; k++) {
+        const bw = 1.5 + ((d * 7 + k * 3 + i) % 3) * 1.5;
+        const gap = 1.5 + ((d + k * 5 + i * 2) % 3) * 1.2;
+        if (x + bw > pad + (i + 1) * step) break;
+        ctx.fillRect(x, 14, bw, 118);
+        x += bw + gap;
+      }
+    });
+    // цифры
+    ctx.fillStyle = '#1E1E1E';
+    ctx.textAlign = 'center';
+    ctx.font = `700 ${Math.floor(step * 1.25)}px ${FONT}`;
+    code.forEach((d, i) => ctx.fillText(String(d), pad + (i + 0.5) * step, 176));
+    // затёртость: пятно и царапины поверх стёртых цифр и полос над ними
+    const x0 = pad + hiddenFrom * step - 6;
+    const x1 = pad + (hiddenFrom + hiddenCount) * step + 6;
+    let seed = code.reduce((a, d) => a * 31 + d, 7) % 2147483647;
+    const rnd = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse((x0 + x1) / 2, 100, (x1 - x0) / 2, 92, 0, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.fillStyle = 'rgba(232, 226, 214, 0.96)';
+    ctx.fillRect(x0, 0, x1 - x0, h);
+    for (let k = 0; k < 70; k++) { // царапины
+      ctx.strokeStyle = rnd() < 0.5 ? 'rgba(255,255,255,0.9)' : 'rgba(170,162,148,0.55)';
+      ctx.lineWidth = 1 + rnd() * 3;
+      const x = x0 + rnd() * (x1 - x0);
+      const y = rnd() * h;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + (rnd() - 0.5) * 50, y + (rnd() - 0.5) * 14);
+      ctx.stroke();
+    }
+    for (let k = 0; k < 14; k++) { // обрывки полос и цифр — чтобы было видно, что тут что-то было
+      ctx.fillStyle = 'rgba(40,40,40,0.25)';
+      ctx.fillRect(x0 + rnd() * (x1 - x0), 14 + rnd() * 150, 2 + rnd() * 3, 4 + rnd() * 14);
+    }
+    ctx.restore();
+  }, 320, 200);
+}
+
 /** Полоса с названием товара на передней стороне. */
 function brandTexture(name: string, bg: string): CanvasTexture {
   return texture(`brand:${name}:${bg}`, (ctx, w, h) => {
@@ -128,11 +184,16 @@ function brandTexture(name: string, bg: string): CanvasTexture {
 
 // ---------- модель ----------
 
+/** Что на наклейке: срок годности («Срок»; без даты — пустая) или затёртый штрихкод («Штрихкод»). */
+export type StickerSpec =
+  | { kind: 'expiry'; date: string | null }
+  | { kind: 'barcode'; code: number[]; hiddenFrom: number; hiddenCount: number };
+
 type Props = {
   look: ProductLook;
   name: string;
   side: number;          // где наклейка
-  date: string | null;   // null — наклейка без даты
+  sticker: StickerSpec;
 };
 
 /** Плоская наклейка на стороне: позиция, поворот, размер. */
@@ -151,14 +212,16 @@ function facePlacement(m: ShapeModel, side: number, size: number): { pos: [numbe
   }
 }
 
-export default function ProductLowPoly({ look, name, side, date }: Props) {
+export default function ProductLowPoly({ look, name, side, sticker: spec }: Props) {
   const m = SHAPES[look.shape];
-  const sticker = stickerTexture(date);
+  const sticker = spec.kind === 'expiry' ? stickerTexture(spec.date) : barcodeTexture(spec.code, spec.hiddenFrom, spec.hiddenCount);
   const brand = useMemo(() => brandTexture(name, look.accent), [name, look.accent]);
 
   // размер наклейки — по стороне, на которой она
   const faceW = side === 1 || side === 3 ? m.d : m.w;
-  const size = side >= 4 ? Math.min(m.topSize, m.w * 0.8, m.d * 0.8) : Math.min(faceW * 0.82, 0.075, m.h * 0.64);
+  // штрихкод — поменьше (решение автора 14.10)
+  const k = spec.kind === 'barcode' ? 0.72 : 0.82;
+  const size = side >= 4 ? Math.min(m.topSize, m.w * 0.8, m.d * 0.8) : Math.min(faceW * k, 0.075, m.h * 0.64);
   const place = facePlacement(m, side, size);
   const brandZ = (m.round ? (m.d / 2) * Math.cos(Math.PI / 8) : m.d / 2) + 0.001;
   const color = (c: 'c' | 'a') => (c === 'c' ? look.color : look.accent);
