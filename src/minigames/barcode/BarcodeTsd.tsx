@@ -60,7 +60,7 @@ export default function BarcodeTsd({ view, onDigit, onErase, onEnter, onClose }:
     <>
       <div className="pdt-wrap" style={{ '--k': k } as CSSProperties}>
         <div className="pdt">
-          <img className="pdt-body" src="/assets/pdt.png" alt="" draggable={false} />
+          <img className="pdt-body" src={`${import.meta.env.BASE_URL}assets/pdt.png`} alt="" draggable={false} />
           <div className="pdt-screen">
             <div className="pdt-status"><span>ТСД-07 · {view.picker.name.toUpperCase()}</span><span>ручной ввод</span></div>
             <div className="pdt-head">
