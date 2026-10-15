@@ -1,10 +1,13 @@
 // Склад: пол, зоны, стены, стеллажи. Только отрисовка карты, никаких решений (09, раздел 9).
+import { useMemo } from 'react';
 import type { WallOpening, WallSide, WarehouseMap } from '../model/warehouse';
 import type { Stock } from '../model/stock';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { PALETTE } from '../config/palette';
-import { cellToWorld } from '../rules/warehouse';
-import Rack from './models/Rack';
+import { rackParts } from './models/Rack';
+import type { VoxelPart } from './models/ProductItem';
+import { rackLocalToWorld } from './rackGeometry';
+import VoxelBatch from './VoxelBatch';
 import FloorMarkings from './FloorMarkings';
 import ShelfGoods from './ShelfGoods';
 
@@ -68,8 +71,32 @@ function Wall({ side, map }: { side: WallSide; map: WarehouseMap }) {
   );
 }
 
+/** Кубики всех стеллажей в координатах сцены — один пакет на весь склад (instancing, 08, раздел 11). */
+function allRackParts(map: WarehouseMap): VoxelPart[] {
+  const out: VoxelPart[] = [];
+  const cache = new Map<string, VoxelPart[]>(); // одинаковые стеллажи считаем один раз
+  for (const r of map.racks) {
+    const key = `${r.cells.length}x${r.shelves}`;
+    let local = cache.get(key);
+    if (!local) {
+      local = rackParts(r.cells.length, r.shelves);
+      cache.set(key, local);
+    }
+    const across = r.axis === 'z'; // стеллаж повёрнут на 90°: размеры по x и z меняются местами
+    for (const p of local) {
+      out.push({
+        pos: rackLocalToWorld(r, p.pos),
+        size: across ? [p.size[2], p.size[1], p.size[0]] : p.size,
+        color: p.color,
+      });
+    }
+  }
+  return out;
+}
+
 export default function Warehouse({ map, stock }: Props) {
   const { floorThickness: ft } = WAREHOUSE_VIEW;
+  const racks = useMemo(() => allRackParts(map), [map]);
 
   return (
     <group>
@@ -91,21 +118,7 @@ export default function Warehouse({ map, stock }: Props) {
         <Wall key={side} side={side} map={map} />
       ))}
 
-      {map.racks.map((r) => {
-        // Центр стеллажа — середина его клеток; длинная сторона вдоль оси аллеи.
-        const pts = r.cells.map(cellToWorld);
-        const cx = pts.reduce((sum, p) => sum + p[0], 0) / pts.length;
-        const cz = pts.reduce((sum, p) => sum + p[2], 0) / pts.length;
-        return (
-          <Rack
-            key={`${r.aisle}.${r.rack}`}
-            position={[cx, 0, cz]}
-            rotationY={r.axis === 'z' ? Math.PI / 2 : 0}
-            length={r.cells.length}
-            shelves={r.shelves}
-          />
-        );
-      })}
+      <VoxelBatch parts={racks} />
 
       <ShelfGoods map={map} stock={stock} />
     </group>

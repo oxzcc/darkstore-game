@@ -11,6 +11,8 @@ export const PALETTE = {
   wood: '#C8A97B',
   box: '#E9CB98',       // картонная коробка с товаром (светлее дерева полок)
   metal: '#554B4E',
+  metalDark: '#3B3437',  // прорези и «башмаки» стоек стеллажа (M9b1)
+  rackBoard: '#E8D2A6',  // светлый настил полок (art/reference/world_shelving_unit.png)
   road: '#656971',
   closeupFog: '#F3EFE4', // дымка вдали в виде стеллажа вблизи (светлая и тёплая) и фон за ней
   // грузовик по art/reference/world_transport_truck.png (M7b)
