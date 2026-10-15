@@ -23,6 +23,16 @@ export const PALETTE = {
   metalDark: '#3B3437',  // прорези и «башмаки» стоек стеллажа (M9b1)
   rackBoard: '#E8D2A6',  // светлый настил полок (art/reference/world_shelving_unit.png)
   road: '#656971',
+  // мир вокруг склада (W5; 08, раздел 0): деревья и кусты как в Moving Out 2, бордюры, разметка, велосипеды
+  treeLight: '#78C880',
+  treeMid: '#60A870',
+  treeDark: '#509868',
+  trunk: '#7A5332',
+  curb: '#E3E1D8',
+  roadMark: '#FAF8EF',
+  slab: '#C9CBCC',      // бетонные плиты площадок и парковки
+  parkingLine: '#45474C',
+  bikeFrame: '#F2F2EE',
   closeupFog: '#F3EFE4', // дымка вдали в виде стеллажа вблизи (светлая и тёплая) и фон за ней
   // грузовик по art/reference/world_transport_truck.png (M7b)
   truckCab: '#76BE34',   // зелёная кабина

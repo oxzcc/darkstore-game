@@ -5,7 +5,7 @@ import { CanvasTexture, RepeatWrapping, SRGBColorSpace, type Texture } from 'thr
 import { PALETTE } from '../config/palette';
 
 /** Маленький генератор случайных чисел с зерном: узор не меняется от загрузки к загрузке. */
-function seeded(seed: number) {
+export function seeded(seed: number) {
   let s = seed >>> 0;
   return () => {
     s = (s + 0x6d2b79f5) >>> 0;
@@ -47,7 +47,7 @@ function cached(key: string, build: () => CanvasTexture): CanvasTexture {
 }
 
 /** Метров на одно повторение текстуры (для repeat). */
-export const TEXTURE_METERS = { grass: 12, tiles: 4, planks: 2 };
+export const TEXTURE_METERS = { grass: 12, tiles: 4, planks: 2, asphalt: 4, slabs: 2 };
 
 /** Трава: светлые и тёмные пятна, пучки травинок. */
 export const grassTexture = () => cached('grass', () => make(1024, (g, rnd) => {
@@ -140,6 +140,37 @@ export const cardboardTexture = () => cached('cardboard', () => make(256, (g, rn
   for (let i = 0; i < 250; i++) { g.fillStyle = rnd() < 0.5 ? grey(0.75, 0.3) : grey(1, 0.4); g.fillRect(rnd() * px, rnd() * px, 2, 2); }
   for (let i = 0; i < 6; i++) { g.fillStyle = grey(0.7, 0.12); blob(g, px, rnd() * px, rnd() * px, 14 + rnd() * 10, 10, rnd()); }
 }, 55));
+
+/** Асфальт (W5): крапинки, тёмные и светлые пятна, пара трещин. */
+export const asphaltTexture = () => cached('asphalt', () => make(512, (g, rnd) => {
+  const px = 512;
+  g.fillStyle = grey(0.93);
+  g.fillRect(0, 0, px, px);
+  for (let i = 0; i < 50; i++) { g.fillStyle = grey(0.86 + rnd() * 0.14, 0.6); const r = 20 + rnd() * 40; blob(g, px, rnd() * px, rnd() * px, r, r * 0.7, rnd() * 3); }
+  for (let i = 0; i < 2500; i++) { g.fillStyle = grey(rnd() < 0.5 ? 0.78 : 1, 0.7); g.fillRect(rnd() * px, rnd() * px, 3, 3); }
+  g.strokeStyle = grey(0.6, 0.6); g.lineWidth = 2.5;
+  for (let i = 0; i < 5; i++) {
+    let x = rnd() * px, y = rnd() * px;
+    g.beginPath(); g.moveTo(x, y);
+    for (let k = 0; k < 6; k++) { x += (rnd() - 0.5) * 50; y += rnd() * 28; g.lineTo(x, y); }
+    g.stroke();
+  }
+}, 66));
+
+/** Бетонные плиты 1 × 1 м (площадки, парковка, дорожка): швы, пятна, светлая фаска. */
+export const slabsTexture = () => cached('slabs', () => make(256, (g, rnd) => {
+  const px = 256, s = px / 2;
+  g.fillStyle = grey(0.84);
+  g.fillRect(0, 0, px, px);
+  for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
+    g.fillStyle = grey(0.95 + rnd() * 0.05);
+    g.fillRect(i * s + 3, j * s + 3, s - 6, s - 6);
+    g.strokeStyle = grey(1, 0.6); g.lineWidth = 2;
+    g.strokeRect(i * s + 7, j * s + 7, s - 14, s - 14);
+  }
+  for (let i = 0; i < 500; i++) { g.fillStyle = grey(0.82, 0.5); g.fillRect(rnd() * px, rnd() * px, 2, 2); }
+  for (let i = 0; i < 3; i++) { g.fillStyle = grey(0.55, 0.12); blob(g, px, rnd() * px, rnd() * px, 18 + rnd() * 14, 10, rnd()); }
+}, 77));
 
 /** Копия текстуры со своим повтором (картинка общая): `w`, `d` — размер поверхности в метрах. */
 export function tiled(tex: Texture, w: number, d: number, meters: number): Texture {

@@ -17,6 +17,7 @@ import DepthShelf from './DepthShelf';
 import ExpiryShelf from './ExpiryShelf';
 import BarcodeShelf from './BarcodeShelf';
 import Deliveries from './Deliveries';
+import World from './World';
 
 type Props = { map: WarehouseMap; stock: Stock };
 
@@ -29,7 +30,7 @@ function Sun({ map }: { map: WarehouseMap }) {
   const light = useRef<DirectionalLight>(null);
   const scene = useThree((s) => s.scene);
   const cx = map.width / 2, cz = map.depth / 2;
-  const r = Math.max(map.width, map.depth) * 0.75 + 4; // полуразмер области теней, м
+  const r = L.shadowRadius; // полуразмер области теней, м
   useLayoutEffect(() => {
     const l = light.current;
     if (!l) return;
@@ -68,6 +69,7 @@ export default function Scene({ map, stock }: Props) {
       <hemisphereLight args={[L.skyColor, L.groundColor, L.sky * Math.PI]} />
       <Sun map={map} />
       <CameraRig map={map} />
+      <World map={map} />
       <Warehouse map={map} stock={stock} />
       <Deliveries map={map} />
       <Pickers />
