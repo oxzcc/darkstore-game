@@ -23,6 +23,8 @@ export const PALETTE = {
   closeupFog: '#F3EFE4', // дымка вдали в виде стеллажа вблизи (светлая и тёплая) и фон за ней
   // грузовик по art/reference/world_transport_truck.png (M7b)
   truckCab: '#76BE34',   // зелёная кабина
+  truckCabDark: '#5E9E26',  // швы и полосы на кабине (M9b4)
+  truckCabLight: '#8ACD4B', // козырёк на крыше кабины (M9b4)
   truckBody: '#F3F3F1',  // белый фургон
   truckTrim: '#C9C9CC',  // серые уголки фургона, бампер, диски
   truckDark: '#34373C',  // шины, стёкла, рама

@@ -6,10 +6,22 @@ import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { useGameStore } from '../store/gameStore';
 import { palletsOnFloor, trucksAtGate } from '../store/selectors';
 import { cellToWorld } from '../rules/warehouse';
-import Truck from './models/Truck';
+import { truckParts } from './models/Truck';
 import { palletParts } from './models/Pallet';
 import type { VoxelPart } from './models/ProductItem';
 import VoxelBatch from './VoxelBatch';
+
+const TRUCK = truckParts(); // модель не меняется — считаем один раз
+
+/** Бруски грузовика, повёрнутые вокруг вертикали на `turn` и поставленные в точку `at`. */
+function placedTruck(at: [number, number, number], turn: number): VoxelPart[] {
+  const c = Math.cos(turn), s = Math.sin(turn);
+  return TRUCK.map((p) => {
+    const [x, y, z] = p.pos;
+    const [rx, ry, rz] = p.rot ?? [0, 0, 0];
+    return { ...p, pos: [at[0] + x * c + z * s, at[1] + y, at[2] - x * s + z * c], rot: [rx, ry + turn, rz] };
+  });
+}
 
 const QTY_PER_BOX = 6; // сколько штук товара «в одной коробке» — только для вида стопки
 
@@ -49,13 +61,17 @@ export default function Deliveries({ map }: { map: WarehouseMap }) {
     return out;
   }, [pallets]);
 
-  const place = truckPlace(map);
-  const gate = map.openings.find((o) => o.kind === 'gate');
-  const rotationY = (gate ? SIDE_ROTATION[gate.side] : 0) + WAREHOUSE_VIEW.truck.rotationY;
+  // место у ворот не меняется — грузовик собираем один раз на карту
+  const truckVoxels = useMemo(() => {
+    const place = truckPlace(map);
+    const gate = map.openings.find((o) => o.kind === 'gate');
+    const rotationY = (gate ? SIDE_ROTATION[gate.side] : 0) + WAREHOUSE_VIEW.truck.rotationY;
+    return place ? placedTruck(place, rotationY) : [];
+  }, [map]);
 
   return (
     <group>
-      {place && trucks.length > 0 && <Truck position={place} rotationY={rotationY} />}
+      {trucks.length > 0 && <VoxelBatch parts={truckVoxels} />}
       <VoxelBatch parts={palletVoxels} />
     </group>
   );
