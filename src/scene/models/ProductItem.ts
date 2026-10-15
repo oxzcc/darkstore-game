@@ -4,8 +4,17 @@
 // один общий VoxelBatch через instancing (08, раздел 11).
 import type { ProductLook } from '../../model/product';
 
-/** Один кубик: центр и размер в метрах, цвет. */
-export type VoxelPart = { pos: [number, number, number]; size: [number, number, number]; color: string };
+/**
+ * Один брусок: центр и размер в метрах, цвет. Необязательный `rot` — наклон в радианах вокруг осей x, y, z
+ * (порядок YXZ, как Euler в Three.js): так low poly детали встают под углом (M9b1, решение автора 15.10).
+ * Порядок YXZ удобен тем, что поворот всей модели вокруг вертикали просто прибавляется к `rot[1]`.
+ */
+export type VoxelPart = {
+  pos: [number, number, number];
+  size: [number, number, number];
+  color: string;
+  rot?: [number, number, number];
+};
 
 /**
  * Кубики одной штуки товара шириной `w` метров. Координаты: x — вдоль полки, y — вверх от полки (0 — доска),

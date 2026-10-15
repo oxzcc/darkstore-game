@@ -1,13 +1,14 @@
 // Стеллаж по art/reference/world_shelving_unit.png (M9b1; 08, раздел 7: 1×2 клетки, 4 полки, без ячеек).
 // Тёмные стойки с прорезями и «башмаками», крест-накрест на боковых рамах, балки под полками, светлый настил.
-// Возвращает список кубиков, а не компонент: стеллажей на складе много, все рисует один VoxelBatch (08, раздел 11).
-// Размеры деталей кратны вокселю 1/16 м (08, раздел 2). Высоты полок — из rackGeometry, товар стоит на них как раньше.
+// Стиль — low poly из брусков (решение автора 15.10): детали могут стоять под наклоном (крест на торцах).
+// Возвращает список брусков, а не компонент: стеллажей на складе много, все рисует один VoxelBatch (08, раздел 11).
+// Толщины деталей — от шага 1/16 м. Высоты полок — из rackGeometry, товар стоит на них как раньше.
 import { WAREHOUSE_VIEW } from '../../config/warehouse';
 import { PALETTE } from '../../config/palette';
 import { RACK_BOARD, rackWidth, shelfY } from '../rackGeometry';
 import type { VoxelPart } from './ProductItem';
 
-const V = 1 / 16;         // один воксель, м
+const V = 1 / 16;         // шаг размеров деталей, м
 const POST = V;           // сечение стойки
 const FOOT = 2 * V;       // «башмак» под стойкой
 const SLOT_STEP = 2 * V;  // шаг прорезей на стойке
@@ -52,21 +53,17 @@ export function rackParts(length: number, shelves: number): VoxelPart[] {
     for (const x of xs) add([x, beamY, 0], [V / 2, V, d - 2 * POST], PALETTE.metal);
   }
 
-  // Крест-накрест на торцевых рамах между соседними полками: две диагонали «лесенкой» из вокселей.
+  // Крест-накрест на торцевых рамах между соседними полками: две наклонные планки на каждый пролёт.
   const span = d - 2 * POST; // ширина рамы между стойками
   for (const x of xs) {
     for (let s = 1; s < shelves; s++) {
       const y0 = shelfY(s, shelves) + RACK_BOARD / 2;
       const y1 = shelfY(s + 1, shelves) - RACK_BOARD / 2 - V;
-      const steps = Math.max(2, Math.round(span / V));
-      const dy = (y1 - y0) / steps;
-      for (let i = 0; i < steps; i++) {
-        const z = -span / 2 + (i + 0.5) * (span / steps);
-        const yUp = y0 + (i + 0.5) * dy;
-        const yDown = y1 - (i + 0.5) * dy;
-        add([x, yUp, z], [V / 2, dy + V / 4, span / steps], PALETTE.metal);
-        add([x, yDown, z], [V / 2, dy + V / 4, span / steps], PALETTE.metal);
-      }
+      const len = Math.hypot(span, y1 - y0);
+      const tilt = Math.atan2(y1 - y0, span); // планка вдоль z, наклонённая вокруг оси x
+      const mid: VoxelPart['pos'] = [x, (y0 + y1) / 2, 0];
+      out.push({ pos: mid, size: [V / 2, V * 0.75, len], color: PALETTE.metal, rot: [-tilt, 0, 0] });
+      out.push({ pos: mid, size: [V / 2, V * 0.75, len], color: PALETTE.metal, rot: [tilt, 0, 0] });
     }
   }
 

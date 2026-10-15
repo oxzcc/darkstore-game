@@ -6,7 +6,7 @@ import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { PALETTE } from '../config/palette';
 import { rackParts } from './models/Rack';
 import type { VoxelPart } from './models/ProductItem';
-import { rackLocalToWorld } from './rackGeometry';
+import { rackLocalToWorld, rackRotY } from './rackGeometry';
 import VoxelBatch from './VoxelBatch';
 import FloorMarkings from './FloorMarkings';
 import ShelfGoods from './ShelfGoods';
@@ -82,12 +82,14 @@ function allRackParts(map: WarehouseMap): VoxelPart[] {
       local = rackParts(r.cells.length, r.shelves);
       cache.set(key, local);
     }
-    const across = r.axis === 'z'; // стеллаж повёрнут на 90°: размеры по x и z меняются местами
+    const turn = rackRotY(r); // поворот стеллажа вокруг вертикали прибавляется к наклону бруска (см. VoxelPart.rot)
     for (const p of local) {
+      const [rx, ry, rz] = p.rot ?? [0, 0, 0];
       out.push({
         pos: rackLocalToWorld(r, p.pos),
-        size: across ? [p.size[2], p.size[1], p.size[0]] : p.size,
+        size: p.size,
         color: p.color,
+        rot: turn || p.rot ? [rx, ry + turn, rz] : undefined,
       });
     }
   }

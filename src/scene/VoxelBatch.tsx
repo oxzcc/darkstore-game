@@ -1,7 +1,7 @@
 // Много одинаковых кубиков за один вызов отрисовки (instancing, встроен в Three.js; 08, раздел 11).
-// Кубики группируются по цвету: один InstancedMesh на цвет.
+// Кубики группируются по цвету: один InstancedMesh на цвет. Бруски могут стоять под наклоном (VoxelPart.rot).
 import { useLayoutEffect, useMemo, useRef } from 'react';
-import { Matrix4, Quaternion, Vector3, type InstancedMesh } from 'three';
+import { Euler, Matrix4, Quaternion, Vector3, type InstancedMesh } from 'three';
 import type { VoxelPart } from './models/ProductItem';
 
 function ColorBatch({ color, parts }: { color: string; parts: VoxelPart[] }) {
@@ -11,7 +11,10 @@ function ColorBatch({ color, parts }: { color: string; parts: VoxelPart[] }) {
     if (!mesh) return;
     const m = new Matrix4();
     const q = new Quaternion();
+    const e = new Euler();
     parts.forEach((p, i) => {
+      if (p.rot) q.setFromEuler(e.set(p.rot[0], p.rot[1], p.rot[2], 'YXZ'));
+      else q.identity();
       m.compose(new Vector3(...p.pos), q, new Vector3(...p.size));
       mesh.setMatrixAt(i, m);
     });

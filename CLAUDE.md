@@ -268,8 +268,9 @@
   https://oxzcc.github.io/darkstore-game/ (один раз включить: Settings → Pages → Source: GitHub Actions). `vite.config.ts`: `base` = `/darkstore-game/` только в режиме сборки `pages` (`npm run build -- --mode pages`),
   в Codespaces всё как раньше. Пути к файлам из `public/` в коде — через `import.meta.env.BASE_URL` (в CSS Vite подставляет сам).
 - M9b (решение автора 15.10: ворота низкие, «в разрезе» — без верхней балки и шторы, ближняя стена остаётся низкой). Шаги: M9b1 стеллаж, M9b2 паллета и стол фасовки,
-  M9b3 стены и ворота, M9b4 грузовик. Модели — чистые функции «список кубиков» (`VoxelPart`), детали кратны вокселю 1/16 м, рисует `VoxelBatch`.
-- M9b1 (написано, ждёт проверки): `scene/models/Rack.ts` (`rackParts`) по `world_shelving_unit.png` — стойки с прорезями и «башмаками», крест на торцах,
+  M9b3 стены и ворота, M9b4 грузовик. Модели — чистые функции «список брусков» (`VoxelPart`), рисует `VoxelBatch`.
+  Стиль — **low poly** (решение автора 15.10): не строго по кубикам, детали могут стоять под наклоном (`VoxelPart.rot`, Euler YXZ); толщины — от шага 1/16 м.
+- M9b1 (написано, ждёт проверки): `scene/models/Rack.ts` (`rackParts`) по `world_shelving_unit.png` — стойки с прорезями и «башмаками», крест на торцах из наклонных планок,
   балки под полками, светлый настил (`PALETTE.metalDark`, `PALETTE.rackBoard`); 4 полки без ячеек, высоты полок прежние (`rackGeometry`).
   Все стеллажи склада — один `VoxelBatch` в `Warehouse.tsx`. `models/Rack.tsx` удалён.
 
