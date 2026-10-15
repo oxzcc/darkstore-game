@@ -272,7 +272,12 @@
   Стиль — **low poly** (решение автора 15.10): не строго по кубикам, детали могут стоять под наклоном (`VoxelPart.rot`, Euler YXZ); толщины — от шага 1/16 м.
 - M9b1 (написано, ждёт проверки): `scene/models/Rack.ts` (`rackParts`) по `world_shelving_unit.png` — стойки с прорезями и «башмаками», крест на торцах из наклонных планок,
   балки под полками, светлый настил (`PALETTE.metalDark`, `PALETTE.rackBoard`); 4 полки без ячеек, высоты полок прежние (`rackGeometry`).
-  Все стеллажи склада — один `VoxelBatch` в `Warehouse.tsx`. `models/Rack.tsx` удалён.
+  Все стеллажи склада — один `VoxelBatch` в `Warehouse.tsx`. `models/Rack.tsx` удалён. Проверено автором и влито 15.10.
+- M9b2 (написано, ждёт проверки): паллета `scene/models/Pallet.ts` (`palletParts`) по `world_palete.png` — нижние доски, бруски 3 × 3, настил из 5 досок со щелями,
+  до 6 коробок, чуть повёрнутых, скотч по крышке и вниз по лицу; все паллеты — один `VoxelBatch` в `Deliveries.tsx` (`models/Pallet.tsx` удалён).
+  Стол фасовки `scene/models/PackingTable.ts` (`packingTableParts`) по `world_packaging_table.png` — столешница, каркас с опорами, нижняя полка с коробками и серыми лотками,
+  на столе коробка и диспенсер скотча. Декорация: 3 стола в дальнем ряду зоны фасовки у стены (`WAREHOUSE_VIEW.packingTables`), рисуются вместе со стеллажами.
+  Новые цвета: `palletWood`, `tableTop`, `bin`, `accentGreen`.
 
 План этапов:
 

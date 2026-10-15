@@ -22,6 +22,11 @@ export const PALETTE = {
   truckDark: '#34373C',  // шины, стёкла, рама
   truckLight: '#FFFFFF', // фары
   boxTape: '#F4E6C8',    // скотч на коробках паллеты (art/reference/world_palete.png)
+  // M9b2: паллета и стол фасовки (art/reference/world_palete.png, world_packaging_table.png)
+  palletWood: '#DDBB85',  // доски поддона и рулон скотча (светлее брусков)
+  tableTop: '#ECE6DA',    // столешница
+  bin: '#7E838B',         // серые лотки под столом
+  accentGreen: '#76BE34', // зелёные детали предметов (боковина диспенсера)
 };
 
 /** Как выглядит зона на полу (08, раздел 6). */
