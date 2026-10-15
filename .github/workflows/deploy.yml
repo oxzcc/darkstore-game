@@ -30,9 +30,7 @@ jobs:
           node-version: 22
       - run: npm install --no-audit --no-fund
       - name: Сборка для GitHub Pages
-        run: npm run build
-        env:
-          GITHUB_PAGES: 'true'
+        run: npm run build -- --mode pages
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
