@@ -3,6 +3,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { Euler, Matrix4, Quaternion, Vector3, type InstancedMesh } from 'three';
 import type { VoxelPart } from './models/ProductItem';
+import { textureForColor } from './textures';
 
 function ColorBatch({ color, parts }: { color: string; parts: VoxelPart[] }) {
   const ref = useRef<InstancedMesh>(null);
@@ -24,7 +25,8 @@ function ColorBatch({ color, parts }: { color: string; parts: VoxelPart[] }) {
     // key по числу кубиков: при изменении количества InstancedMesh создаётся заново
     <instancedMesh key={parts.length} ref={ref} args={[undefined, undefined, parts.length]} frustumCulled={false} castShadow receiveShadow>
       <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color={color} />
+      {/* дерево и картон — с рисованным узором (W4), остальное — ровным цветом */}
+      <meshStandardMaterial color={color} map={textureForColor(color)} />
     </instancedMesh>
   );
 }

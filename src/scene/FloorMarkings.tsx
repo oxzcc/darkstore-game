@@ -1,15 +1,16 @@
-// Разметка пола (08, раздел 6): швы плитки, заливка зон, пунктирные рамки,
-// штриховка брака и жёлтые линии главных проходов. Только отрисовка карты.
+// Разметка пола (08, раздел 6): заливка зон, пунктирные рамки, штриховка брака и жёлтые линии главных проходов.
+// Швы плитки теперь нарисованы в текстуре пола (W4); заливка зон — та же плитка своим цветом, у отдыха — доски.
+// Только отрисовка карты.
 import { useMemo } from 'react';
 import type { Passage, WarehouseMap, Zone } from '../model/warehouse';
 import { FLOOR_MARKINGS } from '../config/warehouse';
-import { PALETTE, PASSAGE_LINE_COLOR, ZONE_LOOK } from '../config/palette';
+import { PASSAGE_LINE_COLOR, ZONE_LOOK } from '../config/palette';
+import { planksTexture, tiled, tilesTexture, TEXTURE_METERS } from './textures';
 
 type Props = { map: WarehouseMap };
 
 // Высоты слоёв над полом, чтобы слои не мерцали друг сквозь друга.
 const Y_FILL = 0.004;
-const Y_GRID = 0.009;
 const Y_MARK = 0.014;
 const MARK_THICK = 0.004;
 
@@ -75,22 +76,19 @@ function passageLines(p: Passage): Strip[] {
   ];
 }
 
-/** Швы плитки: тонкие линии по границам клеток. */
-function GridLines({ map }: Props) {
-  const positions = useMemo(() => {
-    const pts: number[] = [];
-    for (let x = 0; x <= map.width; x++) pts.push(x, Y_GRID, 0, x, Y_GRID, map.depth);
-    for (let z = 0; z <= map.depth; z++) pts.push(0, Y_GRID, z, map.width, Y_GRID, z);
-    return new Float32Array(pts);
-  }, [map]);
-
+/** Заливка зоны: плитка (или доски у отдыха) цвета зоны. */
+function ZoneFill({ z, color }: { z: Zone; color: string }) {
+  const w = z.to.x - z.from.x + 1;
+  const d = z.to.z - z.from.z + 1;
+  const map = useMemo(
+    () => (z.type === 'rest' ? tiled(planksTexture(), w, d, TEXTURE_METERS.planks) : tiled(tilesTexture(), w, d, TEXTURE_METERS.tiles)),
+    [z.type, w, d],
+  );
   return (
-    <lineSegments>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-      </bufferGeometry>
-      <lineBasicMaterial color={PALETTE.floorGrid} />
-    </lineSegments>
+    <mesh position={[z.from.x + w / 2, Y_FILL, z.from.z + d / 2]} receiveShadow>
+      <boxGeometry args={[w, 0.008, d]} />
+      <meshStandardMaterial color={color} map={map} />
+    </mesh>
   );
 }
 
@@ -112,23 +110,15 @@ export default function FloorMarkings({ map }: Props) {
     <group>
       {map.zones.map((z) => {
         const look = ZONE_LOOK[z.type];
-        const w = z.to.x - z.from.x + 1;
-        const d = z.to.z - z.from.z + 1;
         return (
           <group key={z.type}>
-            {look.fill && (
-              <mesh position={[z.from.x + w / 2, Y_FILL, z.from.z + d / 2]} receiveShadow>
-                <boxGeometry args={[w, 0.008, d]} />
-                <meshStandardMaterial color={look.fill} />
-              </mesh>
-            )}
+            {look.fill && <ZoneFill z={z} color={look.fill} />}
             {look.outline === 'dashed' && <Strips strips={dashedFrame(z)} color={look.markColor} />}
             {look.hatch && <Strips strips={hatch(z)} color={look.markColor} />}
           </group>
         );
       })}
 
-      <GridLines map={map} />
 
       {map.passages.map((p, i) => (
         <Strips key={i} strips={passageLines(p)} color={PASSAGE_LINE_COLOR} />
