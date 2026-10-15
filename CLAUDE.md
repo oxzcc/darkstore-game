@@ -252,7 +252,8 @@
   Выкладки и списания входят в «работу». Шанс развилки — `forkPlanFor` (из плана смены). **Обучающая смена**: провал и просрочка ничего не отнимают (`rewardFor(…, noPenalty)`, `expireTasks`);
   первая развилка каждого типа задания гарантирована, по возможности с ТСД (`campaign.tutorialForks`, `job.call.forceTsd`); подсказки — `config/tutorial.ts` (`start`, `order`, `receiving`, `putaway`,
   `writeoff`, `call`, `tsd`), правила — `rules/tutorial.ts` (`currentHint`, `markHintSeen` → `campaign.hintsSeen`), окно — `ui/TutorialHint.tsx` по центру, мир на паузе, «Понятно» / Enter.
-  У таймера смены «· обучение». Тесты — `rules/pace.test.ts`; старые тесты берут заказ через `openOrders` (первым теперь создаётся поставка). Дальше — M8e (сохранение в браузере).
+  У таймера смены «· обучение». Тесты — `rules/pace.test.ts`; старые тесты берут заказ через `openOrders` (первым теперь создаётся поставка).
+  Правка автора 15.10 (динамичнее, как в Dispatch): смена 10 → 5 мин (`SHIFT.durationSeconds`), поставки чаще — 1:50 / 1:30 / 1:30 / 1:15 / 1:15 (`deliveryEvery`). Дальше — M8e (сохранение в браузере).
 
 План этапов:
 

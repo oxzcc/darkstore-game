@@ -119,7 +119,7 @@ export const WRITEOFF = {
  * Звёзды — по доле закрытых заданий от всех, что были за смену; пороги — допущение Claude.
  */
 export const SHIFT = {
-  durationSeconds: 600,   // 10 минут игрового времени (на паузе не идёт)
+  durationSeconds: 300,   // 5 минут игрового времени (на паузе не идёт); было 10 — динамичнее, как в Dispatch (правка автора 15.10)
   totalShifts: 5,
   starThresholds: [0.4, 0.6, 0.8] as [number, number, number], // от 40% — 1 звезда, от 60% — 2, от 80% — 3
   loseRating: 3.0,        // рейтинг ниже этого в конце смены — кампания проиграна (решение автора 14.10)
@@ -176,9 +176,10 @@ export const PICKER_GROWTH = {
 export type ShiftPlan = { load: number; orderMargin: number; forkChance: number; deliveryEvery: number; tutorial: boolean };
 
 export const SHIFT_PLAN: ShiftPlan[] = [
-  { load: 0.8, orderMargin: 1.8, forkChance: 0.25, deliveryEvery: 180, tutorial: true },
-  { load: 1.0, orderMargin: 1.5, forkChance: 0.3,  deliveryEvery: 150, tutorial: false },
-  { load: 1.1, orderMargin: 1.4, forkChance: 0.35, deliveryEvery: 150, tutorial: false },
-  { load: 1.2, orderMargin: 1.3, forkChance: 0.4,  deliveryEvery: 120, tutorial: false },
-  { load: 1.3, orderMargin: 1.2, forkChance: 0.45, deliveryEvery: 120, tutorial: false },
+  // поставки чаще под 5-минутную смену (правка автора 15.10; было 180 / 150 / 150 / 120 / 120)
+  { load: 0.8, orderMargin: 1.8, forkChance: 0.25, deliveryEvery: 110, tutorial: true },
+  { load: 1.0, orderMargin: 1.5, forkChance: 0.3,  deliveryEvery: 90,  tutorial: false },
+  { load: 1.1, orderMargin: 1.4, forkChance: 0.35, deliveryEvery: 90,  tutorial: false },
+  { load: 1.2, orderMargin: 1.3, forkChance: 0.4,  deliveryEvery: 75,  tutorial: false },
+  { load: 1.3, orderMargin: 1.2, forkChance: 0.45, deliveryEvery: 75,  tutorial: false },
 ];
