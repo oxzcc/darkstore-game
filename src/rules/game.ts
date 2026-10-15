@@ -25,11 +25,12 @@ function withExpiring(stock: GameState['stock']): GameState['stock'] {
 
 /** Стартовое состояние. Зерно передаётся снаружи: store берёт случайное, тесты — фиксированное. */
 export function createInitialGame(map: WarehouseMap, seed: number): GameState {
+  const pickers = createPickers(STARTING_PICKERS, map);
   const base: GameState = {
     version: GAME_STATE_VERSION,
     rngSeed: seed,
     nextId: 1,
-    campaign: newCampaign(START_MONEY, START_RATING),
+    campaign: newCampaign(START_MONEY, START_RATING, pickers),
     clock: { time: 0, paused: false, playerSpeed: 1 },
     money: START_MONEY,
     rating: START_RATING,
@@ -41,7 +42,7 @@ export function createInitialGame(map: WarehouseMap, seed: number): GameState {
     // для проверки первая поставка может приехать сразу (DELIVERY.firstAtStart)
     nextDeliveryAt: DELIVERY.firstAtStart ? 0 : DELIVERY.intervalSeconds,
     nextWriteoffAt: WRITEOFF.firstAtSeconds,
-    pickers: createPickers(STARTING_PICKERS, map),
+    pickers,
     tsdOffer: null,
     minigame: null,
     tsdGame: null,

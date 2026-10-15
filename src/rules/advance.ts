@@ -17,6 +17,8 @@ import { createPutawayTasks } from './putaway';
 import { tickWriteoffs } from './writeoff';
 import { endShift } from './shift';
 import { assignDeadlines, expireTasks } from './deadline';
+import { growAfterTask, restFor } from './pickerStats';
+import { endRest, isRestingInPlace } from './rest';
 import { SHIFT } from '../config/balance';
 
 /** Перейти к следующему шагу работы. Состояние сборщика — по виду шага. */
@@ -136,6 +138,16 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
     const taken = new Set(Object.values(pickers).filter((o) => o.id !== id).map((o) => key(claimedCell(o))));
     let p = advancePicker(map, blocked, before, dt * worldSpeedFor(state, id), taken);
     if (before.state === 'playing') p = { ...p, state: 'playing' }; // пока идёт мини-игра — «играете за него»
+    // перерыв (M8c): дошёл до зоны отдыха — усталость падает; отдохнул полностью — свободен
+    if (before.state === 'resting') {
+      p = { ...p, state: 'resting' };
+      if (isRestingInPlace(p)) {
+        p = restFor(p, dt * worldSpeedFor(state, id));
+        if (p.stats.fatigue <= 0) p = endRest({ ...state, pickers: { ...state.pickers, [id]: p } }, id).pickers[id];
+      }
+      pickers[id] = p;
+      continue;
+    }
     const task = tasks[p.job!.taskId];
 
     // первый отрезок пути пройден — сборщик на месте, задание «выполняется»
@@ -167,7 +179,8 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
       // Ошибки «сам ошибся с количеством» у заказа с развилкой больше нет — исход только от развилки (14.10).
       const reveal = calls.length > 0 ? { chances, roll, base, calls, final: outcome } : undefined;
       events.push({ kind: 'taskDone', taskId: task.id, pickerId: p.id, outcome, at: time, ...(reveal ? { reveal } : {}) });
-      p = { ...p, state: 'idle', taskId: null, job: null, path: [], pathProgress: 0 };
+      // опыт по типу задания (зависит от исхода) и усталость (M8c)
+      p = { ...growAfterTask(p, task.type, outcome), state: 'idle', taskId: null, job: null, path: [], pathProgress: 0 };
     }
     pickers[id] = p;
     if (p.state === 'calling') newCallers.push(id); // уже звавшие сюда не попадают — их пропускает continue выше

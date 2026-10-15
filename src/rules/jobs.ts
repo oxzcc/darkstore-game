@@ -113,6 +113,7 @@ export function pickerActivity(game: GameState, pickerId: string): PickerActivit
   const step = job?.steps[job.stepIndex];
   if (p && game.tsdGame?.pickerId === p.id) return { kind: 'tsdGame' };
   if (p?.state === 'playing' && job && !step) return { kind: 'atRack' };
+  if (p?.state === 'resting' && !step) return { kind: 'resting', fatigue: p.stats.fatigue }; // дошёл до зоны отдыха (M8c)
   if (!p || !job || !step) return { kind: 'idle' };
   if (p.state === 'waiting' && game.tsdOffer?.pickerId === p.id) {
     return { kind: 'waitingTsd', secondsLeft: Math.max(0, game.tsdOffer.expiresAt - game.clock.time) };

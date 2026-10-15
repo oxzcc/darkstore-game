@@ -46,7 +46,8 @@ export type PickerActivity =
   | { kind: 'walking'; to: string; secondsLeft: number; progress: number }
   | { kind: 'picking'; line: number; lines: number; progress: number }
   | { kind: 'placing'; line: number; lines: number; progress: number }
-  | { kind: 'packing'; progress: number };
+  | { kind: 'packing'; progress: number }
+  | { kind: 'resting'; fatigue: number };          // на перерыве в зоне отдыха (M8c)
 
 export type Picker = {
   id: string;

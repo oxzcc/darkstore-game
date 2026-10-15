@@ -1,5 +1,5 @@
 // Кампания и смены (M8a; docs/02-gameplay-loop.md, разделы 1, 3, 11).
-import type { Outcome } from './task';
+import type { Outcome, TaskType } from './task';
 
 /** running — смена идёт; summary — время вышло, открыт экран итогов; over — 5 смен пройдено, итоги кампании. */
 export type ShiftPhase = 'running' | 'summary' | 'over';
@@ -15,6 +15,8 @@ export type ShiftResult = {
   money: number;                       // сколько денег прибавилось за смену (может быть меньше нуля)
   rating: number;                      // как изменился рейтинг
   pickers: Record<string, number>;     // сколько заданий закрыл каждый сборщик
+  /** Рост за смену (M8c): опыт, какие специализации поднялись (тип → новый уровень), усталость в конце смены. */
+  growth: Record<string, { xp: number; levelUps: { type: TaskType; level: number }[]; fatigue: number }>;
 };
 
 export type Campaign = {
@@ -26,4 +28,6 @@ export type Campaign = {
   history: ShiftResult[]; // итоги закончившихся смен
   /** Рейтинг в конце смены упал ниже SHIFT.loseRating — кампания проиграна (M8b, решение автора 14.10). */
   lost: boolean;
+  /** Уровни специализаций в начале смены — чтобы в итогах показать, что выросло (M8c). */
+  startLevels: Record<string, Record<TaskType, number>>;
 };

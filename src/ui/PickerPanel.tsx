@@ -1,7 +1,7 @@
 // Карточки сборщиков снизу (ui_01): имя, что делает сейчас, прогресс, усталость.
 import type { CSSProperties } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { activityOf, pickerList } from '../store/selectors';
+import { activityOf, pickerList, restAllowed } from '../store/selectors';
 import { activityLine } from './activityText';
 import { Avatar, FatigueBar } from './PickerBits';
 import Vx from './Vx';
@@ -9,6 +9,7 @@ import Icon from './icons';
 
 export default function PickerPanel() {
   const game = useGameStore((s) => s.game);
+  const { sendToRest, endRest } = useGameStore.getState();
 
   return (
     <div className="picker-bar">
@@ -30,6 +31,10 @@ export default function PickerPanel() {
                 ? <div className="progress"><b style={{ width: `${line.progress * 100}%` }} /></div>
                 : <FatigueBar value={p.stats.fatigue} />}
             </div>
+            {/* перерыв (M8c): свободного и уставшего — отдыхать, отдыхающего — вернуть */}
+            {p.state === 'resting'
+              ? <button className="mini-btn" onClick={() => endRest(p.id)}>Вернуть</button>
+              : restAllowed(game, p.id) && <button className="mini-btn" onClick={() => sendToRest(p.id)}>На перерыв</button>}
           </Vx>
         );
       })}

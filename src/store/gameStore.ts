@@ -17,6 +17,7 @@ import { advanceWorld } from '../rules/advance';
 import { rewardFor } from '../rules/rewards';
 import { worldDt } from '../rules/time';
 import { finishCampaign, startNextShift } from '../rules/shift';
+import { endRest, sendToRest } from '../rules/rest';
 
 /** Карта не меняется во время игры, поэтому строится один раз и не хранится в состоянии (09, 4.1а). */
 export const WAREHOUSE_MAP = buildWarehouseMap(WAREHOUSE_LAYOUT);
@@ -86,6 +87,9 @@ type Store = {
   /** Вызывается каждый кадр из GameLoop: двигает игровое время. */
   tick: (realDt: number) => void;
   togglePause: () => void;
+  /** Перерыв (M8c): отправить свободного сборщика в зону отдыха и вернуть. */
+  sendToRest: (pickerId: string) => void;
+  endRest: (pickerId: string) => void;
   /** Экран итогов смены (M8a): следующая смена; после последней — итоги кампании; «Начать заново». */
   nextShift: () => void;
   finishCampaign: () => void;
@@ -226,6 +230,8 @@ export const useGameStore = create<Store>((set) => ({
       };
     }),
 
+  sendToRest: (pickerId) => set((s) => ({ game: sendToRest(s.game, WAREHOUSE_MAP, pickerId) })),
+  endRest: (pickerId) => set((s) => ({ game: endRest(s.game, pickerId) })),
   nextShift: () => set((s) => ({ game: startNextShift(s.game, WAREHOUSE_MAP), ui: clearWindows(s.ui) })),
   finishCampaign: () => set((s) => ({ game: finishCampaign(s.game) })),
   restartCampaign: () => set((s) => ({ game: createInitialGame(WAREHOUSE_MAP, newSeed()), ui: clearWindows(s.ui) })),

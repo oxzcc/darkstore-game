@@ -18,7 +18,7 @@ export function Avatar({ picker, small }: { picker: Picker; small?: boolean }) {
 export function FatigueBar({ value }: { value: number }) {
   const on = Math.round(value / 10);
   return (
-    <div className="seg" title={`Усталость ${value}%`}>
+    <div className="seg" title={`Усталость ${Math.round(value)}% — снижает скорость и точность`}>
       {Array.from({ length: 10 }, (_, i) => <i key={i} className={i < on ? 'on' : ''} />)}
     </div>
   );
@@ -34,7 +34,7 @@ export function StatBars({ picker }: { picker: Picker }) {
       <Icon name="acc" small />
       <div className="stat-bar" title={`Точность ${picker.stats.accuracy}`}><b style={{ width: pct(picker.stats.accuracy) }} /></div>
       <Icon name="fatigue" small />
-      <div className="stat-bar" title={`Усталость ${picker.stats.fatigue}%`}>
+      <div className="stat-bar" title={`Усталость ${Math.round(picker.stats.fatigue)}%`}>
         <b style={{ width: `${picker.stats.fatigue}%`, background: 'var(--failed)' }} />
       </div>
     </div>

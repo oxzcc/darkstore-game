@@ -90,7 +90,7 @@ button { font-family: inherit; }
 
 /* ---------- сборщики (снизу, ui_01) ---------- */
 .picker-bar { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; gap: 16px; }
-.picker-card { width: 300px; }
+.picker-card { width: 330px; } /* шире на кнопку «На перерыв» (M8c) */
 .picker-card > .vx-edge > .vx-body { display: flex; gap: 12px; align-items: center; padding: 10px 12px; }
 .picker-name { font-weight: 700; font-size: 20px; text-transform: uppercase; letter-spacing: 0.03em; }
 .picker-state { font-size: 14px; color: var(--text-mute); display: flex; align-items: center; gap: 6px; margin: 2px 0 6px; }
@@ -566,3 +566,11 @@ svg.i.sm { width: 18px; height: 18px; }
 .task-timer.warn { color: var(--failed); }
 .task-sub.overdue { color: var(--failed); }
 .summary-lost { text-align: center; font-weight: 700; color: var(--failed); }
+
+/* ---------- сборщики: специализация, перерыв, рост (M8c) ---------- */
+.mini-btn { align-self: center; border: 2px solid var(--outline); background: var(--card); padding: 6px 8px; font: inherit; font-size: 13px;
+  font-weight: 700; cursor: pointer; white-space: nowrap; }
+.mini-btn:hover { background: #FFFDF6; }
+.spec-tag { margin-left: 8px; font-size: 12px; font-weight: 700; color: var(--text-mute); text-transform: none; letter-spacing: 0; }
+.summary-growth { font-size: 13px; color: var(--text-mute); }
+.summary-growth b { color: var(--primary); }
