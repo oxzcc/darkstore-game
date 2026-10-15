@@ -6,8 +6,14 @@ export const PALETTE = {
   grass: '#93DE44',
   floor: '#FFFFFA',
   floorGrid: '#E9E8DF', // швы плитки
-  wall: '#B7B6B8',
-  wallPillar: '#428C00',
+  // стены и ворота по art/reference/world_wall.png и world_gates.png (M9b3)
+  wallPanel: '#EEEEEC',      // белые панели
+  wallPilaster: '#FAFAF8',   // пилястры и карниз
+  wallPlinth: '#A9AAAE',     // серый цоколь
+  wallSeam: '#D8D8D6',       // шов панели
+  wallAccent: '#6DB52F',     // зелёные вставки, кромки, столбики-отбойники
+  wallAccentSeam: '#5A9A25', // шов на зелёной вставке, колпаки столбиков
+  concrete: '#CFCFCB',       // бетонная площадка у ворот
   wood: '#C8A97B',
   box: '#E9CB98',       // картонная коробка с товаром (светлее дерева полок)
   metal: '#554B4E',
