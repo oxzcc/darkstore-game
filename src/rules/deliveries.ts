@@ -12,6 +12,7 @@ import { createRng } from './random';
 import { reservedQty } from './rewards';
 import { addressKey } from './address';
 import { isExpiring } from './stock';
+import { shiftPlan } from './shiftPlan';
 
 /** Паллета ещё на складе (не разобрана до конца) — её товар «уже едет» на полки. */
 const palletPending = (p: Pallet) => p.state !== 'empty';
@@ -124,7 +125,7 @@ export function tickDeliveries(state: GameState): GameState {
   const rng = createRng(state.rngSeed);
   const next = createDelivery(state, rng, now);
   if (!next) return state;
-  return { ...next, rngSeed: rng.seed(), nextDeliveryAt: now + DELIVERY.intervalSeconds };
+  return { ...next, rngSeed: rng.seed(), nextDeliveryAt: now + shiftPlan(state).deliveryEvery }; // интервал — из плана смены (M8d)
 }
 
 /** Приёмка закрыта: паллеты приняты (ждут выкладки), грузовик уезжает. Не зависит от исхода (10, раздел 11.6). */

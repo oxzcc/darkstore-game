@@ -16,6 +16,7 @@ import ResultWindow from './ui/ResultWindow';
 import SpeedControls from './ui/SpeedControls';
 import TopBar from './ui/TopBar';
 import ShiftSummary from './ui/ShiftSummary';
+import TutorialHint from './ui/TutorialHint';
 import './ui/theme.css';
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
         <SpeedControls />
         <Toasts />
         <ShiftSummary />
+        <TutorialHint />
       </div>
     </>
   );

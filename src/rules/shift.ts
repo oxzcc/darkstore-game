@@ -8,7 +8,8 @@ import type { Outcome } from '../model/task';
 import type { WarehouseMap } from '../model/warehouse';
 import { DELIVERY, SHIFT, WRITEOFF } from '../config/balance';
 import { createRng } from './random';
-import { topUpOrders } from './tasks/generator';
+import { fillOrders } from './pace';
+import { shiftPlan } from './shiftPlan';
 import { tickDeliveries } from './deliveries';
 import { createPutawayTasks } from './putaway';
 import { assignDeadlines } from './deadline';
@@ -20,7 +21,7 @@ import { PICKER_GROWTH } from '../config/balance';
 /** Кампания на старте. */
 export function newCampaign(money: number, rating: number, pickers: Record<string, Picker> = {}): Campaign {
   return { shift: 1, totalShifts: SHIFT.totalShifts, phase: 'running', startMoney: money, startRating: rating, history: [], lost: false,
-    startLevels: levelsOf(pickers) };
+    startLevels: levelsOf(pickers), tutorialForks: [], hintsSeen: [] };
 }
 
 /** Сколько игровых секунд осталось до конца смены. */
@@ -135,15 +136,17 @@ export function startNextShift(state: GameState, map: WarehouseMap): GameState {
     pickers,
     deliveries,
     pallets,
-    nextDeliveryAt: DELIVERY.firstAtStart ? 0 : DELIVERY.intervalSeconds,
+    nextDeliveryAt: 0, // поставку задаём ниже, по плану новой смены
+    nextOrderAt: 0,
     nextWriteoffAt: WRITEOFF.firstAtSeconds,
   };
   // принятые, но не выложенные паллеты — снова «Выкладки»
   for (const d of Object.values(next.deliveries)) next = createPutawayTasks(next, map, d.id);
+  next = { ...next, nextDeliveryAt: DELIVERY.firstAtStart ? 0 : shiftPlan(next).deliveryEvery };
+  next = tickDeliveries(next);
   const rng = createRng(next.rngSeed);
-  next = topUpOrders(next, rng, 0);
-  next = { ...next, rngSeed: rng.seed() };
-  return assignDeadlines(tickDeliveries(next), map);
+  next = fillOrders(next, rng, 0); // заказы под загрузку новой смены (M8d)
+  return assignDeadlines({ ...next, rngSeed: rng.seed() }, map);
 }
 
 /** После итогов последней смены (или если кампания проиграна) — итоги кампании. */

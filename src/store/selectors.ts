@@ -24,6 +24,9 @@ import { WAREHOUSE_MAP } from './gameStore';
 import { isLastShift, shiftSecondsLeft } from '../rules/shift';
 import { secondsToTake } from '../rules/deadline';
 import { canRest } from '../rules/rest';
+import { isTutorial } from '../rules/shiftPlan';
+import { currentHint } from '../rules/tutorial';
+import { HINTS } from '../config/tutorial';
 import { DEADLINE, SHIFT } from '../config/balance';
 
 /** Открытые задания по порядку появления. */
@@ -303,7 +306,7 @@ export function resultView(game: GameState, card: ResultCard) {
     if (reveal.errorLine?.lineIndex === i) note = `${picker.name} ошибся с количеством — зависит от его точности`;
     return { name: game.products[l.productId]?.name ?? l.productId, qty: l.qty, picked: picked[i], note };
   });
-  const reward = rewardFor(task, reveal.final); // ровно то, что начислено (rules/rewards.ts)
+  const reward = rewardFor(task, reveal.final, isTutorial(game)); // ровно то, что начислено (rules/rewards.ts)
   return {
     taskNumber: task.number,
     taskType: task.type,
@@ -470,3 +473,14 @@ export function specLevel(game: GameState, pickerId: string, taskId: string): nu
   const t = game.tasks[taskId];
   return t ? game.pickers[pickerId]?.specialization[t.type]?.level ?? 1 : 1;
 }
+
+// ---------- Обучающая смена (M8d) ----------
+
+/** Подсказка для окна по центру; null — показывать нечего. */
+export function hintView(game: GameState, openCallId: string | null) {
+  const id = currentHint(game, openCallId);
+  return id ? HINTS.find((h) => h.id === id) ?? null : null;
+}
+
+/** Плашка «обучение» у таймера смены. */
+export const tutorialShift = (game: GameState) => isTutorial(game);

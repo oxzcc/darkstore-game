@@ -32,7 +32,7 @@ export type PickerJob = {
   stepIndex: number;   // какой шаг выполняется
   stepElapsed: number; // сколько секунд прошло в текущем рабочем шаге (pick/pack/delay)
   /** Развилка, запланированная при отправке: на каком шаге сборщик остановится и позовёт диспетчера. */
-  call?: { stepIndex: number; lineIndex: number; situationId: string; raised: boolean };
+  call?: { stepIndex: number; lineIndex: number; situationId: string; raised: boolean; forceTsd?: boolean };
 };
 
 /** Что сборщик делает сейчас — для карточек интерфейса (считает rules/jobs.ts). */

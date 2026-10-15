@@ -1,21 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import type { GameState } from '../../model/game';
 import { WAREHOUSE_LAYOUT } from '../../config/warehouse';
+import { workload, targetLoad } from '../pace';
 import { ORDER } from '../../config/balance';
 import { buildWarehouseMap } from '../warehouse';
 import { createInitialGame } from '../game';
 import { createRng } from '../random';
 import { qtyAt } from '../stock';
-import { createOrder, openTasks, orderDifficulty } from './generator';
+import { createOrder, openOrders, openTasks, orderDifficulty } from './generator';
 import { canAssign, dispatchTask } from './lifecycle';
 
 const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
 const newGame = (seed = 1) => createInitialGame(map, seed);
 
 describe('заказы', () => {
-  it('на старте в очереди нужное число заказов', () => {
+  it('на старте заказов столько, чтобы набрать загрузку смены (M8d)', () => {
     const g = newGame();
-    expect(openTasks(g).filter((t) => t.type === 'order')).toHaveLength(ORDER.openOrdersTarget);
+    expect(openTasks(g).filter((t) => t.type === 'order').length).toBeGreaterThan(0);
+    expect(workload(g)).toBeGreaterThanOrEqual(targetLoad(g));
+    expect(workload(g) - 1).toBeLessThan(targetLoad(g)); // и не больше, чем нужно
   });
 
   it('заказ только из товаров, которые есть по учёту, в пределах остатка', () => {
@@ -52,7 +55,7 @@ describe('заказы', () => {
 describe('назначение', () => {
   it('свободного сборщика можно назначить на новое задание', () => {
     const g = newGame();
-    const task = openTasks(g)[0];
+    const task = openOrders(g)[0];
     expect(canAssign(g, task.id, 'lucky').ok).toBe(true);
   });
 
@@ -65,9 +68,9 @@ describe('назначение', () => {
     expect(() => dispatchTask(after, map, t1.id, 'buran')).toThrow();
   });
 
-  it('«Отправить»: сборщик получает маршрут и идёт, исхода ещё нет, очередь дополнена', () => {
+  it('«Отправить»: сборщик получает маршрут и идёт, исхода ещё нет; новые заказы — по темпу, не сразу', () => {
     const g = newGame();
-    const task = openTasks(g)[0];
+    const task = openOrders(g)[0];
     const s = dispatchTask(g, map, task.id, 'buran');
     const t = s.tasks[task.id];
     expect(t.status).toBe('pickerEnRoute');
@@ -78,13 +81,13 @@ describe('назначение', () => {
     expect(p.taskId).toBe(task.id);
     const lines = task.type === 'order' ? task.payload.lines.length : 0;
     expect(p.job!.steps).toHaveLength(lines * 2 + 2); // к каждому адресу + сбор, потом фасовка
-    expect(openTasks(s).filter((t) => t.type === 'order')).toHaveLength(ORDER.openOrdersTarget); // приёмка (M7b) не в счёт
+    expect(Object.keys(s.tasks)).toEqual(Object.keys(g.tasks)); // заказ не появился мгновенно (M8d)
   });
 
   it('назначение не меняет остатки, деньги и рейтинг и не портит исходное состояние', () => {
     const g = newGame();
     const before = JSON.stringify(g);
-    const s = dispatchTask(g, map, openTasks(g)[0].id, 'lucky');
+    const s = dispatchTask(g, map, openOrders(g)[0].id, 'lucky');
     expect(JSON.stringify(g)).toBe(before);
     expect(s.stock).toEqual(g.stock);
     expect(s.money).toBe(g.money);

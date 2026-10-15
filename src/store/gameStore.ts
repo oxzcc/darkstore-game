@@ -18,6 +18,9 @@ import { rewardFor } from '../rules/rewards';
 import { worldDt } from '../rules/time';
 import { finishCampaign, startNextShift } from '../rules/shift';
 import { endRest, sendToRest } from '../rules/rest';
+import { isTutorial } from '../rules/shiftPlan';
+import { currentHint, markHintSeen } from '../rules/tutorial';
+import type { HintId } from '../config/tutorial';
 
 /** Карта не меняется во время игры, поэтому строится один раз и не хранится в состоянии (09, 4.1а). */
 export const WAREHOUSE_MAP = buildWarehouseMap(WAREHOUSE_LAYOUT);
@@ -90,6 +93,8 @@ type Store = {
   /** Перерыв (M8c): отправить свободного сборщика в зону отдыха и вернуть. */
   sendToRest: (pickerId: string) => void;
   endRest: (pickerId: string) => void;
+  /** «Понятно» в подсказке обучающей смены (M8d). */
+  dismissHint: (id: HintId) => void;
   /** Экран итогов смены (M8a): следующая смена; после последней — итоги кампании; «Начать заново». */
   nextShift: () => void;
   finishCampaign: () => void;
@@ -181,7 +186,9 @@ export const useGameStore = create<Store>((set) => ({
       // окна по центру (развилка и итог заказа) тоже ставят мир на паузу
       // во время игры на ТСД окно итога ждёт её конца и мир не держит (решение автора 14.10)
       const resultShown = s.ui.results.length > 0 && s.game.tsdGame === null;
-      const dt = worldDt(s.game.clock, realDt, s.ui.assignTaskId !== null || s.ui.openCallId !== null || resultShown);
+      // подсказка обучающей смены по центру — тоже пауза (M8d)
+      const hintShown = currentHint(s.game, s.ui.openCallId) !== null;
+      const dt = worldDt(s.game.clock, realDt, s.ui.assignTaskId !== null || s.ui.openCallId !== null || resultShown || hintShown);
       if (dt === 0) return s;
       const { state, events } = advanceWorld(s.game, WAREHOUSE_MAP, dt);
       // смена кончилась — открытые окна закрываются, поверх всего экран итогов (M8a)
@@ -201,7 +208,7 @@ export const useGameStore = create<Store>((set) => ({
           continue;
         }
         // начисленное за задание — всплывашка у денег и рейтинга (те же числа, что прибавил applyTaskResult)
-        if (e.kind === 'taskDone') gains.push({ id: nextToastId++, ...rewardFor(state.tasks[e.taskId], e.outcome) });
+        if (e.kind === 'taskDone') gains.push({ id: nextToastId++, ...rewardFor(state.tasks[e.taskId], e.outcome, isTutorial(state)) });
         if (e.kind === 'callAnswered') {
           // таймер истёк — подсветить, что выбрал сборщик (текст — по прежнему состоянию, пока вызов был на экране)
           flashes.push({ id: nextToastId++, call: e.call, text: callText(s.game, e.call), optionId: e.optionId, auto: true, chain: false });
@@ -230,6 +237,7 @@ export const useGameStore = create<Store>((set) => ({
       };
     }),
 
+  dismissHint: (id) => set((s) => ({ game: markHintSeen(s.game, id) })),
   sendToRest: (pickerId) => set((s) => ({ game: sendToRest(s.game, WAREHOUSE_MAP, pickerId) })),
   endRest: (pickerId) => set((s) => ({ game: endRest(s.game, pickerId) })),
   nextShift: () => set((s) => ({ game: startNextShift(s.game, WAREHOUSE_MAP), ui: clearWindows(s.ui) })),

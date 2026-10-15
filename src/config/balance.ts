@@ -4,7 +4,7 @@ import type { TaskType } from '../model/task';
 import type { Cell } from '../model/warehouse';
 
 /** Версия формата GameState (09, раздел 12). */
-export const GAME_STATE_VERSION = 14; // 14: опыт, усталость, перерыв (M8c)
+export const GAME_STATE_VERSION = 15; // 15: темп под загрузку, план смен, обучение (M8d)
 
 /**
  * «Взять ТСД» (02, раздел 6; 06, разделы 2–3). Допущения из документов, автор их ещё не подтвердил.
@@ -55,8 +55,8 @@ export const ORDER = {
   qtyPerLine: [1, 3] as [number, number],    // штук одной позиции
   /** Сложность по числу позиций: до 2 — 1, до 4 — 2, больше — 3 (допущение из 04, раздел 4.2). */
   difficultyByLines: [2, 4],
-  /** Сколько открытых заказов держать в очереди. ВРЕМЕННО до генератора по весам (M8). */
-  openOrdersTarget: 2, // было 4 — заданий слишком много (правка автора 15.10)
+  /** Новый заказ — не чаще раза в столько секунд, чтобы не сыпались пачкой (M8d). Сколько их — решает загрузка (SHIFT_PLAN). */
+  minGapSeconds: 8,
 };
 
 /**
@@ -75,7 +75,6 @@ export const REWARD = {
  * Состав — товары, которых на складе свободно меньше всего (на полках − в открытых заказах + уже едет на паллетах).
  */
 export const DELIVERY = {
-  intervalSeconds: 150,       // раз в 2,5 минуты игрового времени (решение автора 14.10)
   firstAtStart: true,         // для проверки: первая поставка приезжает сразу при старте
   pallets: [1, 3] as [number, number],          // паллет в поставке
   productsPerPallet: [2, 4] as [number, number], // видов товара на паллете
@@ -120,7 +119,7 @@ export const WRITEOFF = {
  * Звёзды — по доле закрытых заданий от всех, что были за смену; пороги — допущение Claude.
  */
 export const SHIFT = {
-  durationSeconds: 600,   // 10 минут игрового времени (на паузе не идёт)
+  durationSeconds: 300,   // 5 минут игрового времени (на паузе не идёт); было 10 — динамичнее, как в Dispatch (правка автора 15.10)
   totalShifts: 5,
   starThresholds: [0.4, 0.6, 0.8] as [number, number, number], // от 40% — 1 звезда, от 60% — 2, от 80% — 3
   loseRating: 3.0,        // рейтинг ниже этого в конце смены — кампания проиграна (решение автора 14.10)
@@ -166,3 +165,21 @@ export const PICKER_GROWTH = {
     betweenShifts: 0.5,                  // между сменами усталость падает вдвое
   },
 };
+
+/**
+ * План смен (M8d; 02, разделы 1 и 3; таблица утверждена автором 15.10 «пока да, проверим»).
+ * load — целевая загрузка: новые заказы приходят, пока «занятые сборщики + открытые задания» < сборщики × load.
+ * orderMargin — запас срока у сборки (DEADLINE.order.margin для этой смены); forkChance — шанс развилки на задание;
+ * deliveryEvery — поставка раз в столько секунд. Смен больше, чем строк, — берётся последняя.
+ * tutorial — обучающая смена: без штрафов за провал и просрочку, подсказки, первая развилка каждого типа задания гарантирована.
+ */
+export type ShiftPlan = { load: number; orderMargin: number; forkChance: number; deliveryEvery: number; tutorial: boolean };
+
+export const SHIFT_PLAN: ShiftPlan[] = [
+  // поставки чаще под 5-минутную смену (правка автора 15.10; было 180 / 150 / 150 / 120 / 120)
+  { load: 0.8, orderMargin: 1.8, forkChance: 0.25, deliveryEvery: 110, tutorial: true },
+  { load: 1.0, orderMargin: 1.5, forkChance: 0.3,  deliveryEvery: 90,  tutorial: false },
+  { load: 1.1, orderMargin: 1.4, forkChance: 0.35, deliveryEvery: 90,  tutorial: false },
+  { load: 1.2, orderMargin: 1.3, forkChance: 0.4,  deliveryEvery: 75,  tutorial: false },
+  { load: 1.3, orderMargin: 1.2, forkChance: 0.45, deliveryEvery: 75,  tutorial: false },
+];

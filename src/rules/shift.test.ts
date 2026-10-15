@@ -8,7 +8,7 @@ import { buildWarehouseMap } from './warehouse';
 import { createInitialGame } from './game';
 import { advanceWorld } from './advance';
 import { dispatchTask } from './tasks/lifecycle';
-import { openTasks } from './tasks/generator';
+import { openOrders } from './tasks/generator';
 import { acceptDelivery } from './deliveries';
 import { isExpiring } from './stock';
 import { endShift, finishCampaign, shiftResult, shiftSecondsLeft, starsFor, startNextShift } from './shift';
@@ -45,7 +45,7 @@ describe('итоги смены', () => {
 
   it('считает закрытые по исходам, открытые, деньги и сборщиков', () => {
     let s = createInitialGame(map, 1);
-    const t = openTasks(s)[0];
+    const t = openOrders(s)[0];
     s = dispatchTask(s, map, t.id, 'lucky');
     s = { ...s, pickers: { ...s.pickers, lucky: { ...s.pickers.lucky, job: { ...s.pickers.lucky.job!, call: undefined } } } };
     for (let i = 0; i < 6000 && s.tasks[t.id]?.status !== 'done'; i++) s = advanceWorld(s, map, 0.1).state;
@@ -61,7 +61,7 @@ describe('итоги смены', () => {
 describe('следующая смена', () => {
   it('номер +1, время с нуля, незакрытые задания исчезли, сборщики свободны, деньги остались', () => {
     let s = createInitialGame(map, 1);
-    s = dispatchTask(s, map, openTasks(s)[0].id, 'lucky');
+    s = dispatchTask(s, map, openOrders(s)[0].id, 'lucky');
     s = endShift({ ...s, money: 500 });
     const n = startNextShift(s, map);
     expect(n.campaign).toMatchObject({ shift: 2, phase: 'running', startMoney: 500 });

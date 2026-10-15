@@ -15,6 +15,7 @@ import { applyTaskResult } from './rewards';
 import { tickDeliveries } from './deliveries';
 import { createPutawayTasks } from './putaway';
 import { tickWriteoffs } from './writeoff';
+import { tickOrders } from './pace';
 import { endShift } from './shift';
 import { assignDeadlines, expireTasks } from './deadline';
 import { growAfterTask, restFor } from './pickerStats';
@@ -224,6 +225,8 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
   next = tickDeliveries(next);
   // списания: по одной истекающей партии раз в WRITEOFF.everySeconds (M7e1)
   next = tickWriteoffs(next);
+  // заказы под загрузку сборщиков (M8d)
+  next = tickOrders(next);
   // сроки новым заданиям и просрочка тех, что не успели взять (M8b)
   next = assignDeadlines(next, map);
   const expired = expireTasks(next);

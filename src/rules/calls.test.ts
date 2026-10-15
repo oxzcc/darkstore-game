@@ -5,7 +5,7 @@ import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { CALLS, SITUATION_BY_ID } from '../config/calls';
 import { buildWarehouseMap } from './warehouse';
 import { createInitialGame } from './game';
-import { openTasks } from './tasks/generator';
+import { openOrders } from './tasks/generator';
 import { dispatchTask } from './tasks/lifecycle';
 import { advanceWorld } from './advance';
 import { pickerActivity } from './jobs';
@@ -16,7 +16,7 @@ const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
 
 /** Отправить сборщика и поставить ему развилку на первую позицию заказа. */
 function sentWithCall(pickerId = 'lucky', situationId = 'missing', g: GameState = createInitialGame(map, 1)) {
-  const task = openTasks(g)[0];
+  const task = openOrders(g)[0];
   const s = dispatchTask(g, map, task.id, pickerId);
   const job = s.pickers[pickerId].job!;
   const stepIndex = job.steps.findIndex((st) => st.kind === 'pick');
@@ -42,7 +42,7 @@ const fixed = (...xs: number[]): Rng => {
 describe('развилки: план и вызов', () => {
   it('при отправке развилка планируется с шансом: 1 — на шаге сбора, 0 — нет', () => {
     const g = createInitialGame(map, 1);
-    const task = openTasks(g)[0];
+    const task = openOrders(g)[0];
     const job = dispatchTask(g, map, task.id, 'lucky').pickers.lucky.job!;
     const plain = { ...job, call: undefined };
     const yes = planCall(plain, task, createRng(3), 1);
@@ -198,7 +198,7 @@ describe('развилки: окно результата', () => {
     expect(reveal).toMatchObject({ final: x.tasks[taskId].outcome });
 
     const g = createInitialGame(map, 1);
-    const t = openTasks(g)[0];
+    const t = openOrders(g)[0];
     const sent = dispatchTask(g, map, t.id, 'lucky');
     let y: GameState = { ...sent, pickers: { ...sent.pickers, lucky: { ...sent.pickers.lucky, job: { ...sent.pickers.lucky.job!, call: undefined } } } };
     let plain: unknown = 'нет события';

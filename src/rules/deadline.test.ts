@@ -14,6 +14,7 @@ import { tickWriteoffs } from './writeoff';
 import { rewardFor } from './rewards';
 import { assignDeadlines, deadlineFor, estimateSeconds, expireTasks, penaltyFor, secondsToTake } from './deadline';
 import { endShift, finishCampaign, startNextShift } from './shift';
+import { shiftPlan } from './shiftPlan';
 
 const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
 const ofType = <T extends Task['type']>(s: GameState, type: T) =>
@@ -25,7 +26,7 @@ describe('сроки', () => {
     const g = createInitialGame(map, 1);
     for (const t of Object.values(g.tasks)) {
       expect(t.deadline).not.toBeNull();
-      const d = t.type === 'order' ? DEADLINE.order : DEADLINE.soft;
+      const d = t.type === 'order' ? { ...DEADLINE.order, margin: shiftPlan(g).orderMargin } : DEADLINE.soft; // запас сборки — из плана смены (M8d)
       expect(t.deadline!).toBeCloseTo(t.createdAt + d.waitSeconds + estimateSeconds(g, map, t) * d.margin, 5);
     }
   });
@@ -39,14 +40,15 @@ describe('сроки', () => {
   });
 
   it('у мягких заданий запаса больше, чем у сборки', () => {
-    expect(DEADLINE.soft.margin).toBeGreaterThan(DEADLINE.order.margin);
+    expect(DEADLINE.soft.margin).toBeGreaterThan(Math.max(DEADLINE.order.margin, shiftPlan(createInitialGame(map, 1)).orderMargin));
     expect(DEADLINE.soft.waitSeconds).toBeGreaterThan(DEADLINE.order.waitSeconds);
   });
 });
 
 describe('просрочка', () => {
   it('сборка: исчезает, штраф деньгами (не ниже 0) и рейтингом', () => {
-    const g = { ...createInitialGame(map, 1), money: 1000 };
+    const g0 = createInitialGame(map, 1);
+    const g = { ...g0, money: 1000, campaign: { ...g0.campaign, shift: 2 } }; // обучающая 1-я смена — без штрафов (M8d)
     const o = ofType(g, 'order')[0];
     const { state, events } = expireTasks(at(g, o.deadline!));
     expect(state.tasks[o.id].status).toBe('expired');
