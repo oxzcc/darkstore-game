@@ -1,10 +1,11 @@
-// Склад: пол, зоны, стены, стеллажи. Только отрисовка карты, никаких решений (09, раздел 9).
+// Склад: пол, зоны, стены, стеллажи, столы фасовки. Только отрисовка карты, никаких решений (09, раздел 9).
 import { useMemo } from 'react';
 import type { WallOpening, WallSide, WarehouseMap } from '../model/warehouse';
 import type { Stock } from '../model/stock';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { PALETTE } from '../config/palette';
 import { rackParts } from './models/Rack';
+import { packingTableParts } from './models/PackingTable';
 import type { VoxelPart } from './models/ProductItem';
 import { rackLocalToWorld, rackRotY } from './rackGeometry';
 import VoxelBatch from './VoxelBatch';
@@ -96,9 +97,18 @@ function allRackParts(map: WarehouseMap): VoxelPart[] {
   return out;
 }
 
+/** Столы фасовки (декорация, места — WAREHOUSE_VIEW.packingTables): стол 2×1 вдоль x, лицом к проходу (−z). */
+function allTableParts(): VoxelPart[] {
+  const s = WAREHOUSE_VIEW.cellSize;
+  const local = packingTableParts(2);
+  return WAREHOUSE_VIEW.packingTables.flatMap((c) =>
+    local.map((p) => ({ ...p, pos: [p.pos[0] + (c.x + 1) * s, p.pos[1], p.pos[2] + (c.z + 0.5) * s] as VoxelPart['pos'] })),
+  );
+}
+
 export default function Warehouse({ map, stock }: Props) {
   const { floorThickness: ft } = WAREHOUSE_VIEW;
-  const racks = useMemo(() => allRackParts(map), [map]);
+  const furniture = useMemo(() => [...allRackParts(map), ...allTableParts()], [map]);
 
   return (
     <group>
@@ -120,7 +130,7 @@ export default function Warehouse({ map, stock }: Props) {
         <Wall key={side} side={side} map={map} />
       ))}
 
-      <VoxelBatch parts={racks} />
+      <VoxelBatch parts={furniture} />
 
       <ShelfGoods map={map} stock={stock} />
     </group>

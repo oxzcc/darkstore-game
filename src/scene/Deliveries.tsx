@@ -1,12 +1,15 @@
 // Поставки на сцене (M7b): грузовик у ворот приёмки, пока поставку не приняли, и паллеты в зоне приёмки.
 // Только отрисовка: что приехало и где стоит паллета, решают rules (rules/deliveries.ts).
+import { useMemo } from 'react';
 import type { WarehouseMap } from '../model/warehouse';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { useGameStore } from '../store/gameStore';
 import { palletsOnFloor, trucksAtGate } from '../store/selectors';
 import { cellToWorld } from '../rules/warehouse';
 import Truck from './models/Truck';
-import Pallet from './models/Pallet';
+import { palletParts } from './models/Pallet';
+import type { VoxelPart } from './models/ProductItem';
+import VoxelBatch from './VoxelBatch';
 
 const QTY_PER_BOX = 6; // сколько штук товара «в одной коробке» — только для вида стопки
 
@@ -32,7 +35,19 @@ export default function Deliveries({ map }: { map: WarehouseMap }) {
   const deliveries = useGameStore((s) => s.game.deliveries);
   const pallets = useGameStore((s) => s.game.pallets);
   const trucks = trucksAtGate(deliveries);
-  const onFloor = palletsOnFloor(pallets);
+
+  // все паллеты на полу — один пакет брусков (instancing)
+  const palletVoxels = useMemo(() => {
+    const out: VoxelPart[] = [];
+    for (const p of palletsOnFloor(pallets)) {
+      const qty = p.items.reduce((sum, it) => sum + it.qty, 0);
+      const [cx, , cz] = cellToWorld(p.cell);
+      for (const part of palletParts(Math.ceil(qty / QTY_PER_BOX))) {
+        out.push({ ...part, pos: [part.pos[0] + cx, part.pos[1], part.pos[2] + cz] });
+      }
+    }
+    return out;
+  }, [pallets]);
 
   const place = truckPlace(map);
   const gate = map.openings.find((o) => o.kind === 'gate');
@@ -41,10 +56,7 @@ export default function Deliveries({ map }: { map: WarehouseMap }) {
   return (
     <group>
       {place && trucks.length > 0 && <Truck position={place} rotationY={rotationY} />}
-      {onFloor.map((p) => {
-        const qty = p.items.reduce((sum, it) => sum + it.qty, 0);
-        return <Pallet key={p.id} position={cellToWorld(p.cell)} boxes={Math.ceil(qty / QTY_PER_BOX)} />;
-      })}
+      <VoxelBatch parts={palletVoxels} />
     </group>
   );
 }
