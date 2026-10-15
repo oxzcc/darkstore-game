@@ -16,20 +16,24 @@ const UNIT = new BoxGeometry(1, 1, 1);
 const ONE = new Vector3(1, 1, 1);
 
 /** Радиус скругления бруска такого размера (W6): доля короткой стороны, но не больше предела. */
-export const softRadius = (size: [number, number, number]) => Math.min(Math.min(...size) * SOFT.radiusShare, SOFT.maxRadius);
+/** Насколько скруглять: «strong» — стены, стеллажи, столы; «light» — мелкие предметы (08, раздел 0; WAREHOUSE_VIEW.softCubes). */
+export type Softness = 'strong' | 'light';
+export const softRadius = (size: [number, number, number], soft: Softness) =>
+  Math.min(Math.min(...size) * SOFT[soft].radiusShare, SOFT[soft].maxRadius);
 
 /** Скруглённые геометрии нужных размеров — общие для всех пакетов. */
 const roundedCache = new Map<string, BufferGeometry>();
-function roundedGeometry(size: [number, number, number], key: string): BufferGeometry {
+function roundedGeometry(size: [number, number, number], soft: Softness): BufferGeometry {
+  const key = `${soft}|${size.join('x')}`;
   let g = roundedCache.get(key);
   if (!g) {
-    g = new RoundedBoxGeometry(size[0], size[1], size[2], SOFT.segments, softRadius(size));
+    g = new RoundedBoxGeometry(size[0], size[1], size[2], SOFT.segments, softRadius(size, soft));
     roundedCache.set(key, g);
   }
   return g;
 }
 
-const isSoft = (p: VoxelPart) => Math.min(...p.size) >= SOFT.minSize;
+const isSoft = (p: VoxelPart, soft: Softness) => Math.min(...p.size) >= SOFT[soft].minSize;
 const step = (v: number) => Math.max(SOFT.sizeStep, Math.round(v / SOFT.sizeStep) * SOFT.sizeStep);
 
 type Group = { key: string; color: string; parts: VoxelPart[]; geometry: BufferGeometry; stretch: boolean };
@@ -60,12 +64,12 @@ function Batch({ group }: { group: Group }) {
   );
 }
 
-export default function VoxelBatch({ parts }: { parts: VoxelPart[] }) {
+export default function VoxelBatch({ parts, soft = 'light' }: { parts: VoxelPart[]; soft?: Softness }) {
   const groups = useMemo(() => {
     const map = new Map<string, Group>();
     for (const p of parts) {
       let key: string, size: [number, number, number] | null = null;
-      if (isSoft(p)) {
+      if (isSoft(p, soft)) {
         size = [step(p.size[0]), step(p.size[1]), step(p.size[2])];
         key = `${p.color}|${size.join('x')}`;
       } else {
@@ -74,14 +78,14 @@ export default function VoxelBatch({ parts }: { parts: VoxelPart[] }) {
       let g = map.get(key);
       if (!g) {
         g = size
-          ? { key, color: p.color, parts: [], geometry: roundedGeometry(size, size.join('x')), stretch: false }
+          ? { key, color: p.color, parts: [], geometry: roundedGeometry(size, soft), stretch: false }
           : { key, color: p.color, parts: [], geometry: UNIT, stretch: true };
         map.set(key, g);
       }
       g.parts.push(p);
     }
     return [...map.values()];
-  }, [parts]);
+  }, [parts, soft]);
   return (
     <group>
       {groups.map((g) => <Batch key={g.key} group={g} />)}
