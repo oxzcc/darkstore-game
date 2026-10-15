@@ -19,16 +19,16 @@ describe('адреса', () => {
 
   it('проверяет, есть ли полка на складе', () => {
     expect(isValidAddress(map, parseAddress('1.1.1'))).toBe(true);
-    expect(isValidAddress(map, parseAddress('4.6.4'))).toBe(true);
-    expect(isValidAddress(map, parseAddress('5.1.1'))).toBe(false); // нет 5-й аллеи
-    expect(isValidAddress(map, parseAddress('1.7.1'))).toBe(false); // нет 7-го стеллажа
-    expect(isValidAddress(map, parseAddress('1.1.5'))).toBe(false); // нет 5-й полки
+    expect(isValidAddress(map, parseAddress('3.4.3'))).toBe(true);
+    expect(isValidAddress(map, parseAddress('4.1.1'))).toBe(false); // нет 4-й аллеи
+    expect(isValidAddress(map, parseAddress('1.5.1'))).toBe(false); // нет 5-го стеллажа
+    expect(isValidAddress(map, parseAddress('1.1.4'))).toBe(false); // нет 4-й полки
   });
 
-  it('на складе 96 адресов, все разные', () => {
+  it('на складе 36 адресов, все разные', () => {
     const all = allAddresses(map);
-    expect(all).toHaveLength(96);
-    expect(new Set(all.map(addressKey)).size).toBe(96);
+    expect(all).toHaveLength(36);
+    expect(new Set(all.map(addressKey)).size).toBe(36);
   });
 
   it('сравнивает адреса', () => {

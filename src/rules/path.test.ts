@@ -14,14 +14,14 @@ describe('путь по складу', () => {
   });
 
   it('по прямой без препятствий — кратчайший путь', () => {
-    const p = findPath(map, { x: 0, z: 13 }, { x: 5, z: 13 })!;
+    const p = findPath(map, { x: 0, z: 9 }, { x: 5, z: 9 })!; // главный проход
     expect(p).toHaveLength(5);
-    expect(p[4]).toEqual({ x: 5, z: 13 });
+    expect(p[4]).toEqual({ x: 5, z: 9 });
   });
 
   it('шаги только на соседнюю клетку, без диагоналей, не через стеллажи', () => {
     const from = zoneAccess(map, 'rest');
-    const to = accessForAddress(map, { aisle: 4, rack: 6, shelf: 1 });
+    const to = accessForAddress(map, { aisle: 3, rack: 4, shelf: 1 });
     const p = findPath(map, from, to)!;
     let prev = from;
     for (const c of p) {

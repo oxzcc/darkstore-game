@@ -115,7 +115,7 @@ describe('личная мини-игра', () => {
     const both = dispatchTask(dispatchTask(g, map, t1.id, 'lucky'), map, t2.id, 'korzh');
     const normal = run(both, 2);
     // у Лаки ТСД: игрок отправил его к дальнему стеллажу
-    const playing = chooseRack(acceptTsd(rollTsdOffer(both, t1.id, createRng(1), 1)), map, 4, 6);
+    const playing = chooseRack(acceptTsd(rollTsdOffer(both, t1.id, createRng(1), 1)), map, 3, 4);
     const withGame = run(playing, 2);
     // свой сборщик идёт в обычном темпе: за 2 секунды — 2 / (секунд на клетку) клеток
     expect(withGame.pickers.lucky.pathProgress).toBeCloseTo(2 / secondsPerCell(withGame.pickers.lucky), 5);

@@ -30,30 +30,32 @@ export type WarehouseLayout = {
 };
 
 export const WAREHOUSE_LAYOUT: WarehouseLayout = {
-  width: 20,
-  depth: 18,
+  // Компактный склад (решение автора 16.10, вариант «Б»): 14 × 13 клеток, 3 аллеи × 4 стеллажа × 3 полки = 36 адресов.
+  // Было 20 × 18 и 96 адресов — склад казался пустым. Расположение зон то же, только плотнее.
+  width: 14,
+  depth: 13,
   racks: {
-    aisles: 4,
-    racksPerAisle: 6,
-    shelvesPerRack: 4,
+    aisles: 3,
+    racksPerAisle: 4,
+    shelvesPerRack: 3,
     rackLength: 2,
-    firstRack: { x: 8, z: 12 },
+    firstRack: { x: 5, z: 8 },
     alongAisle: { x: 0, z: -1 }, // вглубь склада, от главного прохода к дальней стене
     nextAisle: { x: 3, z: 0 },   // ряд стеллажей + проход в 2 клетки
     accessSide: { x: 1, z: 0 },
   },
   zones: [
-    { type: 'rest',      from: { x: 0, z: 2 },  to: { x: 2, z: 5 },   access: { x: 3, z: 3 } },
-    { type: 'scrap',     from: { x: 0, z: 8 },  to: { x: 2, z: 10 },  access: { x: 3, z: 9 } },
-    { type: 'receiving', from: { x: 0, z: 14 }, to: { x: 5, z: 17 },  access: { x: 6, z: 15 } },
-    { type: 'packing',   from: { x: 9, z: 15 }, to: { x: 16, z: 16 }, access: { x: 12, z: 14 } },
+    { type: 'rest',      from: { x: 0, z: 1 },  to: { x: 2, z: 3 },   access: { x: 3, z: 2 } },
+    { type: 'scrap',     from: { x: 0, z: 5 },  to: { x: 2, z: 7 },   access: { x: 3, z: 6 } },
+    { type: 'receiving', from: { x: 0, z: 10 }, to: { x: 4, z: 12 },  access: { x: 5, z: 11 } },
+    { type: 'packing',   from: { x: 6, z: 11 }, to: { x: 12, z: 12 }, access: { x: 9, z: 10 } },
   ],
   passages: [
-    { from: { x: 0, z: 13 }, to: { x: 19, z: 13 } }, // главный проход между стеллажами и выдачей
+    { from: { x: 0, z: 9 }, to: { x: 13, z: 9 } }, // главный проход между стеллажами и выдачей
   ],
   openings: [
     { kind: 'gate', side: 'south', from: 1, to: 4 },  // ворота приёмки, 4 м (08, раздел 7)
-    { kind: 'door', side: 'east', from: 14, to: 16 }, // дверь выдачи, к курьерам
+    { kind: 'door', side: 'east', from: 10, to: 12 }, // дверь выдачи, к курьерам
   ],
 };
 
@@ -64,7 +66,7 @@ export const WAREHOUSE_VIEW = {
   truck: { gap: 0.4, rotationY: 0 },
   /** Столы фасовки (M9b2; 08, раздел 7: 2×1). Декорация: левая клетка стола, стол занимает её и соседнюю справа.
    *  Стоят в дальнем ряду зоны фасовки, у стены — сборщики туда не ходят (фасуют, стоя у точки зоны). */
-  packingTables: [{ x: 10, z: 16 }, { x: 12, z: 16 }, { x: 14, z: 16 }] as Cell[],
+  packingTables: [{ x: 7, z: 12 }, { x: 9, z: 12 }, { x: 11, z: 12 }] as Cell[],
   cellSize: 1,         // 1 клетка = 1 метр
   wallHeight: 3,       // дальние стены (08, раздел 2)
   frontWallHeight: 0.4,// ближние к камере стены низкие, чтобы не закрывать склад (как на макете ui_01)

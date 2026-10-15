@@ -10,9 +10,9 @@ describe('карта склада', () => {
   const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
   const rackCells = new Set(map.racks.flatMap((r) => r.cells.map(key)));
 
-  it('строит 4 × 6 = 24 стеллажа с уникальными номерами', () => {
-    expect(map.racks).toHaveLength(24);
-    expect(new Set(map.racks.map((r) => `${r.aisle}.${r.rack}`)).size).toBe(24);
+  it('строит 3 × 4 = 12 стеллажей с уникальными номерами', () => {
+    expect(map.racks).toHaveLength(12);
+    expect(new Set(map.racks.map((r) => `${r.aisle}.${r.rack}`)).size).toBe(12);
   });
 
   it('стеллажи не налезают друг на друга и стоят внутри склада', () => {
