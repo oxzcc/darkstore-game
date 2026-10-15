@@ -3,7 +3,7 @@
 // Слева — смена: «Смена 2 из 5» и сколько осталось (M8a).
 import { useEffect, type CSSProperties } from 'react';
 import { useGameStore, type Gain } from '../store/gameStore';
-import { clockText, money, ratingText, shiftClock, signedRating } from '../store/selectors';
+import { clockText, money, ratingText, shiftClock, signedRating, tutorialShift } from '../store/selectors';
 import Vx from './Vx';
 import Icon from './icons';
 
@@ -34,7 +34,7 @@ export default function TopBar() {
       <div className="topbar-slot">
         <Vx className={`stat-tile${sc.secondsLeft <= 60 ? ' hurry' : ''}`}>
           <Icon name="clock" />
-          <div><small>Смена {sc.shift} из {sc.total}</small><b>{clockText(sc.secondsLeft)}</b></div>
+          <div><small>Смена {sc.shift} из {sc.total}{tutorialShift(game) ? ' · обучение' : ''}</small><b>{clockText(sc.secondsLeft)}</b></div>
         </Vx>
       </div>
       <div className="topbar-slot">

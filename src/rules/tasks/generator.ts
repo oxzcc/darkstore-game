@@ -73,13 +73,7 @@ export function openTasks(state: GameState) {
   return Object.values(state.tasks).filter((t) => t.status === 'new');
 }
 
-/** Дополняет очередь заказов до ORDER.openOrdersTarget. ВРЕМЕННО, до генератора смены (M8). */
-export function topUpOrders(state: GameState, rng: Rng, now: number): GameState {
-  let s = state;
-  while (openTasks(s).filter((t) => t.type === 'order').length < ORDER.openOrdersTarget) {
-    const made = createOrder(s, rng, now);
-    if (!made) break;
-    s = made.state;
-  }
-  return s;
+/** Открытые заказы на сборку (без приёмок, выкладок и списаний). */
+export function openOrders(state: GameState) {
+  return openTasks(state).filter((t) => t.type === 'order');
 }

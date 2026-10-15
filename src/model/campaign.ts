@@ -30,4 +30,7 @@ export type Campaign = {
   lost: boolean;
   /** Уровни специализаций в начале смены — чтобы в итогах показать, что выросло (M8c). */
   startLevels: Record<string, Record<TaskType, number>>;
+  /** Обучающая смена (M8d): у каких типов заданий гарантированная развилка уже была; какие подсказки уже показаны. */
+  tutorialForks: TaskType[];
+  hintsSeen: string[];
 };

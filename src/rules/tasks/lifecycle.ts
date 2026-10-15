@@ -6,7 +6,7 @@ import { createRng } from '../random';
 import { buildJob, canBuildJob } from '../jobs';
 import { planCall } from '../calls';
 import { taskLines } from '../taskLines';
-import { topUpOrders } from './generator';
+import { forkPlanFor } from '../pace';
 
 export type AssignCheck = { ok: true } | { ok: false; reason: string };
 
@@ -24,7 +24,7 @@ export function canAssign(state: GameState, taskId: string, pickerId: string): A
 /**
  * «Отправить»: назначить сборщика и поручить ему задание.
  * Назначение окончательное — отменить или передать нельзя (02, раздел 5).
- * Сборщик получает маршрут и сразу начинает идти; очередь заказов дополняется.
+ * Сборщик получает маршрут и сразу начинает идти. Новые заказы приходят по темпу смены (rules/pace.ts, M8d).
  * Дойдя, сборщик работает сам; с шансом по пути случится развилка (N1).
  */
 export function dispatchTask(state: GameState, map: WarehouseMap, taskId: string, pickerId: string): GameState {
@@ -35,10 +35,16 @@ export function dispatchTask(state: GameState, map: WarehouseMap, taskId: string
   const picker = state.pickers[pickerId];
   // развилка планируется сразу при отправке (10, раздел 3); при «Взять ТСД» работа заменится и развилки не будет
   const callRng = createRng(state.rngSeed);
-  const job = planCall(buildJob(map, picker, task), task, callRng, undefined, taskLines(state, task).length);
+  // шанс развилки — из плана смены; в обучающей смене первая развилка каждого типа гарантирована (M8d)
+  const fork = forkPlanFor(state, task.type);
+  const job = planCall(buildJob(map, picker, task), task, callRng, fork.chance, taskLines(state, task).length, fork.guaranteed);
+  const campaign = fork.guaranteed && job.call
+    ? { ...state.campaign, tutorialForks: [...(state.campaign.tutorialForks ?? []), task.type] }
+    : state.campaign;
 
-  let next: GameState = {
+  return {
     ...state,
+    campaign,
     rngSeed: callRng.seed(),
     tasks: {
       ...state.tasks,
@@ -56,7 +62,4 @@ export function dispatchTask(state: GameState, map: WarehouseMap, taskId: string
       },
     },
   };
-  const rng = createRng(next.rngSeed);
-  next = topUpOrders(next, rng, state.clock.time);
-  return { ...next, rngSeed: rng.seed() };
 }

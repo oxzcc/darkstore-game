@@ -4,7 +4,7 @@ import type { OrderLine } from '../../model/task';
 import { WAREHOUSE_LAYOUT } from '../../config/warehouse';
 import { buildWarehouseMap } from '../warehouse';
 import { createInitialGame } from '../game';
-import { openTasks } from '../tasks/generator';
+import { openOrders } from '../tasks/generator';
 import { dispatchTask } from '../tasks/lifecycle';
 import { createRng } from '../random';
 import { acceptTsd, rollTsdOffer } from '../tsd';
@@ -23,7 +23,7 @@ const PASTA = parseAddress('2.2.4');
 /** Игра, где игрок взял ТСД у Лаки. Заказ можно подменить, чтобы знать, что на каких полках. */
 function inSession(lines?: OrderLine[]): GameState {
   const g = createInitialGame(map, 1);
-  const task = openTasks(g)[0];
+  const task = openOrders(g)[0];
   const s = acceptTsd(rollTsdOffer(dispatchTask(g, map, task.id, 'lucky'), task.id, createRng(1), 1));
   if (!lines) return s;
   const t = s.tasks[task.id];

@@ -4,7 +4,7 @@ import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { TIMING } from '../config/balance';
 import { buildWarehouseMap, zoneCells } from './warehouse';
 import { createInitialGame } from './game';
-import { openTasks } from './tasks/generator';
+import { openOrders, openTasks } from './tasks/generator';
 import { dispatchTask } from './tasks/lifecycle';
 import { advanceWorld } from './advance';
 import { pickerActivity, etaToTask } from './jobs';
@@ -32,7 +32,7 @@ function dispatch(g: GameState, m: typeof map, taskId: string, pickerId: string)
 
 const started = (seed = 1, pickerId = 'lucky') => {
   const g = createInitialGame(map, seed);
-  const task = openTasks(g)[0];
+  const task = openOrders(g)[0];
   return { s: dispatch(g, map, task.id, pickerId), taskId: task.id };
 };
 
@@ -99,7 +99,7 @@ describe('выполнение задания', () => {
 
   it('Коржик заканчивает тот же заказ быстрее Бурана', () => {
     const g = createInitialGame(map, 9);
-    const task = openTasks(g)[0];
+    const task = openOrders(g)[0];
     const timeFor = (pickerId: string) => {
       const s = dispatch(g, map, task.id, pickerId);
       return runUntil(s, (x) => x.tasks[task.id].status === 'done').s.clock.time;
@@ -109,7 +109,7 @@ describe('выполнение задания', () => {
 
   it('время до места: у быстрого меньше, и это число совпадает с реальной ходьбой', () => {
     const g = createInitialGame(map, 3);
-    const task = openTasks(g)[0];
+    const task = openOrders(g)[0];
     if (task.type !== 'order') throw new Error('ожидался заказ');
     const eta = etaToTask(map, g.pickers.lucky, task)!;
     expect(etaToTask(map, g.pickers.korzh, task)! < etaToTask(map, g.pickers.buran, task)!).toBe(true);
@@ -128,7 +128,7 @@ describe('выполнение задания', () => {
   it('сборщики не встают друг в друга: на фасовке у каждого своё место', () => {
     for (const seed of [1, 2, 3, 4, 5]) {
       let s = createInitialGame(map, seed);
-      for (const pid of ['lucky', 'korzh', 'buran']) s = dispatch(s, map, openTasks(s)[0].id, pid);
+      for (const pid of ['lucky', 'korzh', 'buran']) s = dispatch(s, map, openTasks(s)[0].id, pid); // любое задание: заказов может быть меньше трёх (M8d)
       const allIdle = (x: GameState) => Object.values(x.pickers).every((p) => p.state === 'idle');
       s = runUntil(s, allIdle).s;
       expect(allIdle(s)).toBe(true);

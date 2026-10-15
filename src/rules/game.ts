@@ -9,7 +9,8 @@ import { addStock, buildInitialStock } from './stock';
 import { parseAddress } from './address';
 import { createPickers } from './pickers';
 import { createRng } from './random';
-import { topUpOrders } from './tasks/generator';
+import { fillOrders } from './pace';
+import { shiftPlan } from './shiftPlan';
 import { tickDeliveries } from './deliveries';
 import { newCampaign } from './shift';
 import { assignDeadlines } from './deadline';
@@ -26,11 +27,12 @@ function withExpiring(stock: GameState['stock']): GameState['stock'] {
 /** Стартовое состояние. Зерно передаётся снаружи: store берёт случайное, тесты — фиксированное. */
 export function createInitialGame(map: WarehouseMap, seed: number): GameState {
   const pickers = createPickers(STARTING_PICKERS, map);
+  const campaign = newCampaign(START_MONEY, START_RATING, pickers);
   const base: GameState = {
     version: GAME_STATE_VERSION,
     rngSeed: seed,
     nextId: 1,
-    campaign: newCampaign(START_MONEY, START_RATING, pickers),
+    campaign,
     clock: { time: 0, paused: false, playerSpeed: 1 },
     money: START_MONEY,
     rating: START_RATING,
@@ -40,7 +42,8 @@ export function createInitialGame(map: WarehouseMap, seed: number): GameState {
     deliveries: {},
     pallets: {},
     // для проверки первая поставка может приехать сразу (DELIVERY.firstAtStart)
-    nextDeliveryAt: DELIVERY.firstAtStart ? 0 : DELIVERY.intervalSeconds,
+    nextDeliveryAt: DELIVERY.firstAtStart ? 0 : shiftPlan({ campaign }).deliveryEvery,
+    nextOrderAt: 0,
     nextWriteoffAt: WRITEOFF.firstAtSeconds,
     pickers,
     tsdOffer: null,
@@ -49,7 +52,9 @@ export function createInitialGame(map: WarehouseMap, seed: number): GameState {
     calls: [],
     shiftLog: [],
   };
-  const rng = createRng(seed);
-  const withOrders = topUpOrders(base, rng, 0);
-  return assignDeadlines(tickDeliveries({ ...withOrders, rngSeed: rng.seed() }), map);
+  // сначала поставка (она тоже нагрузка), потом заказы под загрузку смены (M8d)
+  const withDelivery = tickDeliveries(base);
+  const rng = createRng(withDelivery.rngSeed);
+  const withOrders = fillOrders(withDelivery, rng, 0);
+  return assignDeadlines({ ...withOrders, rngSeed: rng.seed() }, map);
 }

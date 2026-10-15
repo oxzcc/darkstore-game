@@ -11,6 +11,7 @@ import { RESULT_SHARE, SITUATION_BY_ID, WITH_ERRORS_MONEY_BY_TYPE } from '../con
 import { acceptDelivery } from './deliveries';
 import { completePutaway } from './putaway';
 import { completeWriteoff } from './writeoff';
+import { isTutorial } from './shiftPlan';
 import { sameAddress } from './address';
 import { isExpiring, removeStock } from './stock';
 
@@ -18,11 +19,13 @@ import { isExpiring, removeStock } from './stock';
  * Сколько денег и рейтинга даёт исход: доля от базовой награды задания (RESULT_SHARE).
  * У приёмки и выкладки «неплохо» даёт меньше денег (WITH_ERRORS_MONEY_BY_TYPE, решение автора 14.10).
  */
-export function rewardFor(task: Task, outcome: Outcome): { money: number; rating: number } {
+export function rewardFor(task: Task, outcome: Outcome, noPenalty = false): { money: number; rating: number } {
   if (task.overdue) return { money: 0, rating: 0 }; // просроченная выкладка или списание — без награды (M8b)
   const share = RESULT_SHARE[outcome];
   const moneyShare = outcome === 'withErrors' ? WITH_ERRORS_MONEY_BY_TYPE[task.type] ?? share.money : share.money;
-  return { money: Math.round(task.reward.money * moneyShare), rating: task.reward.rating * share.rating };
+  const r = { money: Math.round(task.reward.money * moneyShare), rating: task.reward.rating * share.rating };
+  // обучающая смена (M8d): провал ничего не отнимает, награда за успех остаётся
+  return noPenalty ? { money: Math.max(0, r.money), rating: Math.max(0, r.rating) } : r;
 }
 
 /**
@@ -85,7 +88,7 @@ export function clampRating(r: number): number {
 export function applyTaskResult(state: GameState, taskId: string, outcome: Outcome, reveal?: OutcomeReveal): GameState {
   const task = state.tasks[taskId];
   if (!task) return state;
-  const reward = rewardFor(task, outcome);
+  const reward = rewardFor(task, outcome, isTutorial(state));
   let stock = state.stock;
   if (task.type === 'order') {
     const picked = pickedQty(task, reveal);

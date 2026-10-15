@@ -27,12 +27,13 @@ export function raiseRisk(r: RiskLevel): RiskLevel {
  * Сборка — на шаге сбора случайной позиции, выкладка — на шаге выкладки, приёмка — перед работой
  * (про случайный товар поставки; сколько их — `lineCount`). `chance` — тесты передают 0 или 1.
  */
-export function planCall(job: PickerJob, task: Task, rng: Rng, chance = CALLS.chance, lineCount = 1): PickerJob {
+export function planCall(job: PickerJob, task: Task, rng: Rng, chance = CALLS.chance, lineCount = 1, preferGame = false): PickerJob {
   if (rng.next() >= chance) return job;
   const ofType = SITUATIONS.filter((s) => s.taskType === task.type);
-  // для проверки (CALLS.forceTsd) — только ситуации с готовой игрой на ТСД, если у этого типа такие есть
+  // для проверки (CALLS.forceTsd) и в обучающей смене (preferGame, M8d) — ситуации с готовой игрой на ТСД, если у этого типа такие есть
   const withGame = ofType.filter(hasReadyGame);
-  const situations = CALLS.forceTsd && withGame.length > 0 ? withGame : ofType;
+  const wantGame = (CALLS.forceTsd || preferGame) && withGame.length > 0;
+  const situations = wantGame ? withGame : ofType;
   const stops = job.steps.map((s, i) => ({ s, i })).filter(({ s }) =>
     task.type === 'order' ? s.kind === 'pick' : task.type === 'putaway' ? s.kind === 'place' : s.kind === 'work');
   if (situations.length === 0 || stops.length === 0) return job;
@@ -43,7 +44,7 @@ export function planCall(job: PickerJob, task: Task, rng: Rng, chance = CALLS.ch
     ? stops[situation.stopAtEnd ? stops.length - 1 : 0]
     : stops[Math.floor(pickStop * stops.length)];
   const lineIndex = s.kind === 'pick' || s.kind === 'place' ? s.lineIndex : Math.floor(rng.next() * Math.max(1, lineCount));
-  return { ...job, call: { stepIndex: i, lineIndex, situationId: situation.id, raised: false } };
+  return { ...job, call: { stepIndex: i, lineIndex, situationId: situation.id, raised: false, ...(preferGame && wantGame ? { forceTsd: true } : {}) } };
 }
 
 /** У ситуации есть игра на ТСД, и она уже сделана. */
@@ -71,7 +72,7 @@ export function raiseCall(state: GameState, pickerId: string): GameState {
   const careful = rng.next() < picker.stats.accuracy / 10;
   const auto = careful ? safest : options[Math.floor(rng.next() * options.length)];
   // вариант «Взять ТСД» — с шансом, у ситуаций с готовой игрой (10, раздел 11.1); сборщик сам его не выбирает
-  const tsd = hasReadyGame(situation) && (CALLS.forceTsd || rng.next() < CALLS.tsdChance) ? situation.tsdGame! : null;
+  const tsd = hasReadyGame(situation) && (CALLS.forceTsd || plan.forceTsd || rng.next() < CALLS.tsdChance) ? situation.tsdGame! : null;
   const call: Call = {
     id: `call-${state.nextId}`,
     taskId: picker.job!.taskId,

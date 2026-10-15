@@ -58,6 +58,7 @@ export type GameState = {
   pallets: Record<string, Pallet>;
   nextDeliveryAt: number;               // когда приедет следующая поставка, игровое время
   nextWriteoffAt: number;               // когда может появиться следующее задание «Списание» (M7e1)
+  nextOrderAt: number;                  // раньше этого нового заказа не будет (пауза между заказами, M8d)
   pickers: Record<string, Picker>;
 
   tsdOffer: TsdOffer | null;        // висит «Взять ТСД?» (одно за раз)

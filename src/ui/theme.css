@@ -574,3 +574,9 @@ svg.i.sm { width: 18px; height: 18px; }
 .spec-tag { margin-left: 8px; font-size: 12px; font-weight: 700; color: var(--text-mute); text-transform: none; letter-spacing: 0; }
 .summary-growth { font-size: 13px; color: var(--text-mute); }
 .summary-growth b { color: var(--primary); }
+
+/* ---------- подсказки обучающей смены (M8d) ---------- */
+.hint-back { position: absolute; inset: 0; background: rgba(40, 30, 10, 0.25); z-index: 45; pointer-events: auto; }
+.hint { width: 460px; max-width: calc(100vw - 32px); }
+.hint > .vx-edge > .vx-body { display: flex; flex-direction: column; }
+.hint-body { padding: 16px 20px; font-size: 16px; line-height: 1.45; text-align: center; }

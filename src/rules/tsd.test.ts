@@ -4,7 +4,7 @@ import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { TSD } from '../config/balance';
 import { buildWarehouseMap } from './warehouse';
 import { createInitialGame } from './game';
-import { openTasks } from './tasks/generator';
+import { openOrders, openTasks } from './tasks/generator';
 import { dispatchTask } from './tasks/lifecycle';
 import { advanceWorld } from './advance';
 import { pickerActivity } from './jobs';
@@ -17,7 +17,7 @@ const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
 
 /** Отправить сборщика и принудительно выбросить (chance = 1) или не выбросить (0) предложение ТСД. */
 function sent(chance: 0 | 1, pickerId = 'lucky', g: GameState = createInitialGame(map, 1)) {
-  const task = openTasks(g)[0];
+  const task = openOrders(g)[0];
   const s = rollTsdOffer(dispatchTask(g, map, task.id, pickerId), task.id, createRng(7), chance);
   return { s, taskId: task.id };
 }
@@ -80,7 +80,7 @@ describe('шанс «Взять ТСД»', () => {
 
   it('пока висит предложение, второе не появляется', () => {
     const { s } = sent(1);
-    const second = openTasks(s)[0];
+    const second = openOrders(s)[0];
     const s2 = rollTsdOffer(dispatchTask(s, map, second.id, 'korzh'), second.id, createRng(3), 1);
     expect(s2.tsdOffer?.pickerId).toBe('lucky');
     expect(s2.pickers.korzh.state).toBe('walking');
@@ -88,11 +88,11 @@ describe('шанс «Взять ТСД»', () => {
 
   it('sendPicker назначает сборщика и не ломает очередь заказов', () => {
     const g = createInitialGame(map, 5);
-    const task = openTasks(g)[0];
+    const task = openOrders(g)[0];
     const s = sendPicker(g, map, task.id, 'buran');
     expect(s.tasks[task.id].assignedPickerId).toBe('buran');
     expect(['walking', 'waiting'].includes(s.pickers.buran.state)).toBe(true);
-    expect(openTasks(s).length).toBe(openTasks(g).length); // взяли одно — генератор добавил новое
+    expect(openTasks(s).length).toBe(openTasks(g).length - 1); // взяли одно; новое придёт по темпу смены, не сразу (M8d)
   });
 });
 
@@ -129,7 +129,7 @@ describe('личная мини-игра', () => {
   it('пока идёт мини-игра, новых предложений нет, а само задание без игрока не заканчивается', () => {
     const { s, taskId } = sent(1);
     const a = acceptTsd(s);
-    const other = openTasks(a)[0];
+    const other = openOrders(a)[0];
     const b = rollTsdOffer(dispatchTask(a, map, other.id, 'korzh'), other.id, createRng(2), 1);
     expect(b.tsdOffer).toBe(null);
     const later = run(b, 60, 0.5);

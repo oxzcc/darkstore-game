@@ -13,8 +13,11 @@ import { createRng } from './random';
 import { receiveSeconds } from './time';
 import { acceptDelivery, createDelivery, freeByProduct, freePalletSlots, tickDeliveries, truckAtGate } from './deliveries';
 import { rewardFor } from './rewards';
+import { shiftPlan } from './shiftPlan';
 
 const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
+/** Интервал поставок первой смены (M8d: из плана смены). */
+const EVERY = shiftPlan(createInitialGame(map, 1)).deliveryEvery;
 
 function runUntil(s: GameState, done: (s: GameState) => boolean, limitSec = 600) {
   for (let t = 0; t < limitSec && !done(s); t += 0.1) s = advanceWorld(s, map, 0.1).state;
@@ -28,7 +31,7 @@ const receivingTasks = (s: GameState) =>
 function noDeliveryGame(seed = 1): GameState {
   const g = createInitialGame(map, seed);
   const tasks = Object.fromEntries(Object.entries(g.tasks).filter(([, t]) => t.type !== 'receiving'));
-  return { ...g, tasks, deliveries: {}, pallets: {}, nextDeliveryAt: DELIVERY.intervalSeconds };
+  return { ...g, tasks, deliveries: {}, pallets: {}, nextDeliveryAt: EVERY };
 }
 
 describe('поставка', () => {
@@ -82,16 +85,16 @@ describe('поставка', () => {
 
   it('приезжает по таймеру; пока грузовик у ворот, следующая ждёт', () => {
     let s = noDeliveryGame();
-    expect(tickDeliveries({ ...s, clock: { ...s.clock, time: DELIVERY.intervalSeconds - 1 } })).toEqual({ ...s, clock: { ...s.clock, time: DELIVERY.intervalSeconds - 1 } });
-    s = tickDeliveries({ ...s, clock: { ...s.clock, time: DELIVERY.intervalSeconds } });
+    expect(tickDeliveries({ ...s, clock: { ...s.clock, time: EVERY - 1 } })).toEqual({ ...s, clock: { ...s.clock, time: EVERY - 1 } });
+    s = tickDeliveries({ ...s, clock: { ...s.clock, time: EVERY } });
     expect(truckAtGate(s)).toBe(true);
-    expect(s.nextDeliveryAt).toBe(DELIVERY.intervalSeconds * 2);
+    expect(s.nextDeliveryAt).toBe(EVERY * 2);
     // время следующей пришло, но грузовик ещё у ворот — новой поставки нет
-    const late = tickDeliveries({ ...s, clock: { ...s.clock, time: DELIVERY.intervalSeconds * 2 } });
+    const late = tickDeliveries({ ...s, clock: { ...s.clock, time: EVERY * 2 } });
     expect(Object.keys(late.deliveries)).toHaveLength(1);
     // приняли — у ворот свободно, приезжает следующая
     const d = Object.values(s.deliveries)[0];
-    const after = tickDeliveries(acceptDelivery({ ...s, clock: { ...s.clock, time: DELIVERY.intervalSeconds * 2 } }, d.id));
+    const after = tickDeliveries(acceptDelivery({ ...s, clock: { ...s.clock, time: EVERY * 2 } }, d.id));
     expect(Object.keys(after.deliveries)).toHaveLength(2);
   });
 
@@ -125,6 +128,7 @@ describe('приёмка', () => {
     const g = createInitialGame(map, 1);
     const [task] = receivingTasks(g);
     let s = dispatchTask(g, map, task.id, 'lucky');
+    s = { ...s, pickers: { ...s.pickers, lucky: { ...s.pickers.lucky, job: { ...s.pickers.lucky.job!, call: undefined } } } }; // без развилки: в 1-й смене она гарантирована (M8d)
     s = runUntil(s, (x) => pickerActivity(x, 'lucky').kind === 'busy');
     expect(pickerActivity(s, 'lucky')).toMatchObject({ kind: 'busy', label: 'Принимает поставку' });
     s = runUntil(s, (x) => x.tasks[task.id].status === 'done');

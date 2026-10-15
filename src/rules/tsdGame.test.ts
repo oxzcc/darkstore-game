@@ -7,7 +7,7 @@ import { TSD } from '../config/balance';
 import { BARCODE, DEPTH, EXPIRY, SITUATION_BY_ID, TSD_OPTION_ID } from '../config/calls';
 import { buildWarehouseMap } from './warehouse';
 import { createInitialGame } from './game';
-import { openTasks } from './tasks/generator';
+import { openOrders } from './tasks/generator';
 import { dispatchTask } from './tasks/lifecycle';
 import { advanceWorld } from './advance';
 import { pickerActivity } from './jobs';
@@ -28,7 +28,7 @@ function runUntil(s: GameState, done: (s: GameState) => boolean, step = 0.1, max
 /** Лаки на заказе, развилка «товар в глубине» на первой позиции; дошёл и зовёт. tsd — есть ли вариант «Взять ТСД». */
 function calling(tsd: 'depth' | 'expiry' | 'barcode' | null = 'depth', situationId = tsd === 'expiry' ? 'expiring' : tsd === 'barcode' ? 'barcode' : 'deep') {
   const g = createInitialGame(map, 1);
-  const task = openTasks(g)[0];
+  const task = openOrders(g)[0];
   const s = dispatchTask(g, map, task.id, 'lucky');
   const job = s.pickers.lucky.job!;
   const stepIndex = job.steps.findIndex((st) => st.kind === 'pick');
@@ -164,7 +164,7 @@ describe('предложение «Взять ТСД?» при отправке'
     expect(TSD.offerOnDispatch).toBe(false);
     for (let seed = 1; seed <= 20; seed++) {
       const g = createInitialGame(map, seed);
-      const task = openTasks(g)[0];
+      const task = openOrders(g)[0];
       const s = sendPicker(g, map, task.id, 'lucky');
       expect(s.tsdOffer).toBe(null);
       expect(s.pickers.lucky.state).toBe('walking');

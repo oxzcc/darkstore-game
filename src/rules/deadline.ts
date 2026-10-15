@@ -11,6 +11,7 @@ import { buildJob } from './jobs';
 import { findPath, zoneAccess } from './warehouse';
 import { secondsPerCell } from './time';
 import { clampRating } from './rewards';
+import { isTutorial, shiftPlan } from './shiftPlan';
 
 /** Эталонный сборщик (скорость 5), стоит у зоны, откуда задание начинается: заказ — у фасовки, остальное — у приёмки. */
 function refPicker(state: GameState, map: WarehouseMap, task: Task): Picker | null {
@@ -40,7 +41,7 @@ export function estimateSeconds(state: GameState, map: WarehouseMap, task: Task)
 
 /** Срок задания: появилось + ожидание + оценка × запас (жёсткий у сборки, мягкий у остальных). */
 export function deadlineFor(state: GameState, map: WarehouseMap, task: Task): number {
-  const d = task.type === 'order' ? DEADLINE.order : DEADLINE.soft;
+  const d = task.type === 'order' ? { ...DEADLINE.order, margin: shiftPlan(state).orderMargin } : DEADLINE.soft; // запас сборки — из плана смены (M8d)
   return task.createdAt + d.waitSeconds + estimateSeconds(state, map, task) * d.margin;
 }
 
@@ -75,7 +76,7 @@ export function expireTasks(state: GameState): { state: GameState; events: Shift
   const events: ShiftEvent[] = [];
   for (const t of Object.values(state.tasks)) {
     if (t.status !== 'new' || t.overdue || t.deadline === null || now < t.deadline) continue;
-    const pen = penaltyFor(t);
+    const pen = isTutorial(s) ? { money: 0, rating: 0 } : penaltyFor(t); // обучающая смена — без штрафов (M8d)
     const money = Math.min(s.money, pen.money); // деньги не уходят ниже 0
     const kept = t.type === 'putaway' || t.type === 'writeoff';
     const tasks = { ...s.tasks, [t.id]: kept ? { ...t, overdue: true } : { ...t, status: 'expired' as const } } as GameState['tasks'];
