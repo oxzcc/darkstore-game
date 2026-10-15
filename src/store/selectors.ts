@@ -22,6 +22,8 @@ import type { Address } from '../model/address';
 import type { Stock } from '../model/stock';
 import { WAREHOUSE_MAP } from './gameStore';
 import { isLastShift, shiftSecondsLeft } from '../rules/shift';
+import { secondsToTake } from '../rules/deadline';
+import { DEADLINE, SHIFT } from '../config/balance';
 
 /** Открытые задания по порядку появления. */
 export function openTaskList(tasks: GameState['tasks']): Task[] {
@@ -425,6 +427,7 @@ export function shiftSummaryView(game: GameState) {
     ...r,
     total: game.campaign.totalShifts,
     last: isLastShift(game),
+    lost: game.campaign.lost,
     pickers: Object.values(game.pickers).map((p) => ({ picker: p, tasks: r.pickers[p.id] ?? 0 })),
   };
 }
@@ -441,5 +444,17 @@ export function campaignSummaryView(game: GameState) {
     appeared: h.reduce((sum, r) => sum + r.appeared, 0),
     money: game.money,
     rating: game.rating,
+    lost: game.campaign.lost,
   };
 }
+
+// ---------- Сроки (M8b) ----------
+
+/** Таймер на карточке задания: сколько осталось его взять; warn — последние секунды. null — таймера нет. */
+export function takeTimer(game: GameState, task: Task): { secondsLeft: number; warn: boolean } | null {
+  const left = secondsToTake(game, task);
+  return left === null ? null : { secondsLeft: left, warn: left <= DEADLINE.warnSeconds };
+}
+
+/** Порог рейтинга для экрана проигрыша. */
+export const LOSE_RATING = SHIFT.loseRating;

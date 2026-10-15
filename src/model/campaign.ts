@@ -7,8 +7,9 @@ export type ShiftPhase = 'running' | 'summary' | 'over';
 /** Итог одной смены — для экрана итогов и истории кампании. */
 export type ShiftResult = {
   shift: number;
-  appeared: number;                    // сколько заданий было за смену (закрытые + незакрытые к концу)
+  appeared: number;                    // сколько заданий было за смену (закрытые + просроченные + незакрытые к концу)
   closed: number;                      // сколько закрыто
+  expired: number;                     // сколько заданий просрочено (M8b)
   byOutcome: Record<Outcome, number>;  // закрытые по исходам
   stars: 0 | 1 | 2 | 3;                // оценка смены (решение автора 14.10: звёзды по доле закрытых)
   money: number;                       // сколько денег прибавилось за смену (может быть меньше нуля)
@@ -23,4 +24,6 @@ export type Campaign = {
   startMoney: number;     // деньги и рейтинг в начале смены — чтобы показать, сколько прибавилось
   startRating: number;
   history: ShiftResult[]; // итоги закончившихся смен
+  /** Рейтинг в конце смены упал ниже SHIFT.loseRating — кампания проиграна (M8b, решение автора 14.10). */
+  lost: boolean;
 };

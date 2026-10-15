@@ -3,7 +3,7 @@
 // деньги и рейтинг за смену, кто сколько сделал. Кнопка — следующая смена или, после последней, итоги кампании.
 import type { CSSProperties } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { campaignSummaryView, money, plural, ratingText, shiftSummaryView, signedRating } from '../store/selectors';
+import { campaignSummaryView, LOSE_RATING, money, plural, ratingText, shiftSummaryView, signedRating } from '../store/selectors';
 import { OUTCOME_LOOK, OUTCOMES_ORDER } from './labels';
 import { Avatar } from './PickerBits';
 import Vx from './Vx';
@@ -44,7 +44,11 @@ export default function ShiftSummary() {
                 {OUTCOMES_ORDER.map((o) => (
                   <span key={o}><Icon name={OUTCOME_LOOK[o].icon} small />{OUTCOME_LOOK[o].name}: <b>{shift.byOutcome[o]}</b></span>
                 ))}
+                <span><Icon name="clock" small />Просрочено: <b>{shift.expired}</b></span>
               </div>
+              {shift.lost && (
+                <div className="summary-lost">Рейтинг упал ниже {ratingText(LOSE_RATING)} — склад закрывают</div>
+              )}
               <div className="summary-sum">
                 <div><span>Деньги за смену</span><b className={shift.money < 0 ? 'bad' : ''}>{signedMoney(shift.money)}</b></div>
                 <div><span>Рейтинг</span><b className={shift.rating < 0 ? 'bad' : ''}>{signedRating(shift.rating)}</b></div>
@@ -61,7 +65,7 @@ export default function ShiftSummary() {
               <div className="note">Незакрытые задания не переходят в следующую смену</div>
             </div>
             <div className="buttons">
-              {shift.last
+              {shift.last || shift.lost
                 ? <button className="btn primary" onClick={finishCampaign}><Vx>Итоги кампании</Vx></button>
                 : <button className="btn primary" onClick={nextShift}><Vx>Следующая смена</Vx></button>}
             </div>
@@ -70,8 +74,9 @@ export default function ShiftSummary() {
 
         {campaign && (
           <Vx className="summary" bodyClass="window">
-            <div className="panel-title">Кампания пройдена</div>
+            <div className="panel-title">{campaign.lost ? 'Склад закрыли' : 'Кампания пройдена'}</div>
             <div className="summary-body">
+              {campaign.lost && <div className="summary-lost">Рейтинг упал ниже {ratingText(LOSE_RATING)}. Попробуйте ещё раз!</div>}
               <div className="summary-big">Звёзд: {campaign.stars} из {campaign.maxStars}</div>
               <div className="summary-shifts">
                 {campaign.shifts.map((r) => (

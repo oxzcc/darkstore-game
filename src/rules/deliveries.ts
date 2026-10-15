@@ -92,7 +92,7 @@ export function createDelivery(state: GameState, rng: Rng, now: number): GameSta
     type: 'receiving',
     status: 'new',
     createdAt: now,
-    deadline: now, // ВРЕМЕННО: сроков ещё нет (M8)
+    deadline: null, // срок посчитает advanceWorld (rules/deadline.ts, M8b)
     difficulty,
     reward: {
       money: REWARD.moneyPerDifficulty * difficulty * REWARD.typeFactor.receiving,

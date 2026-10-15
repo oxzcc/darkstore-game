@@ -31,7 +31,7 @@ export default function AssignDialog() {
             <div className="task-name">{taskTitle(task)}</div>
             <div className="task-sub">{taskSummary(game, task)}</div>
           </div>
-          <div className="reward">+{money(task.reward.money)}</div>
+          <div className="reward">{task.overdue ? 'без награды' : `+${money(task.reward.money)}`}</div>
         </Vx>
         <div className="order-lines">
           {/* сборка — по позициям с адресом; выкладка и приёмка — по товару, места мелко (правка автора 14.10) */}
