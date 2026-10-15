@@ -96,8 +96,9 @@ export const WAREHOUSE_VIEW = {
     sun: 0.6,
     sunColor: '#FFF4E2',
     sunFrom: [-6, 20, 10] as [number, number, number], // откуда светит солнце (от центра склада): слева спереди — тени видны сбоку
-    shadowStrength: 0.5,  // 1 — тень чёрная, 0 — тени нет
+    shadowStrength: 0.7,  // 1 — тень чёрная, 0 — тени нет (0,5 → 0,7 по просьбе автора 16.10: тени были почти не видны)
     shadowMapSize: 2048,
+    shadowRadius: 22,     // полуразмер области теней вокруг центра склада, м (накрывает дорогу и парковку)
     shadowBias: -0.0004,
     shadowNormalBias: 0.02,
     wallShade: { width: 0.9, opacity: 0.28 }, // нарисованная тень на полу вдоль стен, м и прозрачность

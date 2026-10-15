@@ -15,7 +15,7 @@ import { gateParts } from './models/Gate';
 import type { VoxelPart } from './models/ProductItem';
 import { rackLocalToWorld, rackRotY } from './rackGeometry';
 import VoxelBatch from './VoxelBatch';
-import { grassTexture, tiled, tilesTexture, TEXTURE_METERS } from './textures';
+import { tiled, tilesTexture, TEXTURE_METERS } from './textures';
 import FloorMarkings from './FloorMarkings';
 import ShelfGoods from './ShelfGoods';
 
@@ -198,9 +198,7 @@ function WallShade({ map }: { map: WarehouseMap }) {
 
 export default function Warehouse({ map, stock }: Props) {
   const { floorThickness: ft } = WAREHOUSE_VIEW;
-  // рисованные трава и плитка (W4): узор повторяется по метрам, цвет — из палитры
-  const grassSize: [number, number] = [map.width * 4, map.depth * 4];
-  const grassMap = useMemo(() => tiled(grassTexture(), grassSize[0], grassSize[1], TEXTURE_METERS.grass), [grassSize[0], grassSize[1]]);
+  // рисованная плитка (W4): узор повторяется по метрам, цвет — из палитры; трава — в World.tsx (W5)
   const floorMap = useMemo(() => tiled(tilesTexture(), map.width, map.depth, TEXTURE_METERS.tiles), [map]);
   const furniture = useMemo(() => [...allRackParts(map), ...allTableParts()], [map]);
   // ворота и дверь выдачи не опускаются вместе со стеной
@@ -212,12 +210,6 @@ export default function Warehouse({ map, stock }: Props) {
 
   return (
     <group>
-      {/* Трава вокруг склада */}
-      <mesh position={[map.width / 2, -ft - 0.01, map.depth / 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={grassSize} />
-        <meshStandardMaterial color={PALETTE.grass} map={grassMap} />
-      </mesh>
-
       {/* Пол склада */}
       <mesh position={[map.width / 2, -ft / 2, map.depth / 2]} receiveShadow>
         <boxGeometry args={[map.width, ft, map.depth]} />
