@@ -2,7 +2,7 @@
 // Стены (W1): все четыре высокие; та, что оказалась между камерой и складом, плавно уходит в землю до высоты низкой стены.
 import { useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Vector3, type Group } from 'three';
+import { CanvasTexture, Vector3, type Group } from 'three';
 import type { WallSide, WarehouseMap } from '../model/warehouse';
 import type { Stock } from '../model/stock';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
@@ -90,6 +90,40 @@ function Walls({ map }: { map: WarehouseMap }) {
   );
 }
 
+/** Нарисованная мягкая тень на полу вдоль стен (W2; 08, раздел 0): полоса, тёмная у стены и прозрачная к центру. */
+function WallShade({ map }: { map: WarehouseMap }) {
+  const { width, opacity } = WAREHOUSE_VIEW.light.wallShade;
+  const tex = useMemo(() => {
+    const c = document.createElement('canvas');
+    c.width = 4; c.height = 64;
+    const g = c.getContext('2d')!;
+    const grad = g.createLinearGradient(0, 0, 0, 64);
+    grad.addColorStop(0, 'rgba(70,55,30,1)');
+    grad.addColorStop(1, 'rgba(70,55,30,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 4, 64);
+    return new CanvasTexture(c);
+  }, []);
+  const s = WAREHOUSE_VIEW.cellSize, W = map.width * s, D = map.depth * s, y = 0.006;
+  // полоса вдоль стены: центр, длина, поворот (тёмный край текстуры — к стене)
+  const strips: { pos: [number, number, number]; len: number; rotZ: number }[] = [
+    { pos: [W / 2, y, width / 2], len: W, rotZ: 0 },             // север
+    { pos: [W / 2, y, D - width / 2], len: W, rotZ: Math.PI },   // юг
+    { pos: [width / 2, y, D / 2], len: D, rotZ: Math.PI / 2 },   // запад
+    { pos: [W - width / 2, y, D / 2], len: D, rotZ: -Math.PI / 2 }, // восток
+  ];
+  return (
+    <>
+      {strips.map((st, i) => (
+        <mesh key={i} position={st.pos} rotation={[-Math.PI / 2, 0, st.rotZ]} renderOrder={1}>
+          <planeGeometry args={[st.len, width]} />
+          <meshBasicMaterial map={tex} transparent opacity={opacity} depthWrite={false} />
+        </mesh>
+      ))}
+    </>
+  );
+}
+
 export default function Warehouse({ map, stock }: Props) {
   const { floorThickness: ft } = WAREHOUSE_VIEW;
   const furniture = useMemo(() => [...allRackParts(map), ...allTableParts()], [map]);
@@ -98,18 +132,19 @@ export default function Warehouse({ map, stock }: Props) {
   return (
     <group>
       {/* Трава вокруг склада */}
-      <mesh position={[map.width / 2, -ft - 0.01, map.depth / 2]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[map.width / 2, -ft - 0.01, map.depth / 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[map.width * 4, map.depth * 4]} />
         <meshStandardMaterial color={PALETTE.grass} />
       </mesh>
 
       {/* Пол склада */}
-      <mesh position={[map.width / 2, -ft / 2, map.depth / 2]}>
+      <mesh position={[map.width / 2, -ft / 2, map.depth / 2]} receiveShadow>
         <boxGeometry args={[map.width, ft, map.depth]} />
         <meshStandardMaterial color={PALETTE.floor} />
       </mesh>
 
       <FloorMarkings map={map} />
+      <WallShade map={map} />
 
       <Walls map={map} />
       <VoxelBatch parts={gates} />

@@ -98,7 +98,7 @@ function Strips({ strips, color }: { strips: Strip[]; color: string }) {
   return (
     <>
       {strips.map((s, i) => (
-        <mesh key={i} position={s.pos} rotation={[0, s.rotY ?? 0, 0]}>
+        <mesh key={i} position={s.pos} rotation={[0, s.rotY ?? 0, 0]} receiveShadow>
           <boxGeometry args={s.size} />
           <meshStandardMaterial color={color} />
         </mesh>
@@ -117,7 +117,7 @@ export default function FloorMarkings({ map }: Props) {
         return (
           <group key={z.type}>
             {look.fill && (
-              <mesh position={[z.from.x + w / 2, Y_FILL, z.from.z + d / 2]}>
+              <mesh position={[z.from.x + w / 2, Y_FILL, z.from.z + d / 2]} receiveShadow>
                 <boxGeometry args={[w, 0.008, d]} />
                 <meshStandardMaterial color={look.fill} />
               </mesh>
