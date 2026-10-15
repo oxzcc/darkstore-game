@@ -277,7 +277,12 @@
   до 6 коробок, чуть повёрнутых, скотч по крышке и вниз по лицу; все паллеты — один `VoxelBatch` в `Deliveries.tsx` (`models/Pallet.tsx` удалён).
   Стол фасовки `scene/models/PackingTable.ts` (`packingTableParts`) по `world_packaging_table.png` — столешница, каркас с опорами, нижняя полка с коробками и серыми лотками,
   на столе коробка и диспенсер скотча. Декорация: 3 стола в дальнем ряду зоны фасовки у стены (`WAREHOUSE_VIEW.packingTables`), рисуются вместе со стеллажами.
-  Новые цвета: `palletWood`, `tableTop`, `bin`, `accentGreen`.
+  Новые цвета: `palletWood`, `tableTop`, `bin`, `accentGreen`. Проверено автором и влито 15.10.
+- M9b3 (написано, ждёт проверки): стены `scene/models/Wall.ts` (`wallParts`) по `world_wall.png` — белые панели со швом, серый цоколь, белые пилястры каждые 3 м и у двери,
+  карниз, зелёные вставки у концов высоких стен; ближние стены низкие (цоколь, панель, карниз, короткие пилястры); углы закрыты.
+  Ворота `scene/models/Gate.ts` (`gateParts`) по `world_gates.png`, низкие «в разрезе»: тёмные стойки рамы чуть выше низкой стены, бетонная площадка снаружи,
+  перегрузчик с зелёной кромкой и упорами, 4 зелёных столбика. Стены и ворота — один `VoxelBatch` в `Warehouse.tsx` (компонент `Wall` оттуда убран).
+  Цвета `wall` / `wallPillar` заменены на `wallPanel`, `wallPilaster`, `wallPlinth`, `wallSeam`, `wallAccent`, `wallAccentSeam`, `concrete`. Дверь выдачи пока просто проём (M9d).
 
 План этапов:
 
