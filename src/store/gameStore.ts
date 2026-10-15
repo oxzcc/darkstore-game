@@ -5,7 +5,7 @@ import { persist } from 'zustand/middleware';
 import { persistOptions } from './persist';
 import type { GameState } from '../model/game';
 import type { Outcome, TaskType } from '../model/task';
-import { WAREHOUSE_LAYOUT } from '../config/warehouse';
+import { WAREHOUSE_LAYOUT, WAREHOUSE_VIEW } from '../config/warehouse';
 import { buildWarehouseMap } from '../rules/warehouse';
 import { createInitialGame } from '../rules/game';
 import { acceptTsd, declineTsd, sendPicker } from '../rules/tsd';
@@ -51,6 +51,8 @@ export type UiState = {
   results: ResultCard[];        // очередь окон результата: показывается первое (не во время игры на ТСД)
   depthSelected: number | null; // «Глубина»: выбранная коробка (клетка) — сцена подсвечивает, куда её можно сдвинуть
   barcodeInput: number[];       // «Штрихкод»: цифры текущей попытки, которые игрок уже набрал
+  /** Камера общего вида (W1): куда игрок её повернул (радианы, 0 — исходный угол) и зум. Не игровое состояние, не сохраняется. */
+  camera: { yaw: number; zoom: number };
 };
 
 type Store = {
@@ -102,6 +104,11 @@ type Store = {
   finishCampaign: () => void;
   restartCampaign: () => void;
   setPlayerSpeed: (speed: 1 | 2) => void;
+  /** Камера (W1): поворот на четверть круга (кнопки ⟲ ⟳), перетаскивание, зум (колесо, + −), исходный вид. */
+  turnCamera: (dir: 1 | -1) => void;
+  dragCamera: (deltaYaw: number) => void;
+  zoomCamera: (steps: number) => void;
+  resetCamera: () => void;
 };
 
 /** Окна и всплывашки, которые закрываются, когда кончилась смена или началась новая. */
@@ -110,13 +117,17 @@ const clearWindows = (ui: UiState): UiState => ({
   depthSelected: null, barcodeInput: [],
 });
 
+/** Исходный вид камеры: поворот 0, зум из config. */
+const HOME_CAMERA = { yaw: 0, zoom: WAREHOUSE_VIEW.homeCamera.zoom };
+const QUARTER = Math.PI / 2;
+
 /** Случайное зерно для новой игры. Math.random можно здесь, но не в rules (09, раздел 5.2). */
 const newSeed = () => Math.floor(Math.random() * 2 ** 32);
 
 // persist — сохранение игры в браузере (M8e, store/persist.ts)
 export const useGameStore = create<Store>()(persist((set) => ({
   game: createInitialGame(WAREHOUSE_MAP, newSeed()),
-  ui: { assignTaskId: null, chosenPickerId: null, toasts: [], gains: [], nextToastId: 1, callFlashes: [], openCallId: null, results: [], depthSelected: null, barcodeInput: [] },
+  ui: { assignTaskId: null, chosenPickerId: null, toasts: [], gains: [], nextToastId: 1, callFlashes: [], openCallId: null, results: [], depthSelected: null, barcodeInput: [], camera: HOME_CAMERA },
 
   openAssign: (taskId) => set((s) => ({ ui: { ...s.ui, assignTaskId: taskId, chosenPickerId: null } })),
   closeAssign: () => set((s) => ({ ui: { ...s.ui, assignTaskId: null, chosenPickerId: null } })),
@@ -254,6 +265,16 @@ export const useGameStore = create<Store>()(persist((set) => ({
 
   dismissToast: (id) => set((s) => ({ ui: { ...s.ui, toasts: s.ui.toasts.filter((t) => t.id !== id) } })),
   dismissGain: (id) => set((s) => ({ ui: { ...s.ui, gains: s.ui.gains.filter((g) => g.id !== id) } })),
+  // поворот кнопкой — до следующей «четверти», чтобы после перетаскивания вид снова встал ровно
+  turnCamera: (dir) => set((s) => ({ ui: { ...s.ui, camera: { ...s.ui.camera, yaw: (Math.round(s.ui.camera.yaw / QUARTER) + dir) * QUARTER } } })),
+  dragCamera: (deltaYaw) => set((s) => ({ ui: { ...s.ui, camera: { ...s.ui.camera, yaw: s.ui.camera.yaw + deltaYaw } } })),
+  zoomCamera: (steps) => set((s) => {
+    const { zoomMin, zoomMax, zoomStep } = WAREHOUSE_VIEW.homeCamera;
+    const zoom = Math.min(zoomMax, Math.max(zoomMin, s.ui.camera.zoom * Math.pow(zoomStep, steps)));
+    return { ui: { ...s.ui, camera: { ...s.ui.camera, zoom } } };
+  }),
+  // исходный вид: ближайший к текущему полный оборот, чтобы камера не крутилась лишние круги
+  resetCamera: () => set((s) => ({ ui: { ...s.ui, camera: { yaw: Math.round(s.ui.camera.yaw / (2 * Math.PI)) * 2 * Math.PI, zoom: HOME_CAMERA.zoom } } })),
   dismissFlash: (id) =>
     set((s) => {
       const flash = s.ui.callFlashes.find((f) => f.id === id);

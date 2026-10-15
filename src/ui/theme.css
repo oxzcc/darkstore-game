@@ -169,6 +169,11 @@ svg.i.sm { width: 18px; height: 18px; }
 .btn.sq.on svg.i { color: #fff; }
 .btn.sq:disabled { opacity: 1; cursor: default; }
 
+/* кнопки камеры справа (W1): поворот, зум, исходный вид */
+.cam-controls { position: absolute; right: 16px; bottom: 140px; display: flex; flex-direction: column; gap: 6px; } /* столбиком над карточками сборщиков, чтобы не налезать на них */
+.btn.sq.cam { width: 44px; height: 44px; }
+.btn.sq.cam > .vx > .vx-edge > .vx-body { font-size: 20px; }
+
 /* плашка «пауза» в заголовке окна назначения (ui_03) */
 .pause-tag { position: absolute; right: 12px; display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px;
   background: var(--tag); color: #fff; font-size: 13px; letter-spacing: 0.06em; }
