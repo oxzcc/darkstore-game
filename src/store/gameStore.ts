@@ -1,6 +1,8 @@
 // Хранилище игры (09, раздел 8): единственный источник правды.
 // Действия — тонкие обёртки: взять состояние, вызвать чистую функцию из rules, положить результат.
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { persistOptions } from './persist';
 import type { GameState } from '../model/game';
 import type { Outcome, TaskType } from '../model/task';
 import { WAREHOUSE_LAYOUT } from '../config/warehouse';
@@ -111,7 +113,8 @@ const clearWindows = (ui: UiState): UiState => ({
 /** Случайное зерно для новой игры. Math.random можно здесь, но не в rules (09, раздел 5.2). */
 const newSeed = () => Math.floor(Math.random() * 2 ** 32);
 
-export const useGameStore = create<Store>((set) => ({
+// persist — сохранение игры в браузере (M8e, store/persist.ts)
+export const useGameStore = create<Store>()(persist((set) => ({
   game: createInitialGame(WAREHOUSE_MAP, newSeed()),
   ui: { assignTaskId: null, chosenPickerId: null, toasts: [], gains: [], nextToastId: 1, callFlashes: [], openCallId: null, results: [], depthSelected: null, barcodeInput: [] },
 
@@ -265,4 +268,4 @@ export const useGameStore = create<Store>((set) => ({
       : s)),
   closeCall: () => set((s) => ({ ui: { ...s.ui, openCallId: null } })),
   dismissResult: (id) => set((s) => ({ ui: { ...s.ui, results: s.ui.results.filter((r) => r.id !== id) } })),
-}));
+}), persistOptions<Store>()));
