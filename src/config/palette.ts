@@ -6,11 +6,15 @@ export const PALETTE = {
   grass: '#93DE44',
   floor: '#FFFFFA',
   floorGrid: '#E9E8DF', // швы плитки
-  // стены и ворота по art/reference/world_wall.png и world_gates.png (M9b3)
-  wallPanel: '#EEEEEC',      // белые панели
-  wallPilaster: '#FAFAF8',   // пилястры и карниз
-  wallPlinth: '#A9AAAE',     // серый цоколь
-  wallSeam: '#D8D8D6',       // шов панели
+  // стены склада (W3; 08, раздел 0): сэндвич-панель с градиентом, цоколь, отлив, окна; дверь выдачи
+  wallBottom: '#4B5668',     // градиент панели и рёбер: внизу…
+  wallTop: '#959794',        // …и вверху
+  wallPlinth: '#B7B3AA',     // светлый бетонный цоколь
+  wallCap: '#80848C',        // серый отлив сверху
+  windowFrame: '#59606E',
+  windowGlass: '#C4E6F2',
+  doorMat: '#5E616A',        // коврик у двери выдачи
+  // ворота по art/reference/world_gates.png (M9b3)
   wallAccent: '#6DB52F',     // зелёные вставки, кромки, столбики-отбойники
   wallAccentSeam: '#5A9A25', // шов на зелёной вставке, колпаки столбиков
   concrete: '#CFCFCB',       // бетонная площадка у ворот

@@ -69,7 +69,7 @@ export const WAREHOUSE_VIEW = {
   packingTables: [{ x: 7, z: 12 }, { x: 9, z: 12 }, { x: 11, z: 12 }] as Cell[],
   cellSize: 1,         // 1 клетка = 1 метр
   wallHeight: 3,       // дальние стены (08, раздел 2)
-  frontWallHeight: 0.4,// ближние к камере стены низкие, чтобы не закрывать склад (как на макете ui_01)
+  frontWallHeight: 0.55,// ближние к камере стены низкие, чтобы не закрывать склад (08, раздел 0: около 0,55 м)
   wallThickness: 0.25,
   rackHeight: 2,       // стеллаж выше сборщика (~1,5 м)
   rackDepth: 0.6,
