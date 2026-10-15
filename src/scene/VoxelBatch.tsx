@@ -15,13 +15,15 @@ const SOFT = WAREHOUSE_VIEW.softCubes;
 const UNIT = new BoxGeometry(1, 1, 1);
 const ONE = new Vector3(1, 1, 1);
 
+/** Радиус скругления бруска такого размера (W6): доля короткой стороны, но не больше предела. */
+export const softRadius = (size: [number, number, number]) => Math.min(Math.min(...size) * SOFT.radiusShare, SOFT.maxRadius);
+
 /** Скруглённые геометрии нужных размеров — общие для всех пакетов. */
 const roundedCache = new Map<string, BufferGeometry>();
 function roundedGeometry(size: [number, number, number], key: string): BufferGeometry {
   let g = roundedCache.get(key);
   if (!g) {
-    const r = Math.min(Math.min(...size) * SOFT.radiusShare, SOFT.maxRadius);
-    g = new RoundedBoxGeometry(size[0], size[1], size[2], SOFT.segments, r);
+    g = new RoundedBoxGeometry(size[0], size[1], size[2], SOFT.segments, softRadius(size));
     roundedCache.set(key, g);
   }
   return g;

@@ -4,12 +4,12 @@ import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { cellToWorld } from '../rules/warehouse';
 
 export const RACK_POST = 0.06;  // толщина стойки
-export const RACK_BOARD = 0.05; // толщина полки
+export const RACK_BOARD = 0.08; // толщина полки (как в концепт-рендере, W6)
 
-/** Высота полки над полом. Полка 1 — нижняя, остальные равномерно до верха. */
+/** Высота полки над полом. Полка 1 — нижняя, остальные равномерно; над верхней — место под товар до верхней рамы. */
 export function shelfY(shelf: number, shelves: number): number {
-  const h = WAREHOUSE_VIEW.rackHeight;
-  return 0.15 + ((shelf - 1) * (h - 0.25)) / (shelves - 1 || 1);
+  const { rackHeight: h, rackBottomShelf: bottom, rackTopClearance: clear } = WAREHOUSE_VIEW;
+  return bottom + ((shelf - 1) * (h - clear - bottom)) / (shelves - 1 || 1);
 }
 
 /** Центр основания стеллажа в координатах сцены (середина его клеток). */
