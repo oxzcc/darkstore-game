@@ -580,3 +580,10 @@ svg.i.sm { width: 18px; height: 18px; }
 .hint { width: 460px; max-width: calc(100vw - 32px); }
 .hint > .vx-edge > .vx-body { display: flex; flex-direction: column; }
 .hint-body { padding: 16px 20px; font-size: 16px; line-height: 1.45; text-align: center; }
+
+/* ---------- новая игра (M8e) ---------- */
+.speed .mini-btn.restart { margin-right: 8px; }
+.restart-confirm { --cut: 6px; margin-right: 8px; }
+.restart-confirm > .vx-edge > .vx-body { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 13px; white-space: nowrap; }
+.mini-btn.danger { background: var(--failed); color: #fff; border-color: var(--failed); }
+.speed { align-items: center; } /* «Новая игра» по центру рядом с кнопками скорости */

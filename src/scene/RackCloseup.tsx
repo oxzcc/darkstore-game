@@ -4,7 +4,7 @@
 // минус уже взятое в сессии (их передаёт App).
 import { useEffect, useMemo, useState } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
+import SceneHtml from './SceneHtml';
 import type { Rack, WarehouseMap } from '../model/warehouse';
 import type { Stock } from '../model/stock';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
@@ -77,14 +77,14 @@ export default function RackCloseup({ map, stock }: { map: WarehouseMap; stock: 
     <group position={origin} rotation={[0, rot, 0]}>
       {/* этикетки адресов — наклейка на лицевом краю доски своей полки, вровень с ней, полка 1 — нижняя (08, раздел 7) */}
       {Array.from({ length: rack.shelves }, (_, i) => i + 1).map((shelf) => (
-        <Html
+        <SceneHtml
           key={`l${shelf}`}
           position={[-w / 2 + 0.16, shelfY(shelf, rack.shelves), frontSign * (d / 2 + 0.01)]}
           center
           className="shelf-label"
         >
           {addressText({ aisle: rack.aisle, rack: rack.rack, shelf })}
-        </Html>
+        </SceneHtml>
       ))}
 
       {shelves.map(({ address, layout }) =>
