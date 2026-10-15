@@ -65,7 +65,7 @@ export default function Truck({ position, rotationY }: Props) {
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
       {PARTS.map((part, i) => (
-        <mesh key={i} position={part.pos}>
+        <mesh key={i} position={part.pos} castShadow receiveShadow>
           <boxGeometry args={part.size} />
           <meshStandardMaterial color={part.color} />
         </mesh>

@@ -22,7 +22,7 @@ function ColorBatch({ color, parts }: { color: string; parts: VoxelPart[] }) {
   }, [parts]);
   return (
     // key по числу кубиков: при изменении количества InstancedMesh создаётся заново
-    <instancedMesh key={parts.length} ref={ref} args={[undefined, undefined, parts.length]} frustumCulled={false}>
+    <instancedMesh key={parts.length} ref={ref} args={[undefined, undefined, parts.length]} frustumCulled={false} castShadow receiveShadow>
       <boxGeometry args={[1, 1, 1]} />
       <meshStandardMaterial color={color} />
     </instancedMesh>

@@ -14,9 +14,9 @@ type Props = {
 const SHIRT = '#FFFFFF';
 const PAWS = '#3A342A';
 
-function Box({ p, s, c }: { p: [number, number, number]; s: [number, number, number]; c: string }) {
+function Box({ p, s, c, shadow = true }: { p: [number, number, number]; s: [number, number, number]; c: string; shadow?: boolean }) {
   return (
-    <mesh position={p}>
+    <mesh position={p} castShadow={shadow} receiveShadow>
       <boxGeometry args={s} />
       <meshStandardMaterial color={c} />
     </mesh>
@@ -28,10 +28,10 @@ function Ring({ color }: { color: string }) {
   const r = 0.42, w = 0.07, y = 0.02;
   return (
     <group>
-      <Box p={[0, y, -r]} s={[2 * r + w, 0.02, w]} c={color} />
-      <Box p={[0, y, r]} s={[2 * r + w, 0.02, w]} c={color} />
-      <Box p={[-r, y, 0]} s={[w, 0.02, 2 * r]} c={color} />
-      <Box p={[r, y, 0]} s={[w, 0.02, 2 * r]} c={color} />
+      <Box p={[0, y, -r]} s={[2 * r + w, 0.02, w]} c={color} shadow={false} />
+      <Box p={[0, y, r]} s={[2 * r + w, 0.02, w]} c={color} shadow={false} />
+      <Box p={[-r, y, 0]} s={[w, 0.02, 2 * r]} c={color} shadow={false} />
+      <Box p={[r, y, 0]} s={[w, 0.02, 2 * r]} c={color} shadow={false} />
     </group>
   );
 }
