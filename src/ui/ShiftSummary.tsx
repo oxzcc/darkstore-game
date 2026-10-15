@@ -4,7 +4,7 @@
 import type { CSSProperties } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { campaignSummaryView, LOSE_RATING, money, plural, ratingText, shiftSummaryView, signedRating } from '../store/selectors';
-import { OUTCOME_LOOK, OUTCOMES_ORDER } from './labels';
+import { OUTCOME_LOOK, OUTCOMES_ORDER, TASK_TYPE_LOOK } from './labels';
 import { Avatar } from './PickerBits';
 import Vx from './Vx';
 import Icon from './icons';
@@ -54,13 +54,25 @@ export default function ShiftSummary() {
                 <div><span>Рейтинг</span><b className={shift.rating < 0 ? 'bad' : ''}>{signedRating(shift.rating)}</b></div>
               </div>
               <div className="summary-pickers">
-                {shift.pickers.map(({ picker, tasks }) => (
-                  <div key={picker.id} className="summary-picker" style={{ '--pc': picker.color } as CSSProperties}>
-                    <Avatar picker={picker} small />
-                    <span className="grow">{picker.name}</span>
-                    <span>{tasks} {plural(tasks, 'задание', 'задания', 'заданий')}</span>
-                  </div>
-                ))}
+                {shift.pickers.map(({ picker, tasks }) => {
+                  const g = shift.growth?.[picker.id];
+                  return (
+                    <div key={picker.id} className="summary-picker" style={{ '--pc': picker.color } as CSSProperties}>
+                      <Avatar picker={picker} small />
+                      <div className="grow">
+                        <div>{picker.name} · {tasks} {plural(tasks, 'задание', 'задания', 'заданий')}</div>
+                        {/* рост за смену (M8c) */}
+                        {g && (
+                          <div className="summary-growth">
+                            +{g.xp} опыта
+                            {g.levelUps.map((u) => <b key={u.type}> · {TASK_TYPE_LOOK[u.type].name} ур. {u.level} ↑</b>)}
+                            {' '}· усталость {g.fatigue}%
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
               <div className="note">Незакрытые задания не переходят в следующую смену</div>
             </div>

@@ -18,5 +18,6 @@ export function activityLine(a: PickerActivity): { text: string; icon: IconName;
     case 'picking': return { text: `Собирает ${a.line} из ${a.lines}`, icon: 'work', progress: a.progress };
     case 'placing': return { text: `Выкладывает ${a.line} из ${a.lines}`, icon: 'work', progress: a.progress };
     case 'packing': return { text: 'Фасует заказ', icon: 'work', progress: a.progress };
+    case 'resting': return { text: `Отдыхает · усталость ${Math.round(a.fatigue)}%`, icon: 'pause', progress: null };
   }
 }

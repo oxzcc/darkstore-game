@@ -12,10 +12,15 @@ import { topUpOrders } from './tasks/generator';
 import { tickDeliveries } from './deliveries';
 import { createPutawayTasks } from './putaway';
 import { assignDeadlines } from './deadline';
+import { levelsOf, restBetweenShifts } from './pickerStats';
+import type { Picker } from '../model/picker';
+import type { TaskType } from '../model/task';
+import { PICKER_GROWTH } from '../config/balance';
 
 /** Кампания на старте. */
-export function newCampaign(money: number, rating: number): Campaign {
-  return { shift: 1, totalShifts: SHIFT.totalShifts, phase: 'running', startMoney: money, startRating: rating, history: [], lost: false };
+export function newCampaign(money: number, rating: number, pickers: Record<string, Picker> = {}): Campaign {
+  return { shift: 1, totalShifts: SHIFT.totalShifts, phase: 'running', startMoney: money, startRating: rating, history: [], lost: false,
+    startLevels: levelsOf(pickers) };
 }
 
 /** Сколько игровых секунд осталось до конца смены. */
@@ -51,9 +56,22 @@ export function shiftResult(state: GameState): ShiftResult {
   const keptOverdue = Object.values(state.tasks).filter((t) => t.overdue).length;
   const open = Object.values(state.tasks).filter(isOpen).length;
   const appeared = closed + open + expired - keptOverdue;
+  // рост сборщиков за смену (M8c): опыт по исходам, новые уровни специализаций, усталость сейчас
+  const growth: ShiftResult['growth'] = {};
+  for (const p of Object.values(state.pickers)) {
+    const start = state.campaign.startLevels?.[p.id];
+    const levelUps = (Object.entries(p.specialization) as [TaskType, { level: number }][])
+      .filter(([t, s]) => s.level > (start?.[t] ?? s.level))
+      .map(([type, s]) => ({ type, level: s.level }));
+    growth[p.id] = { xp: 0, levelUps, fatigue: Math.round(p.stats.fatigue) };
+  }
+  for (const e of state.shiftLog) {
+    if (e.kind === 'taskDone' && growth[e.pickerId]) growth[e.pickerId].xp += PICKER_GROWTH.spec.xp[e.outcome];
+  }
   return {
     shift: state.campaign.shift,
     appeared,
+    growth,
     closed,
     expired,
     byOutcome,
@@ -98,13 +116,15 @@ export function startNextShift(state: GameState, map: WarehouseMap): GameState {
     delete deliveries[d.id];
   }
 
+  // сборщики свободны; усталость за ночь падает (M8c)
   const pickers = Object.fromEntries(Object.entries(state.pickers).map(([id, p]) => [id, {
-    ...p, state: 'idle' as const, taskId: null, job: null, path: [], pathProgress: 0,
+    ...restBetweenShifts(p), state: 'idle' as const, taskId: null, job: null, path: [], pathProgress: 0,
   }]));
 
   let next: GameState = {
     ...state,
-    campaign: { ...state.campaign, shift: state.campaign.shift + 1, phase: 'running', startMoney: state.money, startRating: state.rating },
+    campaign: { ...state.campaign, shift: state.campaign.shift + 1, phase: 'running', startMoney: state.money, startRating: state.rating,
+      startLevels: levelsOf(pickers) },
     clock: { ...state.clock, time: 0, paused: false },
     tasks: {},
     calls: [],

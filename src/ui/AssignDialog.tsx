@@ -2,7 +2,7 @@
 // Все числа — из selectors (а те — из rules); окно само ничего не считает.
 import type { CSSProperties } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { addressText, assignCheck, chancesFor, clockText, etaFor, groupedLines, money, pickerList, taskSummary } from '../store/selectors';
+import { addressText, assignCheck, chancesFor, clockText, etaFor, groupedLines, money, pickerList, specLevel, taskSummary } from '../store/selectors';
 import { OUTCOME_LOOK, OUTCOMES_ORDER, TASK_TYPE_LOOK, taskTitle } from './labels';
 import { Avatar, StatBars } from './PickerBits';
 import Vx from './Vx';
@@ -67,7 +67,12 @@ export default function AssignDialog() {
               <div className="choice-head">
                 <Avatar picker={p} />
                 <div className="grow">
-                  <div className="picker-name">{p.name}</div>
+                  <div className="picker-name">
+                    {p.name}
+                    <span className="spec-tag" title="Специализация по этому типу задания: каждый уровень — быстрее и точнее">
+                      {TASK_TYPE_LOOK[task.type].name} ур. {specLevel(game, p.id, task.id)}
+                    </span>
+                  </div>
                   <div className="picker-state">
                     {check.ok
                       ? <><Icon name="walk" small />{eta === null ? 'не дойти' : `${clockText(eta)} до места`}</>
@@ -94,7 +99,7 @@ export default function AssignDialog() {
             </Vx>
           );
         })}
-        <div className="note">Шансы пока одинаковые для всех — формула появится позже</div>
+        <div className="note">Шансы зависят от точности, специализации и усталости сборщика</div>
       </div>
 
       <div className="buttons">

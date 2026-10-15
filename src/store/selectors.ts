@@ -23,6 +23,7 @@ import type { Stock } from '../model/stock';
 import { WAREHOUSE_MAP } from './gameStore';
 import { isLastShift, shiftSecondsLeft } from '../rules/shift';
 import { secondsToTake } from '../rules/deadline';
+import { canRest } from '../rules/rest';
 import { DEADLINE, SHIFT } from '../config/balance';
 
 /** Открытые задания по порядку появления. */
@@ -458,3 +459,14 @@ export function takeTimer(game: GameState, task: Task): { secondsLeft: number; w
 
 /** Порог рейтинга для экрана проигрыша. */
 export const LOSE_RATING = SHIFT.loseRating;
+
+// ---------- Сборщики: опыт, усталость, перерыв (M8c) ----------
+
+/** Можно ли отправить на перерыв (кнопка на карточке). */
+export const restAllowed = (game: GameState, pickerId: string) => canRest(game.pickers[pickerId]);
+
+/** Уровень специализации сборщика по типу задания — для окна «Кого отправить?». */
+export function specLevel(game: GameState, pickerId: string, taskId: string): number {
+  const t = game.tasks[taskId];
+  return t ? game.pickers[pickerId]?.specialization[t.type]?.level ?? 1 : 1;
+}
