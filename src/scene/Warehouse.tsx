@@ -1,12 +1,15 @@
 // Склад: пол, зоны, стены и ворота, стеллажи, столы фасовки. Только отрисовка карты, никаких решений (09, раздел 9).
-import { useMemo } from 'react';
-import type { WarehouseMap } from '../model/warehouse';
+// Стены (W1): все четыре высокие; та, что оказалась между камерой и складом, плавно уходит в землю до высоты низкой стены.
+import { useMemo, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import { Vector3, type Group } from 'three';
+import type { WallSide, WarehouseMap } from '../model/warehouse';
 import type { Stock } from '../model/stock';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { PALETTE } from '../config/palette';
 import { rackParts } from './models/Rack';
 import { packingTableParts } from './models/PackingTable';
-import { wallParts } from './models/Wall';
+import { wallSideParts } from './models/Wall';
 import { gateParts } from './models/Gate';
 import type { VoxelPart } from './models/ProductItem';
 import { rackLocalToWorld, rackRotY } from './rackGeometry';
@@ -50,13 +53,47 @@ function allTableParts(): VoxelPart[] {
   );
 }
 
+const SIDES: WallSide[] = ['north', 'south', 'west', 'east'];
+/** Куда смотрит стена наружу (x, z). */
+const OUTWARD: Record<WallSide, [number, number]> = { north: [0, -1], south: [0, 1], west: [-1, 0], east: [1, 0] };
+
+/** Четыре стены; ближняя к камере опускается («срез», как в Moving Out и The Sims). */
+function Walls({ map }: { map: WarehouseMap }) {
+  const sides = useMemo(() => SIDES.map((side) => ({ side, parts: wallSideParts(map, side, true) })), [map]);
+  const groups = useRef<(Group | null)[]>([]);
+  const camera = useThree((s) => s.camera);
+  const look = useMemo(() => new Vector3(), []);
+  const first = useRef(true);
+  const drop = WAREHOUSE_VIEW.wallHeight - WAREHOUSE_VIEW.frontWallHeight;
+  useFrame((_, delta) => {
+    camera.getWorldDirection(look); // от камеры в сцену
+    // в первый кадр — сразу на место, чтобы ближние стены не «съезжали» при загрузке
+    const k = first.current ? 1 : 1 - Math.exp(-Math.min(delta, 0.1) * WAREHOUSE_VIEW.homeCamera.wallFollow);
+    first.current = false;
+    sides.forEach(({ side }, i) => {
+      const g = groups.current[i];
+      if (!g) return;
+      const [nx, nz] = OUTWARD[side];
+      const nearCamera = -(nx * look.x + nz * look.z) > 0.1; // камера по ту сторону стены
+      const target = nearCamera ? -drop : 0;
+      g.position.y += (target - g.position.y) * k;
+    });
+  });
+  return (
+    <>
+      {sides.map(({ side, parts }, i) => (
+        <group key={side} ref={(el) => { groups.current[i] = el; }}>
+          <VoxelBatch parts={parts} />
+        </group>
+      ))}
+    </>
+  );
+}
+
 export default function Warehouse({ map, stock }: Props) {
   const { floorThickness: ft } = WAREHOUSE_VIEW;
   const furniture = useMemo(() => [...allRackParts(map), ...allTableParts()], [map]);
-  const walls = useMemo(
-    () => [...wallParts(map), ...map.openings.filter((o) => o.kind === 'gate').flatMap((g) => gateParts(map, g))],
-    [map],
-  );
+  const gates = useMemo(() => map.openings.filter((o) => o.kind === 'gate').flatMap((g) => gateParts(map, g)), [map]);
 
   return (
     <group>
@@ -74,7 +111,8 @@ export default function Warehouse({ map, stock }: Props) {
 
       <FloorMarkings map={map} />
 
-      <VoxelBatch parts={walls} />
+      <Walls map={map} />
+      <VoxelBatch parts={gates} />
 
       <VoxelBatch parts={furniture} />
 

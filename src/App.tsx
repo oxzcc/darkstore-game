@@ -14,6 +14,7 @@ import TsdPanel from './ui/TsdPanel';
 import CallWindow from './ui/CallWindow';
 import ResultWindow from './ui/ResultWindow';
 import SpeedControls from './ui/SpeedControls';
+import CameraControls from './ui/CameraControls';
 import TopBar from './ui/TopBar';
 import ShiftSummary from './ui/ShiftSummary';
 import TutorialHint from './ui/TutorialHint';
@@ -41,6 +42,7 @@ export default function App() {
         <ResultWindow />
         {!closeup && <TopBar />}
         <SpeedControls />
+        {!closeup && <CameraControls />}
         <Toasts />
         <ShiftSummary />
         <TutorialHint />

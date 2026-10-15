@@ -3,8 +3,10 @@
 // - во время мини-игры, когда игрок выбрал стеллаж, камера плавно «влетает» в проход: приближается,
 //   угол обзора расширяется до обычного, и она встаёт на уровне глаз сборщика перед стеллажом;
 // - «Назад к складу» возвращает её домой.
+// Дома камеру можно крутить вокруг склада и приближать (W1; 08, раздел 0): перетаскивание мышью, колесо,
+// двойной клик — исходный вид; кнопки ⟲ ⟳ + − — в ui/CameraControls. Поворот и зум лежат в store.ui.camera.
 // Вдали склад растворяется в светлой дымке. Куда смотреть, решает сцена по store; это не игровое состояние.
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Color, Fog, PerspectiveCamera, Vector3 } from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { Rack, WarehouseMap } from '../model/warehouse';
@@ -15,7 +17,6 @@ import { useGameStore } from '../store/gameStore';
 import { closeupEye, closeupLook } from './closeupView';
 import { closeupFocus } from '../store/selectors';
 
-const ISO_ELEVATION = Math.atan(1 / Math.SQRT2); // ≈35,26° — классическая изометрия
 const SCREEN_FILL = 0.95;                         // доля свободного места, которую занимает склад в общем виде
 const DEPTH = 60;                                 // сколько метров сцены вокруг цели помещается между near и far
 const NO_FOG = 1e5;                               // дымка так далеко, что её нет
@@ -32,21 +33,24 @@ type Pose = { target: Vector3; dir: Vector3; dist: number; fovDeg: number; inset
 const rad = (deg: number) => (deg * Math.PI) / 180;
 
 /** Общий вид: весь склад «в изометрии» (узкий угол издалека). */
-function homePose(map: WarehouseMap, size: Size, panel: number): Pose {
+function homePose(map: WarehouseMap, size: Size, panel: number, yaw: number, zoom: number): Pose {
   // panel — 0…1: насколько выдвинута панель ТСД справа (склад сдвигается влево, чтобы она его не закрывала)
   const base = WAREHOUSE_VIEW.screenInsets;
   const ins = { ...base, right: lerp(base.right, WAREHOUSE_VIEW.tsdPanelInset, panel) };
   const freeW = Math.max(100, size.width - ins.left - ins.right);
   const freeH = Math.max(100, size.height - ins.top - ins.bottom);
+  const elev = rad(WAREHOUSE_VIEW.homeCamera.elevationDeg);
+  // размер склада на экране считаем для исходного угла (45°), чтобы при повороте он не «дышал»
   const diag = (map.width + map.depth) / Math.SQRT2;
-  const spanY = diag * Math.sin(ISO_ELEVATION) + WAREHOUSE_VIEW.wallHeight * Math.cos(ISO_ELEVATION);
+  const spanY = diag * Math.sin(elev) + WAREHOUSE_VIEW.wallHeight * Math.cos(elev);
   // сколько пикселей на метр (как zoom ортографической камеры в M1) → какая высота мира видна на экране
-  const pxPerM = Math.min(freeW / diag, freeH / spanY) * SCREEN_FILL;
+  const pxPerM = Math.min(freeW / diag, freeH / spanY) * SCREEN_FILL * zoom;
   const visibleH = size.height / pxPerM;
   const fovDeg = WAREHOUSE_VIEW.homeFovDeg;
   return {
     target: new Vector3(map.width / 2, WAREHOUSE_VIEW.wallHeight / 2, map.depth / 2),
-    dir: new Vector3(1, 1, 1).normalize(),
+    // исходный угол — с юго-востока (как раньше), yaw поворачивает вокруг склада
+    dir: new Vector3(Math.sin(Math.PI / 4 + yaw) * Math.cos(elev), Math.sin(elev), Math.cos(Math.PI / 4 + yaw) * Math.cos(elev)),
     dist: visibleH / 2 / Math.tan(rad(fovDeg) / 2),
     fovDeg,
     insets: ins,
@@ -126,6 +130,54 @@ export default function CameraRig({ map }: { map: WarehouseMap }) {
   const progress = useRef(0);                 // 0 — дом, 1 — у стеллажа
   const lastRack = useRef<Rack | null>(null); // к какому стеллажу летим (и от какого возвращаемся)
   const fog = useRef(new Fog(FOG, NO_FOG, NO_FOG * 2));
+  const yaw = useRef(0);   // поворот и зум, которые сейчас на экране: плавно догоняют store.ui.camera
+  const zoom = useRef(WAREHOUSE_VIEW.homeCamera.zoom);
+  const gl = useThree((s) => s.gl);
+
+  // Мышь над сценой: перетаскивание — поворот, колесо — зум, двойной клик — исходный вид.
+  // Пока камера у стеллажа (игра на ТСД), вращать нельзя.
+  useEffect(() => {
+    const el = gl.domElement;
+    const { dragRadPerPx, dragThresholdPx } = WAREHOUSE_VIEW.homeCamera;
+    const busy = () => { const g = useGameStore.getState().game; return closeupFocus(g) !== null || g.tsdGame !== null; };
+    let down: { x: number; lastX: number; dragging: boolean } | null = null;
+    // после перетаскивания браузер всё равно пришлёт «клик» — гасим его, чтобы не выбрать что-то случайно
+    const eatClick = (e: MouseEvent) => { e.stopPropagation(); e.preventDefault(); };
+    const onDown = (e: PointerEvent) => { if (e.button === 0 && !busy()) down = { x: e.clientX, lastX: e.clientX, dragging: false }; };
+    const onMove = (e: PointerEvent) => {
+      if (!down) return;
+      if (!down.dragging && Math.abs(e.clientX - down.x) < dragThresholdPx) return;
+      if (!down.dragging) { down.dragging = true; el.style.cursor = 'grabbing'; }
+      useGameStore.getState().dragCamera(-(e.clientX - down.lastX) * dragRadPerPx);
+      down.lastX = e.clientX;
+    };
+    const onUp = () => {
+      if (down?.dragging) {
+        window.addEventListener('click', eatClick, { capture: true, once: true });
+        setTimeout(() => window.removeEventListener('click', eatClick, { capture: true }), 0);
+        el.style.cursor = '';
+      }
+      down = null;
+    };
+    const onWheel = (e: WheelEvent) => {
+      if (busy()) return;
+      e.preventDefault();
+      useGameStore.getState().zoomCamera(e.deltaY < 0 ? 1 : -1);
+    };
+    const onDouble = () => { if (!busy()) useGameStore.getState().resetCamera(); };
+    el.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('dblclick', onDouble);
+    return () => {
+      el.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('dblclick', onDouble);
+    };
+  }, [gl]);
 
   useFrame((_, delta) => {
     const rack = focus ? map.racks.find((r) => r.aisle === focus.aisle && r.rack === focus.rack) ?? null : null;
@@ -138,7 +190,11 @@ export default function CameraRig({ map }: { map: WarehouseMap }) {
     const t = smooth(progress.current);
 
     panel.current = session ? Math.min(1, panel.current + step) : Math.max(0, panel.current - step);
-    const home = homePose(map, size, smooth(panel.current));
+    const want = useGameStore.getState().ui.camera;
+    const k = 1 - Math.exp(-Math.min(delta, 0.1) * WAREHOUSE_VIEW.homeCamera.follow);
+    yaw.current += (want.yaw - yaw.current) * k;
+    zoom.current += (want.zoom - zoom.current) * k;
+    const home = homePose(map, size, smooth(panel.current), yaw.current, zoom.current);
     const close = lastRack.current ? closePose(lastRack.current, lastInsets.current) : null;
     const pose = close && progress.current > 0 ? mix(home, close, t) : home;
     apply(camera, pose, size);

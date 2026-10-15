@@ -53,10 +53,12 @@ export function wallSegments(length: number, openings: WallOpening[]): [number, 
   return segments;
 }
 
-function sideParts(map: WarehouseMap, side: WallSide): VoxelPart[] {
+/** Одна стена. `tall` — высокая (по умолчанию высокие только дальние); с вращением камеры (W1) все стены строятся высокими,
+ *  а ближняя к камере опускается в землю до высоты низкой стены (Warehouse.tsx). */
+export function wallSideParts(map: WarehouseMap, side: WallSide, tall = FAR_SIDES.includes(side)): VoxelPart[] {
   const t = WAREHOUSE_VIEW.wallThickness;
   const s = WAREHOUSE_VIEW.cellSize;
-  const far = FAR_SIDES.includes(side);
+  const far = tall;
   const h = far ? WAREHOUSE_VIEW.wallHeight : WAREHOUSE_VIEW.frontWallHeight;
   const plinth = far ? PLINTH : LOW_PLINTH;
   const length = (side === 'north' || side === 'south' ? map.width : map.depth) * s;
@@ -105,5 +107,5 @@ function sideParts(map: WarehouseMap, side: WallSide): VoxelPart[] {
 
 /** Все стены склада. */
 export function wallParts(map: WarehouseMap): VoxelPart[] {
-  return (['north', 'south', 'west', 'east'] as WallSide[]).flatMap((side) => sideParts(map, side));
+  return (['north', 'south', 'west', 'east'] as WallSide[]).flatMap((side) => wallSideParts(map, side));
 }
