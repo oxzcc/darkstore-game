@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { BoxGeometry, BufferAttribute, CanvasTexture, Color, Vector3, type Group } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import type { WallOpening, WallSide, WarehouseMap } from '../model/warehouse';
 import type { Stock } from '../model/stock';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
@@ -14,7 +15,7 @@ import { doorParts, doorSignPose, wallBox, wallGradientBoxes, wallHeight, wallSi
 import { gateParts } from './models/Gate';
 import type { VoxelPart } from './models/ProductItem';
 import { rackLocalToWorld, rackRotY } from './rackGeometry';
-import VoxelBatch from './VoxelBatch';
+import VoxelBatch, { softRadius } from './VoxelBatch';
 import { tiled, tilesTexture, TEXTURE_METERS } from './textures';
 import FloorMarkings from './FloorMarkings';
 import ShelfGoods from './ShelfGoods';
@@ -66,7 +67,8 @@ function GradientWall({ map, side, tall }: { map: WarehouseMap; side: WallSide; 
     const bottom = new Color(PALETTE.wallBottom), top = new Color(PALETTE.wallTop), c = new Color();
     const pieces = wallGradientBoxes(map, side, tall).map((b) => {
       const { pos, size } = wallBox(map, side, b.a0, b.a1, b.y0, b.y1, b.i0, b.i1, '');
-      const g = new BoxGeometry(size[0], size[1], size[2]).translate(pos[0], pos[1], pos[2]);
+      // мягкие рёбра, как у остальных моделей (W6)
+      const g = new RoundedBoxGeometry(size[0], size[1], size[2], WAREHOUSE_VIEW.softCubes.segments, softRadius(size, 'strong')).translate(pos[0], pos[1], pos[2]);
       const p = g.attributes.position;
       const colors = new Float32Array(p.count * 3);
       for (let k = 0; k < p.count; k++) {
@@ -150,11 +152,11 @@ function Walls({ map }: { map: WarehouseMap }) {
         <group key={side}>
           <group ref={(el) => { tallGroups.current[i] = el; }}>
             <GradientWall map={map} side={side} tall />
-            <VoxelBatch parts={tall} />
+            <VoxelBatch parts={tall} soft="strong" />
           </group>
           <group ref={(el) => { lowGroups.current[i] = el; }}>
             <GradientWall map={map} side={side} tall={false} />
-            <VoxelBatch parts={low} />
+            <VoxelBatch parts={low} soft="strong" />
           </group>
         </group>
       ))}
@@ -220,10 +222,10 @@ export default function Warehouse({ map, stock }: Props) {
       <WallShade map={map} />
 
       <Walls map={map} />
-      <VoxelBatch parts={gates} />
+      <VoxelBatch parts={gates} soft="strong" />
       {doors.map((d, i) => <DoorSign key={i} map={map} door={d} />)}
 
-      <VoxelBatch parts={furniture} />
+      <VoxelBatch parts={furniture} soft="strong" />
 
       <ShelfGoods map={map} stock={stock} />
     </group>

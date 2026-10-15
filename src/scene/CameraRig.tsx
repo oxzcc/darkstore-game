@@ -1,5 +1,5 @@
 // Камера (09, раздел 6.4). Одна перспективная камера на всю игру:
-// - дома она смотрит издалека с очень узким углом обзора — на глаз это та же изометрия, что в M1;
+// - дома она смотрит сверху на склад с перспективой (угол обзора WAREHOUSE_VIEW.homeFovDeg, как в концепт-рендере, W6);
 // - во время мини-игры, когда игрок выбрал стеллаж, камера плавно «влетает» в проход: приближается,
 //   угол обзора расширяется до обычного, и она встаёт на уровне глаз сборщика перед стеллажом;
 // - «Назад к складу» возвращает её домой.
@@ -40,6 +40,7 @@ function homePose(map: WarehouseMap, size: Size, panel: number, yaw: number, zoo
   const freeW = Math.max(100, size.width - ins.left - ins.right);
   const freeH = Math.max(100, size.height - ins.top - ins.bottom);
   const elev = rad(WAREHOUSE_VIEW.homeCamera.elevationDeg);
+  const az = rad(WAREHOUSE_VIEW.homeCamera.azimuthDeg);
   // размер склада на экране считаем для исходного угла (45°), чтобы при повороте он не «дышал»
   const diag = (map.width + map.depth) / Math.SQRT2;
   const spanY = diag * Math.sin(elev) + WAREHOUSE_VIEW.wallHeight * Math.cos(elev);
@@ -49,8 +50,8 @@ function homePose(map: WarehouseMap, size: Size, panel: number, yaw: number, zoo
   const fovDeg = WAREHOUSE_VIEW.homeFovDeg;
   return {
     target: new Vector3(map.width / 2, WAREHOUSE_VIEW.wallHeight / 2, map.depth / 2),
-    // исходный угол — с юго-востока (как раньше), yaw поворачивает вокруг склада
-    dir: new Vector3(Math.sin(Math.PI / 4 + yaw) * Math.cos(elev), Math.sin(elev), Math.cos(Math.PI / 4 + yaw) * Math.cos(elev)),
+    // исходный угол — с юго-востока, ближе к югу (azimuthDeg), yaw поворачивает вокруг склада
+    dir: new Vector3(Math.sin(az + yaw) * Math.cos(elev), Math.sin(elev), Math.cos(az + yaw) * Math.cos(elev)),
     dist: visibleH / 2 / Math.tan(rad(fovDeg) / 2),
     fovDeg,
     insets: ins,

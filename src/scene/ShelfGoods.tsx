@@ -31,16 +31,16 @@ export default function ShelfGoods({ map, stock }: Props) {
         const look = products[g.productId]?.look;
         if (!look) continue;
         const item = productParts(look, size);
-        for (const x of g.xs) {
+        g.xs.forEach((x, k) => {
           for (const p of item) {
-            const local: [number, number, number] = [x + p.pos[0], layout.y + p.pos[1], layout.z + layout.front * p.pos[2]];
+            const local: [number, number, number] = [x + p.pos[0], layout.y + p.pos[1], g.zs[k] + layout.front * p.pos[2]];
             out.push({
               pos: rackLocalToWorld(rack, local),
               size: across ? [p.size[2], p.size[1], p.size[0]] : p.size,
               color: p.color,
             });
           }
-        }
+        });
       }
     }
     return out;
