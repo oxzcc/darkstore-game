@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Group, Vector3 } from 'three';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
+import SceneHtml from './SceneHtml';
 import type { WarehouseMap } from '../model/warehouse';
 import type { DepthBoard } from '../model/tsdGame';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
@@ -88,9 +88,9 @@ function Tray({ look, rim, label, labelTarget, showLabel }: { look: ProductLook 
       {/* подпись товара на переднем борту */}
       {/* подписи — ниже окон интерфейса (zIndexRange), а при итоге не рисуются вовсе, чтобы не лезть поверх окна */}
       {showLabel && (
-        <Html position={[0, h, s / 2]} center zIndexRange={[5, 0]} className={`shelf-label depth-tray-label${labelTarget ? ' target' : ''}`}>
+        <SceneHtml position={[0, h, s / 2]} center zIndexRange={[5, 0]} className={`shelf-label depth-tray-label${labelTarget ? ' target' : ''}`}>
           {label}
-        </Html>
+        </SceneHtml>
       )}
     </group>
   );
@@ -193,9 +193,9 @@ export default function DepthShelf({ map }: { map: WarehouseMap }) {
           <meshBasicMaterial color={TARGET_FRAME} transparent opacity={0.45} depthWrite={false} />
         </mesh>
         {!game.result && (
-          <Html position={[cellPos(b, b.exit)[0], 0, d / 2 + 0.07]} center zIndexRange={[5, 0]} className="shelf-label depth-front-label">
+          <SceneHtml position={[cellPos(b, b.exit)[0], 0, d / 2 + 0.07]} center zIndexRange={[5, 0]} className="shelf-label depth-front-label">
             сюда
-          </Html>
+          </SceneHtml>
         )}
 
         {/* куда можно сдвинуть выбранную коробку — прозрачные белые клетки, клик — ход */}

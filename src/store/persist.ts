@@ -61,8 +61,9 @@ export function persistOptions<S extends Saved>(): PersistOptions<S, Saved> {
     merge: (persisted, current) => {
       const saved = (persisted as Saved | undefined)?.game;
       if (!saved || saved.version !== GAME_STATE_VERSION) return current;
-      // после открытия — на паузе
-      return { ...current, game: { ...saved, clock: { ...saved.clock, paused: true } } };
+      // после открытия — на паузе. Кроме игры на ТСД: мир в ней и так стоит, а снять паузу во время игры нечем —
+      // кнопки скорости заблокированы, и клики по головоломке не проходили (игра зависала).
+      return { ...current, game: { ...saved, clock: { ...saved.clock, paused: saved.tsdGame === null } } };
     },
   };
 }

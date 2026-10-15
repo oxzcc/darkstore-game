@@ -10,7 +10,7 @@ import { cellToWorld } from '../rules/warehouse';
 import PickerModel from './models/Picker';
 import { blocksCloseup } from './closeupView';
 import { closeupFocus } from '../store/selectors';
-import { Html } from '@react-three/drei';
+import SceneHtml from './SceneHtml';
 import type { CSSProperties } from 'react';
 
 const HOP_HEIGHT = 0.06;  // высота подскока при ходьбе
@@ -70,7 +70,7 @@ function CallBang({ pickerId, pos }: { pickerId: string; pos: [number, number, n
   if (!call) return null;
   const left = call.expiresAt === null ? 1 : Math.max(0, call.expiresAt - time) / CALLS.answerSeconds;
   return (
-    <Html position={[pos[0], 2.1, pos[2]]} center zIndexRange={[20, 0]}>
+    <SceneHtml position={[pos[0], 2.1, pos[2]]} center zIndexRange={[20, 0]}>
       <button className="call-bang" title="Нужна помощь — нажмите" onClick={() => openCall(call.id)}>
         <svg viewBox="0 0 44 44" className="call-bang-timer" aria-hidden>
           <rect x="2" y="2" width="40" height="40" pathLength={100} className="track" />
@@ -78,7 +78,7 @@ function CallBang({ pickerId, pos }: { pickerId: string; pos: [number, number, n
         </svg>
         <span>!</span>
       </button>
-    </Html>
+    </SceneHtml>
   );
 }
 

@@ -3,7 +3,7 @@
 // Сцена ничего не решает: можно ли выбрать стеллаж, проверяет rules (chooseRack).
 import { useState } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
+import SceneHtml from './SceneHtml';
 import type { Rack, WarehouseMap } from '../model/warehouse';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { PALETTE } from '../config/palette';
@@ -78,7 +78,7 @@ export default function RackPicking({ map }: { map: WarehouseMap }) {
             {key === focusKey && <FloorFrame rack={r} color={PALETTE.primary} />}
             {isHover && key !== focusKey && <FloorFrame rack={r} color={HOVER_COLOR} />}
             {isHover && (
-              <Html position={[x, h + 0.35, z]} center className="rack-label">{key}</Html>
+              <SceneHtml position={[x, h + 0.35, z]} center className="rack-label">{key}</SceneHtml>
             )}
           </group>
         );
