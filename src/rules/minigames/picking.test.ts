@@ -15,10 +15,10 @@ import { chooseRack, leaveRack, scanShelf, seenStock, takenPerLine } from './pic
 
 const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
 
-// В начальном запасе: 2.3.2 — молоко (6), 2.2.1 — яйца (10), 2.2.4 — макароны (9).
+// В начальном запасе: 2.3.2 — молоко (6), 2.2.1 — яйца (10), 2.2.3 — макароны (9).
 const MILK = parseAddress('2.3.2');
 const EGGS = parseAddress('2.2.1');
-const PASTA = parseAddress('2.2.4');
+const PASTA = parseAddress('2.2.3');
 
 /** Игра, где игрок взял ТСД у Лаки. Заказ можно подменить, чтобы знать, что на каких полках. */
 function inSession(lines?: OrderLine[]): GameState {
@@ -55,8 +55,8 @@ describe('«Сборка»: выбор стеллажа и ходьба (M5e1)',
   });
 
   it('клик по стеллажу — сборщик идёт к нему, камера подлетает только когда дошёл', () => {
-    const s = chooseRack(inSession(), map, 4, 6);
-    expect(s.minigame?.focus).toEqual({ aisle: 4, rack: 6 });
+    const s = chooseRack(inSession(), map, 3, 4);
+    expect(s.minigame?.focus).toEqual({ aisle: 3, rack: 4 });
     expect(s.minigame?.atFocus).toBe(false);
     const there = arrive(s);
     expect(there.minigame?.atFocus).toBe(true);
@@ -64,7 +64,7 @@ describe('«Сборка»: выбор стеллажа и ходьба (M5e1)',
   });
 
   it('пока идёт, можно передумать; у стеллажа другой выбрать нельзя — сначала «Назад к складу»', () => {
-    const walking = advanceWorld(chooseRack(inSession(), map, 4, 6), map, 1).state;
+    const walking = advanceWorld(chooseRack(inSession(), map, 3, 4), map, 1).state;
     const changed = chooseRack(walking, map, 1, 1);
     expect(changed.minigame?.focus).toEqual({ aisle: 1, rack: 1 });
     const there = arrive(changed);
