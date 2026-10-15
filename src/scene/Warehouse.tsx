@@ -1,15 +1,16 @@
 // Склад: пол, зоны, стены и ворота, стеллажи, столы фасовки. Только отрисовка карты, никаких решений (09, раздел 9).
-// Стены (W1): все четыре высокие; та, что оказалась между камерой и складом, плавно уходит в землю до высоты низкой стены.
-import { useMemo, useRef } from 'react';
+// Стены (W1, W3): у каждой высокий и низкий вид; та, что оказалась между камерой и складом, показывается низкой.
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { CanvasTexture, Vector3, type Group } from 'three';
-import type { WallSide, WarehouseMap } from '../model/warehouse';
+import { BoxGeometry, BufferAttribute, CanvasTexture, Color, Vector3, type Group } from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import type { WallOpening, WallSide, WarehouseMap } from '../model/warehouse';
 import type { Stock } from '../model/stock';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { PALETTE } from '../config/palette';
 import { rackParts } from './models/Rack';
 import { packingTableParts } from './models/PackingTable';
-import { wallSideParts } from './models/Wall';
+import { doorParts, doorSignPose, wallBox, wallGradientBoxes, wallHeight, wallSideParts } from './models/Wall';
 import { gateParts } from './models/Gate';
 import type { VoxelPart } from './models/ProductItem';
 import { rackLocalToWorld, rackRotY } from './rackGeometry';
@@ -57,33 +58,103 @@ const SIDES: WallSide[] = ['north', 'south', 'west', 'east'];
 /** Куда смотрит стена наружу (x, z). */
 const OUTWARD: Record<WallSide, [number, number]> = { north: [0, -1], south: [0, 1], west: [-1, 0], east: [1, 0] };
 
-/** Четыре стены; ближняя к камере опускается («срез», как в Moving Out и The Sims). */
+/** Панель и рёбра стены одним куском с вертикальным градиентом цвета (W3): внизу wallBottom, вверху wallTop. */
+function GradientWall({ map, side, tall }: { map: WarehouseMap; side: WallSide; tall: boolean }) {
+  const geometry = useMemo(() => {
+    const h = wallHeight(tall);
+    const bottom = new Color(PALETTE.wallBottom), top = new Color(PALETTE.wallTop), c = new Color();
+    const pieces = wallGradientBoxes(map, side, tall).map((b) => {
+      const { pos, size } = wallBox(map, side, b.a0, b.a1, b.y0, b.y1, b.i0, b.i1, '');
+      const g = new BoxGeometry(size[0], size[1], size[2]).translate(pos[0], pos[1], pos[2]);
+      const p = g.attributes.position;
+      const colors = new Float32Array(p.count * 3);
+      for (let k = 0; k < p.count; k++) {
+        c.copy(bottom).lerp(top, Math.min(1, Math.max(0, p.getY(k) / h)));
+        colors.set([c.r, c.g, c.b], k * 3);
+      }
+      g.setAttribute('color', new BufferAttribute(colors, 3));
+      return g;
+    });
+    return mergeGeometries(pieces) ?? new BoxGeometry(0, 0, 0);
+  }, [map, side, tall]);
+  return (
+    <mesh geometry={geometry} castShadow receiveShadow>
+      <meshStandardMaterial vertexColors />
+    </mesh>
+  );
+}
+
+/** Табличка «КУРЬЕРЫ» над дверью выдачи (08, раздел 0). Текст рисуется на холсте шрифтом X5 Sans. */
+function DoorSign({ map, door }: { map: WarehouseMap; door: WallOpening }) {
+  const tex = useMemo(() => {
+    const c = document.createElement('canvas');
+    c.width = 512; c.height = 96;
+    return new CanvasTexture(c);
+  }, []);
+  useEffect(() => {
+    const draw = () => {
+      const c = tex.image as HTMLCanvasElement;
+      const g = c.getContext('2d')!;
+      g.clearRect(0, 0, c.width, c.height);
+      g.fillStyle = '#FFF9EC';
+      g.font = "700 64px 'X5 Sans', system-ui, sans-serif";
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('КУРЬЕРЫ', c.width / 2, c.height / 2 + 4);
+      tex.needsUpdate = true;
+    };
+    draw();
+    document.fonts?.ready.then(draw); // перерисовать, когда шрифт загрузится
+  }, [tex]);
+  const { pos, rotY } = doorSignPose(map, door);
+  return (
+    <mesh position={pos} rotation={[0, rotY, 0]}>
+      <planeGeometry args={[1.5, 0.28]} />
+      <meshBasicMaterial map={tex} transparent toneMapped={false} />
+    </mesh>
+  );
+}
+
+/**
+ * Четыре стены (W1, W3). Каждая — в двух видах: высокая и низкая. Та, что между камерой и складом, показывается низкой
+ * («срез», как в Moving Out и The Sims): высокая плавно уходит в землю, низкая поднимается.
+ */
 function Walls({ map }: { map: WarehouseMap }) {
-  const sides = useMemo(() => SIDES.map((side) => ({ side, parts: wallSideParts(map, side, true) })), [map]);
-  const groups = useRef<(Group | null)[]>([]);
+  const sides = useMemo(
+    () => SIDES.map((side) => ({ side, tall: wallSideParts(map, side, true), low: wallSideParts(map, side, false) })),
+    [map],
+  );
+  const tallGroups = useRef<(Group | null)[]>([]);
+  const lowGroups = useRef<(Group | null)[]>([]);
   const camera = useThree((s) => s.camera);
   const look = useMemo(() => new Vector3(), []);
   const first = useRef(true);
-  const drop = WAREHOUSE_VIEW.wallHeight - WAREHOUSE_VIEW.frontWallHeight;
+  const tallDrop = -wallHeight(true) - 0.05, lowDrop = -wallHeight(false) - 0.05; // «под землёй» — совсем не видно
   useFrame((_, delta) => {
     camera.getWorldDirection(look); // от камеры в сцену
     // в первый кадр — сразу на место, чтобы ближние стены не «съезжали» при загрузке
     const k = first.current ? 1 : 1 - Math.exp(-Math.min(delta, 0.1) * WAREHOUSE_VIEW.homeCamera.wallFollow);
     first.current = false;
     sides.forEach(({ side }, i) => {
-      const g = groups.current[i];
-      if (!g) return;
       const [nx, nz] = OUTWARD[side];
       const nearCamera = -(nx * look.x + nz * look.z) > 0.1; // камера по ту сторону стены
-      const target = nearCamera ? -drop : 0;
-      g.position.y += (target - g.position.y) * k;
+      const tg = tallGroups.current[i], lg = lowGroups.current[i];
+      if (tg) tg.position.y += ((nearCamera ? tallDrop : 0) - tg.position.y) * k;
+      if (lg) lg.position.y += ((nearCamera ? 0 : lowDrop) - lg.position.y) * k;
     });
   });
   return (
     <>
-      {sides.map(({ side, parts }, i) => (
-        <group key={side} ref={(el) => { groups.current[i] = el; }}>
-          <VoxelBatch parts={parts} />
+      {sides.map(({ side, tall, low }, i) => (
+        <group key={side}>
+          <group ref={(el) => { tallGroups.current[i] = el; }}>
+            <GradientWall map={map} side={side} tall />
+            <VoxelBatch parts={tall} />
+          </group>
+          <group ref={(el) => { lowGroups.current[i] = el; }}>
+            <GradientWall map={map} side={side} tall={false} />
+            <VoxelBatch parts={low} />
+          </group>
         </group>
       ))}
     </>
@@ -127,7 +198,12 @@ function WallShade({ map }: { map: WarehouseMap }) {
 export default function Warehouse({ map, stock }: Props) {
   const { floorThickness: ft } = WAREHOUSE_VIEW;
   const furniture = useMemo(() => [...allRackParts(map), ...allTableParts()], [map]);
-  const gates = useMemo(() => map.openings.filter((o) => o.kind === 'gate').flatMap((g) => gateParts(map, g)), [map]);
+  // ворота и дверь выдачи не опускаются вместе со стеной
+  const gates = useMemo(
+    () => map.openings.flatMap((o) => (o.kind === 'gate' ? gateParts(map, o) : doorParts(map, o))),
+    [map],
+  );
+  const doors = map.openings.filter((o) => o.kind === 'door');
 
   return (
     <group>
@@ -148,6 +224,7 @@ export default function Warehouse({ map, stock }: Props) {
 
       <Walls map={map} />
       <VoxelBatch parts={gates} />
+      {doors.map((d, i) => <DoorSign key={i} map={map} door={d} />)}
 
       <VoxelBatch parts={furniture} />
 

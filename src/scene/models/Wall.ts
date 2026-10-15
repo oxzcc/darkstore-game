@@ -1,22 +1,27 @@
-// Стены склада по art/reference/world_wall.png (M9b3; 08, раздел 2: высота 3 м, модуль 3 м). Стиль — low poly.
-// Белые панели со швом, серый цоколь, белые пилястры каждые 3 м, верхний карниз, зелёные вставки по краям стены.
-// Дальние от камеры стены (север, запад) высокие, ближние — низкие, чтобы не закрывать склад (как на ui_01):
-// у низких только цоколь, панель, карниз и короткие пилястры. В проёмах (ворота, дверь) стены нет.
-// Возвращает список брусков в координатах сцены: все стены рисует один VoxelBatch (08, раздел 11).
+// Стены склада (W3; 08, раздел 0): сплошные, без колонн и зелёных вставок — сэндвич-панель с вертикальными рёбрами,
+// светлый бетонный цоколь, серый отлив сверху; у высоких стен под крышей — лента окон. Панель и рёбра — вертикальный
+// градиент (внизу PALETTE.wallBottom, вверху PALETTE.wallTop); он рисуется отдельно (`wallGradientBoxes`), остальное —
+// обычные бруски для VoxelBatch (`wallSideParts`). Каждая стена строится в двух видах — высокая и низкая:
+// та, что между камерой и складом, показывается низкой (Warehouse.tsx). В проёмах (ворота, дверь) стены нет.
+// У двери выдачи — тёмная рама с зелёной полосой (табличка «КУРЬЕРЫ» — в Warehouse.tsx) и коврик внутри.
 import type { WallOpening, WallSide, WarehouseMap } from '../../model/warehouse';
 import { WAREHOUSE_VIEW } from '../../config/warehouse';
 import { PALETTE } from '../../config/palette';
 import type { VoxelPart } from './ProductItem';
 
-/** Дальние от камеры стены — высокие. */
-export const FAR_SIDES: WallSide[] = ['north', 'west'];
-const MODULE = 3;       // шаг пилястр, м
-const PLINTH = 0.3;     // высота цоколя высокой стены
-const LOW_PLINTH = 0.15;
-const CAP = 0.06;       // карниз сверху
-const PILASTER = 0.22;  // ширина пилястры вдоль стены
-const PROUD = 0.05;     // насколько пилястра и цоколь выступают внутрь склада
-const ACCENT = 0.45;    // ширина зелёной вставки
+const PLINTH = 0.3;        // высота цоколя
+const PLINTH_PROUD = 0.04; // насколько цоколь толще стены с каждой стороны
+const CAP = 0.1;           // отлив сверху
+const RIB_STEP = 0.42;     // шаг рёбер профлиста вдоль стены
+const RIB_W = 0.1;         // ширина ребра
+const RIB_PROUD = 0.05;    // насколько ребро выступает из панели
+const WIN_W = 1.5, WIN_H = 0.46, WIN_FROM_TOP = 0.62; // окно: ширина, высота, низ рамы — на столько ниже верха стены
+const WIN_STEP = 2.6;      // примерно одно окно на столько метров стены
+const DOOR_FRAME = 0.16;   // толщина рамы двери выдачи
+const DOOR_H = 1.9;        // высота проёма двери
+
+/** Брусок в собственных мерах стены (см. `wallBox`). */
+export type WallBox = { a0: number; a1: number; y0: number; y1: number; i0: number; i1: number };
 
 /**
  * Брусок у стены в её собственных мерах: `a0`–`a1` — вдоль стены (м от её начала), `y0`–`y1` — высота,
@@ -53,59 +58,92 @@ export function wallSegments(length: number, openings: WallOpening[]): [number, 
   return segments;
 }
 
-/** Одна стена. `tall` — высокая (по умолчанию высокие только дальние); с вращением камеры (W1) все стены строятся высокими,
- *  а ближняя к камере опускается в землю до высоты низкой стены (Warehouse.tsx). */
-export function wallSideParts(map: WarehouseMap, side: WallSide, tall = FAR_SIDES.includes(side)): VoxelPart[] {
+/** Высота стены: высокая или низкая (ближняя к камере). */
+export const wallHeight = (tall: boolean) => (tall ? WAREHOUSE_VIEW.wallHeight : WAREHOUSE_VIEW.frontWallHeight);
+
+function layout(map: WarehouseMap, side: WallSide) {
   const t = WAREHOUSE_VIEW.wallThickness;
   const s = WAREHOUSE_VIEW.cellSize;
-  const far = tall;
-  const h = far ? WAREHOUSE_VIEW.wallHeight : WAREHOUSE_VIEW.frontWallHeight;
-  const plinth = far ? PLINTH : LOW_PLINTH;
   const length = (side === 'north' || side === 'south' ? map.width : map.depth) * s;
   const openings = map.openings.filter((o) => o.side === side);
   const segments = wallSegments(length / s, openings).map(([a, b]) => [a * s, b * s] as [number, number]);
-  const out: VoxelPart[] = [];
-  const box = (a0: number, a1: number, y0: number, y1: number, i0: number, i1: number, color: string) =>
-    out.push(wallBox(map, side, a0, a1, y0, y1, i0, i1, color));
-  // Стена продлевается за угол на толщину, чтобы углы были закрыты.
+  // стена продлевается за угол на толщину, чтобы углы были закрыты
   const ext = (a: number) => (a <= 0 ? -t : a >= length ? length + t : a);
+  return { t, segments, ext };
+}
 
+/** Середины окон на куске стены от `a` до `b`: равномерно, примерно одно на WIN_STEP метров. */
+function windowCenters(a: number, b: number): number[] {
+  const n = Math.floor((b - a) / WIN_STEP);
+  return Array.from({ length: n }, (_, i) => a + ((i + 0.5) * (b - a)) / n);
+}
+
+/** Бруски с градиентом (панель и рёбра) в мерах стены. Градиент — по высоте стены, от пола до верха. */
+export function wallGradientBoxes(map: WarehouseMap, side: WallSide, tall: boolean): WallBox[] {
+  const { t, segments, ext } = layout(map, side);
+  const h = wallHeight(tall);
+  const out: WallBox[] = [];
+  // рёбра — от цоколя до окон, у низкой стены — до отлива
+  const ribTop = tall ? h - WIN_FROM_TOP - 0.06 : h - CAP;
   for (const [a, b] of segments) {
-    const a0 = ext(a), a1 = ext(b);
-    box(a0, a1, 0, plinth, -t / 2, t / 2 + PROUD / 2, PALETTE.wallPlinth);       // цоколь
-    box(a0, a1, plinth, h - CAP, -t / 2, t / 2, PALETTE.wallPanel);               // панель
-    box(a0, a1, h - CAP, h, -t / 2 - 0.02, t / 2 + 0.03, PALETTE.wallPilaster);   // карниз
-    if (far) box(a0, a1, h * 0.72, h * 0.72 + 0.04, t / 2, t / 2 + 0.01, PALETTE.wallSeam); // шов панели
-  }
-
-  // Пилястры: каждые 3 м и по краям двери; не в проёмах и не у ворот (у ворот свои стойки рамы, models/Gate.ts).
-  const nearGap = (p: number) =>
-    openings.some((o) => (o.kind === 'gate' ? p > o.from * s - 0.3 && p < (o.to + 1) * s + 0.3 : p > o.from * s && p < (o.to + 1) * s));
-  const posts = new Set<number>();
-  for (let p = 0; p <= length + 1e-6; p += MODULE) if (!nearGap(p)) posts.add(Math.min(p, length));
-  if (!nearGap(length)) posts.add(length);
-  for (const o of openings.filter((o) => o.kind !== 'gate')) { posts.add(o.from * s); posts.add((o.to + 1) * s); }
-  for (const p of posts) {
-    const half = PILASTER / 2;
-    const a0 = Math.max(-t, p - half), a1 = Math.min(length + t, p + half);
-    box(a0, a1, 0, plinth, -t / 2 - 0.02, t / 2 + PROUD + 0.02, PALETTE.wallPlinth);
-    box(a0, a1, plinth, h + 0.04, -t / 2 - 0.02, t / 2 + PROUD, PALETTE.wallPilaster);
-  }
-
-  // Зелёные вставки у концов каждого куска высокой стены — рядом с пилястрой, как на образце.
-  if (far) {
-    for (const [a, b] of segments) {
-      if (b - a < ACCENT * 3) continue;
-      for (const [x0, x1] of [[a + PILASTER / 2, a + PILASTER / 2 + ACCENT], [b - PILASTER / 2 - ACCENT, b - PILASTER / 2]]) {
-        box(x0, x1, plinth, h - CAP, t / 2, t / 2 + 0.02, PALETTE.wallAccent);
-        box(x0, x1, h * 0.72, h * 0.72 + 0.04, t / 2 + 0.02, t / 2 + 0.03, PALETTE.wallAccentSeam);
-      }
+    out.push({ a0: ext(a), a1: ext(b), y0: 0, y1: h - CAP, i0: -t / 2, i1: t / 2 }); // панель (низ закрыт цоколем)
+    if (ribTop <= PLINTH + 0.05) continue;
+    for (let p = a + RIB_STEP / 2; p < b - RIB_STEP / 4; p += RIB_STEP) {
+      out.push({ a0: p - RIB_W / 2, a1: p + RIB_W / 2, y0: PLINTH, y1: ribTop, i0: t / 2, i1: t / 2 + RIB_PROUD });
+      out.push({ a0: p - RIB_W / 2, a1: p + RIB_W / 2, y0: PLINTH, y1: ribTop, i0: -t / 2 - RIB_PROUD, i1: -t / 2 });
     }
   }
   return out;
 }
 
-/** Все стены склада. */
-export function wallParts(map: WarehouseMap): VoxelPart[] {
-  return (['north', 'south', 'west', 'east'] as WallSide[]).flatMap((side) => wallSideParts(map, side));
+/** Бруски одной стены без градиента: цоколь, отлив, у высокой — окна. Координаты сцены. */
+export function wallSideParts(map: WarehouseMap, side: WallSide, tall: boolean): VoxelPart[] {
+  const { t, segments, ext } = layout(map, side);
+  const h = wallHeight(tall);
+  const out: VoxelPart[] = [];
+  const box = (a0: number, a1: number, y0: number, y1: number, i0: number, i1: number, color: string) =>
+    out.push(wallBox(map, side, a0, a1, y0, y1, i0, i1, color));
+
+  for (const [a, b] of segments) {
+    const a0 = ext(a), a1 = ext(b);
+    box(a0, a1, 0, Math.min(PLINTH, h - CAP), -t / 2 - PLINTH_PROUD, t / 2 + PLINTH_PROUD, PALETTE.wallPlinth); // цоколь
+    box(a0 - 0.02, a1 + 0.02, h - CAP, h, -t / 2 - 0.06, t / 2 + 0.06, PALETTE.wallCap);                          // отлив
+    if (!tall) continue;
+    // лента окон под крышей: рама толще стены, стекло ещё чуть толще — видно с обеих сторон
+    for (const c of windowCenters(a, b)) {
+      const y0 = h - WIN_FROM_TOP, y1 = y0 + WIN_H;
+      box(c - WIN_W / 2, c + WIN_W / 2, y0, y1, -t / 2 - 0.02, t / 2 + 0.02, PALETTE.windowFrame);
+      box(c - WIN_W / 2 + 0.08, c + WIN_W / 2 - 0.08, y0 + 0.07, y1 - 0.07, -t / 2 - 0.035, t / 2 + 0.035, PALETTE.windowGlass);
+      box(c - 0.03, c + 0.03, y0 + 0.07, y1 - 0.07, -t / 2 - 0.045, t / 2 + 0.045, PALETTE.windowFrame); // перемычка
+    }
+  }
+  return out;
+}
+
+/** Рама двери выдачи, зелёная полоса над ней и коврик внутри. Не опускается вместе со стеной. Координаты сцены. */
+export function doorParts(map: WarehouseMap, door: WallOpening): VoxelPart[] {
+  const t = WAREHOUSE_VIEW.wallThickness;
+  const s = WAREHOUSE_VIEW.cellSize;
+  const a0 = door.from * s, a1 = (door.to + 1) * s;
+  const out: VoxelPart[] = [];
+  const box = (b0: number, b1: number, y0: number, y1: number, i0: number, i1: number, color: string) =>
+    out.push(wallBox(map, door.side, b0, b1, y0, y1, i0, i1, color));
+  const d0 = -t / 2 - 0.05, d1 = t / 2 + 0.05;
+  box(a0, a0 + DOOR_FRAME, 0, DOOR_H, d0, d1, PALETTE.metal);                         // левая стойка
+  box(a1 - DOOR_FRAME, a1, 0, DOOR_H, d0, d1, PALETTE.metal);                         // правая стойка
+  box(a0, a1, DOOR_H, DOOR_H + 0.26, d0, d1, PALETTE.metal);                          // перекладина
+  box(a0 + 0.3, a1 - 0.3, DOOR_H + 0.05, DOOR_H + 0.21, d0 - 0.01, d1 + 0.01, PALETTE.wallAccent); // зелёная полоса под табличку
+  box(a0 + 0.25, a1 - 0.25, 0, 0.02, t / 2 + 0.1, t / 2 + 1.1, PALETTE.doorMat);      // коврик у выхода
+  return out;
+}
+
+/** Табличка «КУРЬЕРЫ» над дверью: центр на зелёной полосе, чуть снаружи, и поворот лицом наружу. */
+export function doorSignPose(map: WarehouseMap, door: WallOpening): { pos: [number, number, number]; rotY: number } {
+  const t = WAREHOUSE_VIEW.wallThickness;
+  const s = WAREHOUSE_VIEW.cellSize;
+  const mid = ((door.from + door.to + 1) / 2) * s;
+  const out = -t / 2 - 0.08; // снаружи стены
+  const pos = wallBox(map, door.side, mid, mid, DOOR_H + 0.13, DOOR_H + 0.13, out, out, '').pos;
+  const rotY = { north: Math.PI, south: 0, west: -Math.PI / 2, east: Math.PI / 2 }[door.side];
+  return { pos, rotY };
 }
