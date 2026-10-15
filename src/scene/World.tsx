@@ -54,7 +54,9 @@ function decorParts(map: WarehouseMap): VoxelPart[] {
     if (placed.some((p) => (p.x - x) ** 2 + (p.z - z) ** 2 < T.minGap ** 2)) continue;
     placed.push({ x, z });
     const bush = rnd() < T.bushShare;
-    const size = bush ? 0.8 + rnd() * 0.6 : 0.85 + rnd() * 0.45;
+    // размер — одна из нескольких ступеней: одинаковые блоки рисуются одним пакетом (мягкие кубы, W6)
+    const steps = bush ? [0.8, 1, 1.2, 1.4] : [0.85, 1, 1.15, 1.3];
+    const size = steps[Math.floor(rnd() * steps.length)];
     const parts = bush ? bushParts(size, rnd() * Math.PI, rnd) : treeParts(size, rnd() * Math.PI, rnd);
     for (const p of parts) out.push({ ...p, pos: [p.pos[0] + x, p.pos[1] + GROUND_Y, p.pos[2] + z] });
   }

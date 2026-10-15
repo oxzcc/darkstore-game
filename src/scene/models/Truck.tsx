@@ -2,6 +2,7 @@
 // Собран из блоков: зелёная кабина, белый фургон с серыми уголками, тёмная рама и колёса-кубы.
 // Начало координат — середина заднего края (тем краем грузовик встаёт к воротам), длина идёт по +z.
 import { PALETTE } from '../../config/palette';
+import VoxelBatch from '../VoxelBatch';
 
 type Part = { pos: [number, number, number]; size: [number, number, number]; color: string };
 
@@ -64,12 +65,8 @@ type Props = { position: [number, number, number]; rotationY: number };
 export default function Truck({ position, rotationY }: Props) {
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      {PARTS.map((part, i) => (
-        <mesh key={i} position={part.pos} castShadow receiveShadow>
-          <boxGeometry args={part.size} />
-          <meshStandardMaterial color={part.color} />
-        </mesh>
-      ))}
+      {/* мягкие кубы (W6) — тем же пакетом, что и остальные модели */}
+      <VoxelBatch parts={PARTS} />
     </group>
   );
 }
