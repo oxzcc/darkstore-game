@@ -30,6 +30,8 @@ type CardProps = {
   // ответ уже есть:
   chosenId?: string;
   auto?: boolean;
+  /** Живой портрет сборщика (сценка из App); нет — заглушка с буквой. */
+  portrait?: ReactNode;
 };
 
 function Risk({ risk }: { risk: CallOptionView['risk'] }) {
@@ -52,7 +54,9 @@ function ForkCard(p: CardProps) {
     <div className={`fork-wrap${decided ? ' decided' : ''}`} style={{ '--pc': p.picker.color } as CSSProperties}>
     {/* заглушка портрета 224 × 257: сборщик по пояс с ТСД (решение автора 13.10 — картинка позже).
         Стоит поверх окна и выходит за его верх, как на макете (сама подложка окна обрезает всё, что выходит за край). */}
-    <div className="fork-portrait"><span>{p.picker.name[0]}</span><em>{p.picker.name}</em></div>
+    {p.portrait
+      ? <div className="fork-portrait has-art">{p.portrait}</div>
+      : <div className="fork-portrait"><span>{p.picker.name[0]}</span><em>{p.picker.name}</em></div>}
     <Vx className="fork">
       <div className="fork-top">
         <div className="fork-portrait-space" />
@@ -118,7 +122,8 @@ function Flash({ id, children }: { id: number; children: ReactNode }) {
   return <>{children}</>;
 }
 
-export default function CallWindow() {
+/** `renderPortrait` — портрет сборщика (сценка из scene, её передаёт App: интерфейс сам 3D не импортирует). */
+export default function CallWindow({ renderPortrait }: { renderPortrait?: (picker: Picker) => ReactNode }) {
   const game = useGameStore((s) => s.game);
   const flashes = useGameStore((s) => s.ui.callFlashes);
   const openCallId = useGameStore((s) => s.ui.openCallId);
@@ -150,7 +155,7 @@ export default function CallWindow() {
       {fv?.picker && (
         <div className="call-center">
           <Flash key={`f${fv.id}`} id={fv.id}>
-            <ForkCard {...fv} />
+            <ForkCard {...fv} portrait={renderPortrait?.(fv.picker)} />
           </Flash>
         </div>
       )}
@@ -159,6 +164,7 @@ export default function CallWindow() {
           <ForkCard
             key={open.id}
             {...open}
+            portrait={renderPortrait?.(open.picker)}
             waiting={shown.filter((c) => c.id !== open.id).map((c) => c.picker?.name ?? '')}
             onAnswer={(optionId) => answer(open.id, optionId)}
             onClose={closeCall}

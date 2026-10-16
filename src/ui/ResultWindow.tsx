@@ -1,7 +1,8 @@
 // Окно итога задания с развилкой — по макету автора ui_12 (13.10). С M7d1 — для сборки, приёмки и выкладки.
 // Сверху иллюстрация (пока заглушка), что решили и что вышло; ниже «чек» заказа: позиции, деньги, рейтинг, опыт и штамп исхода.
 // Деньги и рейтинг пока только показываются (начисление — M6), опыт — M8. Закрывается кнопкой или кликом по «Закрыть».
-import { useEffect, type CSSProperties } from 'react';
+import { useEffect, type CSSProperties, type ReactNode } from 'react';
+import type { Picker } from '../model/picker';
 import { useGameStore } from '../store/gameStore';
 import { money, resultView } from '../store/selectors';
 import { nameForm, OUTCOME_LOOK, TASK_TYPE_LOOK, taskTitle } from './labels';
@@ -11,7 +12,11 @@ import Icon from './icons';
 
 const ratingText = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n).toFixed(2).replace('.', ',')}`;
 
-export default function ResultWindow() {
+/** Что нужно сценке итога: развилка, вариант, сработал ли, итог ТСД, сборщик и товар позиции. */
+export type ResultArt = NonNullable<NonNullable<ReturnType<typeof resultView>>['art']> & { picker: Picker };
+
+/** `renderArt` — сценка-иллюстрация итога (её передаёт App: интерфейс сам 3D не импортирует); null — заглушка. */
+export default function ResultWindow({ renderArt }: { renderArt?: (art: ResultArt) => ReactNode | null }) {
   const card = useGameStore((s) => s.ui.results[0]);
   const game = useGameStore((s) => s.game);
   const dismiss = useGameStore((s) => s.dismissResult);
@@ -28,6 +33,7 @@ export default function ResultWindow() {
   const v = resultView(game, card);
   if (!v) return null;
   const look = OUTCOME_LOOK[v.outcome];
+  const art = v.art && renderArt ? renderArt({ ...v.art, picker: v.picker }) : null;
 
   return (
     <div className="call-center wide">
@@ -40,11 +46,11 @@ export default function ResultWindow() {
           </div>
         </div>
 
-        {/* заглушка иллюстрации итога 770 × 300 (решение автора 13.10 — картинка позже) */}
-        <div className="outcome-art">
+        {/* сценка итога (прототип 16.10) или заглушка 770 × 300 (решение автора 13.10 — картинка позже) */}
+        {art ? <div className="outcome-art has-art">{art}</div> : <div className="outcome-art">
           <span className="outcome-art-pic">{v.picker.name[0]}</span>
           <Icon name={v.worked ? 'check' : 'errors'} />
-        </div>
+        </div>}
 
         <div className="outcome-chips">
           <span className="call-sub">{v.auto ? `${v.picker.name} решил сам:` : 'Вы решили:'}</span>

@@ -67,6 +67,7 @@ export const PALETTE = {
   // анимации сборщиков (W7b)
   tsdBody: '#2A2B2F',    // ТСД в лапе
   tsdScreen: '#7FC743',
+  ladder: '#C3C9D1',     // стремянка в сценках-иллюстрациях (config/vignettes.ts); ступени — uniform
   dust: '#FFFFFF',       // пыль из-под колёс тележки
 };
 
