@@ -35,4 +35,6 @@ export type WarehouseMap = {
   zones: Zone[];
   passages: Passage[];
   openings: WallOpening[];
+  /** Столы фасовки: левая клетка стола, стол 2×1 занимает её и соседнюю справа (+x). По ним не ходят. */
+  tables: Cell[];
 };

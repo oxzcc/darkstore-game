@@ -7,7 +7,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import type { WallOpening, WallSide, WarehouseMap } from '../model/warehouse';
 import type { Stock } from '../model/stock';
-import { WAREHOUSE_VIEW } from '../config/warehouse';
+import { WAREHOUSE_LAYOUT, WAREHOUSE_VIEW } from '../config/warehouse';
 import { PALETTE } from '../config/palette';
 import { rackParts } from './models/Rack';
 import { packingTableParts } from './models/PackingTable';
@@ -47,11 +47,11 @@ function allRackParts(map: WarehouseMap): VoxelPart[] {
   return out;
 }
 
-/** Столы фасовки (декорация, места — WAREHOUSE_VIEW.packingTables): стол 2×1 вдоль x, лицом к проходу (−z). */
+/** Столы фасовки (места — WAREHOUSE_LAYOUT.tables, клетки заняты): стол 2×1 вдоль x, лицом к проходу (−z). */
 function allTableParts(): VoxelPart[] {
   const s = WAREHOUSE_VIEW.cellSize;
   const local = packingTableParts(2);
-  return WAREHOUSE_VIEW.packingTables.flatMap((c) =>
+  return WAREHOUSE_LAYOUT.tables.flatMap((c) =>
     local.map((p) => ({ ...p, pos: [p.pos[0] + (c.x + 1) * s, p.pos[1], p.pos[2] + (c.z + 0.5) * s] as VoxelPart['pos'] })),
   );
 }

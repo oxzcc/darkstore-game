@@ -6,7 +6,7 @@ import { Color } from 'three';
 import type { DogLook } from '../../config/pickers';
 import { WAREHOUSE_VIEW } from '../../config/warehouse';
 import VoxelBatch from '../VoxelBatch';
-import { dogRig, ARMS_ON_CART, CART_AHEAD, type DogPartName, type DogRig } from './Dog';
+import { dogRig, ARMS_ON_CART, type DogPartName, type DogRig } from './Dog';
 import { cartParts } from './Cart';
 
 type Props = {
@@ -15,7 +15,8 @@ type Props = {
   hop: number;      // подскок при ходьбе, метры (как в Crossy Road, 08, раздел 9)
   look: DogLook;
   ringColor: string;
-  withCart: boolean; // катит тележку (сборка и выкладка, решение автора 16.10)
+  /** Тележка (сборка и выкладка, решение автора 16.10): где стоит и куда повёрнута, в координатах склада; null — без тележки. */
+  cart: { pos: [number, number, number]; facing: number } | null;
 };
 
 /** Кольцо под ногами — как в концепт-рендере: плоская квадратная рамка светлого оттенка цвета сборщика, без теней. */
@@ -52,28 +53,30 @@ const rigFor = (look: DogLook) => {
   return r;
 };
 
-export default function Picker({ position, facing, hop, look, ringColor, withCart }: Props) {
+export default function Picker({ position, facing, hop, look, ringColor, cart }: Props) {
   const rig = useMemo(() => rigFor(look), [look]);
-  const arms = withCart ? ARMS_ON_CART : 0;
+  const arms = cart ? ARMS_ON_CART : 0;
   const s = WAREHOUSE_VIEW.picker.scale;
   return (
-    <group position={position}>
-      <Ring color={ringColor} />
-      <group rotation={[0, facing, 0]} scale={s}>
-        {/* тележка катится по полу — без подскока */}
-        {withCart && (
-          <group position={[0, 0, CART_AHEAD]}>
-            <VoxelBatch parts={CART} soft="strong" />
+    <group>
+      {/* тележка катится по полу — без подскока; где она стоит, считает pickerPose */}
+      {cart && (
+        <group position={cart.pos} rotation={[0, cart.facing, 0]} scale={s}>
+          <VoxelBatch parts={CART} soft="strong" />
+        </group>
+      )}
+      <group position={position}>
+        <Ring color={ringColor} />
+        <group rotation={[0, facing, 0]} scale={s}>
+          <group position={[0, hop, 0]}>
+            <RigPart rig={rig} name="body" />
+            <RigPart rig={rig} name="head" />
+            <RigPart rig={rig} name="legL" />
+            <RigPart rig={rig} name="legR" />
+            <RigPart rig={rig} name="armL" rotX={arms} />
+            <RigPart rig={rig} name="armR" rotX={arms} />
+            <RigPart rig={rig} name="tail" />
           </group>
-        )}
-        <group position={[0, hop, 0]}>
-          <RigPart rig={rig} name="body" />
-          <RigPart rig={rig} name="head" />
-          <RigPart rig={rig} name="legL" />
-          <RigPart rig={rig} name="legR" />
-          <RigPart rig={rig} name="armL" rotX={arms} />
-          <RigPart rig={rig} name="armR" rotX={arms} />
-          <RigPart rig={rig} name="tail" />
         </group>
       </group>
     </group>
