@@ -1,5 +1,6 @@
 // Зона отдыха с диваном (W7b; правки автора 16.10): через диван не ходят, отдохнувшие не встают друг в друга.
 import { describe, expect, it } from 'vitest';
+import type { GameState } from '../model/game';
 import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { buildWarehouseMap, findPath, isRestSeat } from './warehouse';
 import { createInitialGame } from './game';
@@ -29,7 +30,7 @@ describe('диван', () => {
   it('встав с дивана, сборщики не оказываются на одной клетке', () => {
     const g = createInitialGame(map, 1);
     // все трое сидят на диване на перерыве, остальные клетки зоны свободны
-    let s = {
+    let s: GameState = {
       ...g,
       pickers: Object.fromEntries(Object.values(g.pickers).map((p, i) => [
         p.id,
