@@ -19,7 +19,7 @@ export function treeParts(size: number, turn: number, rnd: () => number): VoxelP
     const r = 0.55 * k;
     parts.push({
       pos: [Math.cos(a) * r, (1.45 + rnd() * 0.5) * k, Math.sin(a) * r],
-      size: [0.95 * k, 0.8 * k, 0.95 * k],
+      size: [(0.93 + i * 0.02) * k, (0.78 + i * 0.02) * k, (0.93 + i * 0.02) * k], // чуть разные: грани соседних блоков не совпадают
       color: i === 0 ? PALETTE.treeDark : i === 1 ? PALETTE.treeLight : PALETTE.treeMid,
       rot,
     });
