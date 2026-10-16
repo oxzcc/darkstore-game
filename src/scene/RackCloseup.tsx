@@ -15,7 +15,7 @@ import { shelfLayout, type ShelfGroup } from './shelfLayout';
 
 const HOVER_COLOR = '#7FC743'; // светлый основной — как подсветка стеллажа в RackPicking
 const FRAME = 0.02;            // толщина рамки
-const ITEM_HEIGHT = 0.3;       // высота зоны клика и рамки над полкой
+const ITEM_HEIGHT = 0.45;      // высота зоны клика и рамки над полкой (товар на полке крупный, 16.10)
 
 /** Рамка вокруг товара на лицевой стороне полки (в координатах стеллажа). */
 function ItemFrame({ x0, x1, y, z, color }: { x0: number; x1: number; y: number; z: number; color: string }) {

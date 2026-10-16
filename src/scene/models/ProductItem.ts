@@ -19,11 +19,13 @@ export type VoxelPart = {
 /**
  * Кубики одной штуки товара шириной `w` метров. Координаты: x — вдоль полки, y — вверх от полки (0 — доска),
  * z — к лицу стеллажа (+z — сторона, откуда смотрит сборщик). Глубина товара не больше `w * 1.5`.
+ * `d` — глубина в метрах на единицу доли (по умолчанию как ширина), `hs` — во сколько раз выше обычного:
+ * так крупный товар на полке (ShelfGoods) — широкий, неглубокий и высокий, а форма та же.
  */
-export function productParts(look: ProductLook, w: number): VoxelPart[] {
+export function productParts(look: ProductLook, w: number, d = w, hs = 1): VoxelPart[] {
   const { color: c, accent: a } = look;
   const box = (x: number, y: number, z: number, sx: number, sy: number, sz: number, color: string): VoxelPart =>
-    ({ pos: [x * w, y, z * w], size: [sx * w, sy, sz * w], color });
+    ({ pos: [x * w, y * hs, z * d], size: [sx * w, sy * hs, sz * d], color });
   // y и высоты — в метрах, остальное — в долях ширины товара
 
   switch (look.shape) {

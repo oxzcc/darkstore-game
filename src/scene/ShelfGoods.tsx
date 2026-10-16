@@ -1,6 +1,6 @@
 // Товар на полках: воксельные заглушки там, где по ФАКТУ что-то лежит (M5d).
 // Сцена показывает остатки склада как есть; считает их rules (shelfContents).
-// Штук нарисовано столько, сколько лежит (до shelfItems.max на полку) — решение автора 12.10.
+// Крупно, по концепт-рендеру (решение автора 16.10): до 2 штук в ширину полки, на половину глубины (shelfLayout).
 import { useMemo } from 'react';
 import type { Stock } from '../model/stock';
 import type { WarehouseMap } from '../model/warehouse';
@@ -20,7 +20,6 @@ export default function ShelfGoods({ map, stock }: Props) {
   const parts = useMemo(() => {
     // Простой поиск стеллажа по номеру аллеи и стеллажа — это данные карты, не правило игры.
     const racks = new Map(map.racks.map((r) => [`${r.aisle}.${r.rack}`, r]));
-    const size = WAREHOUSE_VIEW.shelfItems.size;
     const out: VoxelPart[] = [];
     for (const { address, contents } of goodsOnShelves(stock)) {
       const rack = racks.get(`${address.aisle}.${address.rack}`);
@@ -30,7 +29,8 @@ export default function ShelfGoods({ map, stock }: Props) {
       for (const g of layout.groups) {
         const look = products[g.productId]?.look;
         if (!look) continue;
-        const item = productParts(look, size);
+        // крупная штука: на всё место по ширине, на половину глубины полки, выше обычной модели
+        const item = productParts(look, layout.slotWidth * 0.92, layout.itemDepth / 1.2, WAREHOUSE_VIEW.shelfItems.heightScale);
         g.xs.forEach((x, k) => {
           for (const p of item) {
             const local: [number, number, number] = [x + p.pos[0], layout.y + p.pos[1], g.zs[k] + layout.front * p.pos[2]];
