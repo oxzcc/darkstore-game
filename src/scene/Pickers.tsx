@@ -8,6 +8,7 @@ import { useGameStore, WAREHOUSE_MAP } from '../store/gameStore';
 import { cellToWorld } from '../rules/warehouse';
 import PickerModel from './models/Picker';
 import { pickerPose } from './pickerPose';
+import { dogAction, phaseOffset } from './dogAnim';
 import { blocksCloseup } from './closeupView';
 import { closeupFocus } from '../store/selectors';
 import SceneHtml from './SceneHtml';
@@ -100,6 +101,9 @@ export default function Pickers() {
               look={lookOf(p.id)}
               ringColor={p.color}
               cart={pose.cart}
+              action={dogAction(p)}
+              walkPhase={p.pathProgress * Math.PI * 2}
+              phase={phaseOffset(p.id)}
             />
             {/* нужна помощь (развилка) — красный «!» над головой с таймером по контуру; клик — окно (решение автора 13.10) */}
             {p.state === 'calling' && <CallBang pickerId={p.id} pos={pose.dog} />}
