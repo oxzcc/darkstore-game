@@ -19,8 +19,8 @@ export function restAreaParts(rest: RestFurniture): VoxelPart[] {
     const alongX = fz !== 0; // смотрит по z — значит, вытянут вдоль x
     const xs = rest.seats.map((c) => (c.x + 0.5) * s), zs = rest.seats.map((c) => (c.z + 0.5) * s);
     const [cx, cz] = [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...zs) + Math.max(...zs)) / 2];
-    const len = (alongX ? Math.max(...xs) - Math.min(...xs) : Math.max(...zs) - Math.min(...zs)) + s + 0.3;
-    const D = 0.85, BACK = 0.28, ARM = 0.3;
+    const len = (alongX ? Math.max(...xs) - Math.min(...xs) : Math.max(...zs) - Math.min(...zs)) + s - 0.04; // ровно по своим клеткам, не заходя на соседние
+    const D = 0.85, BACK = 0.28, ARM = 0.2;
     // центр сиденья: от задней кромки клетки на половину глубины
     const back = (k: number) => [cx - fx * (s / 2 - k), cz - fz * (s / 2 - k)] as const;
     const box = (along: number, deep: number, h: number, color: string, offAlong: number, offDeep: number, y: number) => {

@@ -19,6 +19,7 @@ export const PALETTE = {
   concrete: '#CFCFCB',       // бетонная площадка у ворот
   wood: '#C8A97B',
   box: '#E9CB98',       // картонная коробка с товаром (светлее дерева полок)
+  boxDark: '#D2AE78',   // коробка потемнее — для разнообразия на паллете (W7b, как в концепт-рендере)
   metal: '#554B4E',
   metalDark: '#3B3437',  // прорези и «башмаки» стоек стеллажа (M9b1)
   rackBoard: '#E8D2A6',  // светлый настил полок (art/reference/world_shelving_unit.png)

@@ -25,7 +25,7 @@ export type DogPose = {
   breath: number;                                     // дыхание: тело чуть шире и ниже (+) или уже и выше (−)
   drop: number;                                       // насколько опустить фигурку, м
   tsd: boolean;                                       // ТСД в правой лапе
-  box: { y: number; z: number; spin: number } | null; // коробка в броске: высота, вперёд от собаки, поворот
+  box: { k: number; spin: number } | null;            // коробка в броске: 0 — в лапах над головой, 1 — на паллете; поворот
 };
 
 const A = () => WAREHOUSE_VIEW.pickerAnim;
@@ -93,7 +93,7 @@ export function dogPose(action: DogAction, t: number, walkPhase: number, cart: b
       break;
     }
     case 'throw': {
-      // как Лаки на рендере: замах обеими лапами над головой с наклоном назад, бросок с наклоном вперёд, коробка летит по дуге
+      // как Лаки на рендере: замах обеими лапами над головой с наклоном назад, бросок с наклоном вперёд, коробка летит по дуге на паллету
       const ph = ((tt * a.throwRate) % 1 + 1) % 1;
       if (ph < a.throwWindup) {
         const k = ph / a.throwWindup;
@@ -101,14 +101,14 @@ export function dogPose(action: DogAction, t: number, walkPhase: number, cart: b
         pose.armL = [arm, 0];
         pose.armR = [arm, 0];
         pose.lean = -k * 0.15;
-        pose.box = { y: 1.75, z: 0, spin: 0 };
+        pose.box = { k: 0, spin: 0 };
       } else {
         const k = (ph - a.throwWindup) / (1 - a.throwWindup);
         const arm = -2.6 + Math.min(1, k * 3) * 1.6;
         pose.armL = [arm, 0];
         pose.armR = [arm, 0];
         pose.lean = Math.min(1, k * 3) * 0.12;
-        pose.box = { y: 1.75 + (a.throwLand - 1.75) * k + Math.sin(k * Math.PI) * a.throwArc, z: a.throwDistance * k, spin: k * 5 };
+        pose.box = { k, spin: k * 5 };
       }
       pose.bob = Math.abs(Math.sin(tt * 3.4)) * 0.03;
       break;

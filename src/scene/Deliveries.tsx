@@ -7,11 +7,10 @@ import { useGameStore } from '../store/gameStore';
 import { palletsOnFloor, trucksAtGate } from '../store/selectors';
 import { cellToWorld } from '../rules/warehouse';
 import Truck from './models/Truck';
-import { palletParts } from './models/Pallet';
+import { palletBoxes, palletParts } from './models/Pallet';
 import type { VoxelPart } from './models/ProductItem';
 import VoxelBatch from './VoxelBatch';
 
-const QTY_PER_BOX = 6; // сколько штук товара «в одной коробке» — только для вида стопки
 
 /** Где встаёт грузовик: напротив середины ворот, снаружи южной стены. */
 function truckPlace(map: WarehouseMap): [number, number, number] | null {
@@ -42,7 +41,7 @@ export default function Deliveries({ map }: { map: WarehouseMap }) {
     for (const p of palletsOnFloor(pallets)) {
       const qty = p.items.reduce((sum, it) => sum + it.qty, 0);
       const [cx, , cz] = cellToWorld(p.cell);
-      for (const part of palletParts(Math.ceil(qty / QTY_PER_BOX))) {
+      for (const part of palletParts(palletBoxes(qty))) {
         out.push({ ...part, pos: [part.pos[0] + cx, part.pos[1], part.pos[2] + cz] });
       }
     }

@@ -25,6 +25,8 @@ type Props = {
   action: DogAction;  // что делает — для анимации (W7b, dogAnim.ts)
   walkPhase: number;  // фаза шага от пройденного пути
   phase: number;      // сдвиг фазы у этого сборщика
+  /** Приёмка: верх паллеты, куда летят коробки (W7b); null — не бросает. */
+  throwTarget: [number, number, number] | null;
 };
 
 /** Кольцо под ногами — как в концепт-рендере: плоская квадратная рамка светлого оттенка цвета сборщика, без теней. */
@@ -74,7 +76,7 @@ function snoreTex(): CanvasTexture {
   return snoreTexture;
 }
 
-export default function Picker({ position, facing, hop, look, ringColor, cart, moving, action, walkPhase, phase }: Props) {
+export default function Picker({ position, facing, hop, look, ringColor, cart, moving, action, walkPhase, phase, throwTarget }: Props) {
   const rig = useMemo(() => rigFor(look), [look]);
   const s = WAREHOUSE_VIEW.picker.scale;
   const root = useRef<Group>(null);   // вся фигурка: место на складе (плавно догоняет, если сдвиг большой)
@@ -88,14 +90,16 @@ export default function Picker({ position, facing, hop, look, ringColor, cart, m
   const dustLife = useRef<number[]>(Array(DUST_COUNT).fill(0));
   const dustState = useRef({ lastT: -1, timer: 0, next: 0 });
   const [start] = useState(() => position);
-  const live = useRef({ action, walkPhase, cart, moving, hop, position });
-  live.current = { action, walkPhase, cart, moving, hop, position };
+  const face = useRef<Group>(null);       // поворот собаки
+  const cartPlace = useRef<Group>(null);  // место и поворот тележки
+  const live = useRef({ action, walkPhase, cart, moving, hop, position, facing, throwTarget });
+  live.current = { action, walkPhase, cart, moving, hop, position, facing, throwTarget };
 
   // Каждый кадр: поза по игровому времени, части тела плавно догоняют её (W7b). На паузе время стоит — поза тоже.
   useFrame((_, delta) => {
     const a = WAREHOUSE_VIEW.pickerAnim;
     const k = 1 - Math.exp(-Math.min(delta, 0.1) * a.catchUp);
-    const { action: act, walkPhase: wp, cart: c, moving: mv, hop: h, position: target } = live.current;
+    const { action: act, walkPhase: wp, cart: c, moving: mv, hop: h, position: target, throwTarget: tgt } = live.current;
     const t = useGameStore.getState().game.clock.time;
     const ds = dustState.current;
     const gameDt = ds.lastT < 0 ? 0 : Math.max(0, Math.min(0.2, t - ds.lastT));
@@ -124,13 +128,6 @@ export default function Picker({ position, facing, hop, look, ringColor, cart, m
       L.scale.set(1 + pose.breath, 1 - pose.breath, 1);
     }
     if (tsd.current) tsd.current.visible = pose.tsd;
-    if (box.current) {
-      box.current.visible = pose.box !== null;
-      if (pose.box) {
-        box.current.position.set(0, pose.box.y, pose.box.z);
-        box.current.rotation.set(pose.box.spin, pose.box.spin * 0.4, 0);
-      }
-    }
     // «z z» над спящим: всплывает и тает
     if (snore.current) {
       const on = act === 'sit';
@@ -168,15 +165,50 @@ export default function Picker({ position, facing, hop, look, ringColor, cart, m
       m.position.y += gameDt * 0.25;
       (m.material as MeshLambertMaterial).opacity = nl * 0.7;
     });
-    // место: обычный шаг — сразу, большой скачок (появилась или убрана тележка, сел на диван) — плавно
+    // место: обычный шаг — сразу, большой скачок (появилась или убрана тележка, развернулся назад) — плавно.
+    // С тележкой собака при этом обходит её по дуге вокруг тележки, а не проходит насквозь (правка автора 16.10).
     const r = root.current;
     if (r) {
       const dx = target[0] - r.position.x, dz = target[2] - r.position.z;
-      if (Math.hypot(dx, dz) > a.jumpOver) {
+      if (Math.hypot(dx, dz) <= a.jumpOver) {
+        r.position.set(target[0], target[1], target[2]);
+      } else if (c) {
+        const [cx, , cz] = c.pos;
+        const from = Math.atan2(r.position.x - cx, r.position.z - cz), to = Math.atan2(target[0] - cx, target[2] - cz);
+        let turn = to - from;
+        while (turn > Math.PI) turn -= Math.PI * 2;
+        while (turn < -Math.PI) turn += Math.PI * 2;
+        const ang = from + turn * k;
+        const rad0 = Math.hypot(r.position.x - cx, r.position.z - cz), rad1 = Math.hypot(target[0] - cx, target[2] - cz);
+        const rad = Math.max(rad0 + (rad1 - rad0) * k, Math.min(rad1, 0.75)); // не ближе к тележке, чем нужно
+        r.position.set(cx + Math.sin(ang) * rad, target[1], cz + Math.cos(ang) * rad);
+      } else {
         r.position.x += dx * k;
         r.position.z += dz * k;
-      } else {
-        r.position.set(target[0], target[1], target[2]);
+      }
+    }
+    // куда смотрит собака и тележка: с тележкой — собака на тележку, тележка — от собаки (как прицеп); бросает — на паллету
+    const rp = r ? r.position : null;
+    if (face.current && rp) {
+      let ang = live.current.facing;
+      if (tgt) ang = Math.atan2(tgt[0] - rp.x, tgt[2] - rp.z);
+      else if (c) ang = Math.atan2(c.pos[0] - rp.x, c.pos[2] - rp.z);
+      face.current.rotation.y = ang;
+    }
+    if (cartPlace.current && c && rp) {
+      cartPlace.current.position.set(c.pos[0], c.pos[1], c.pos[2]);
+      const ax = c.pos[0] - rp.x, az = c.pos[2] - rp.z;
+      cartPlace.current.rotation.y = Math.hypot(ax, az) > 0.05 ? Math.atan2(ax, az) : c.facing;
+    }
+    // коробка в броске (приёмка): из лап над головой по дуге на паллету, вращаясь
+    if (box.current) {
+      box.current.visible = pose.box !== null && tgt !== null && rp !== null;
+      if (pose.box && tgt && rp) {
+        const sx = rp.x, sy = 1.75 * s, sz = rp.z;
+        const ex = tgt[0], ey = tgt[1] + 0.2, ez = tgt[2];
+        const q = pose.box.k;
+        box.current.position.set(sx + (ex - sx) * q, sy + (ey - sy) * q + Math.sin(q * Math.PI) * a.throwArc, sz + (ez - sz) * q);
+        box.current.rotation.set(pose.box.spin, pose.box.spin * 0.4, 0);
       }
     }
   });
@@ -185,12 +217,23 @@ export default function Picker({ position, facing, hop, look, ringColor, cart, m
     <group>
       {/* тележка катится по полу — без подскока; где она стоит, считает pickerPose */}
       {cart && (
-        <group position={cart.pos} rotation={[0, cart.facing, 0]} scale={s}>
+        <group ref={cartPlace} position={cart.pos} rotation={[0, cart.facing, 0]} scale={s}>
           <group ref={cartRef}>
             <VoxelBatch parts={CART} soft="strong" />
           </group>
         </group>
       )}
+      {/* коробка в броске (приёмка) — в координатах склада: летит из лап на паллету по дуге, вращаясь */}
+      <group ref={box} visible={false}>
+        <mesh castShadow>
+          <boxGeometry args={[0.5, 0.4, 0.5]} />
+          <meshStandardMaterial color={PALETTE.box} />
+        </mesh>
+        <mesh position={[0, 0.205, 0]}>
+          <boxGeometry args={[0.5, 0.02, 0.12]} />
+          <meshStandardMaterial color={PALETTE.boxTape} />
+        </mesh>
+      </group>
       {/* пыль — в координатах склада, чтобы оставалась позади */}
       {Array.from({ length: DUST_COUNT }, (_, i) => (
         <mesh key={i} ref={(el) => { dust.current[i] = el; }} visible={false}>
@@ -201,7 +244,7 @@ export default function Picker({ position, facing, hop, look, ringColor, cart, m
       {/* место ставит useFrame (чтобы большой скачок шёл плавно); здесь — только начальное */}
       <group ref={root} position={start}>
         <Ring color={ringColor} />
-        <group rotation={[0, facing, 0]} scale={s}>
+        <group ref={face} rotation={[0, facing, 0]} scale={s}>
           <group ref={lift}>
             {PARTS.map((name) => (
               <group key={name} ref={(el) => { if (el) parts.current[name] = el; }} position={rig[name].pivot}>
@@ -221,17 +264,6 @@ export default function Picker({ position, facing, hop, look, ringColor, cart, m
                 )}
               </group>
             ))}
-          </group>
-          {/* коробка в броске (приёмка): летит вперёд по дуге, вращаясь */}
-          <group ref={box} visible={false}>
-            <mesh castShadow>
-              <boxGeometry args={[0.5, 0.4, 0.5]} />
-              <meshStandardMaterial color={PALETTE.box} />
-            </mesh>
-            <mesh position={[0, 0.205, 0]}>
-              <boxGeometry args={[0.5, 0.02, 0.12]} />
-              <meshStandardMaterial color={PALETTE.boxTape} />
-            </mesh>
           </group>
           <sprite ref={snore} scale={[0.6, 0.6, 1]} visible={false}>
             <spriteMaterial map={snoreTex()} transparent depthWrite={false} />

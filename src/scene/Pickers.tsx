@@ -8,6 +8,7 @@ import { useGameStore, WAREHOUSE_MAP } from '../store/gameStore';
 import { cellToWorld } from '../rules/warehouse';
 import PickerModel from './models/Picker';
 import { pickerPose } from './pickerPose';
+import { palletBoxes, palletTopY } from './models/Pallet';
 import { dogAction, phaseOffset } from './dogAnim';
 import { blocksCloseup } from './closeupView';
 import { closeupFocus } from '../store/selectors';
@@ -69,32 +70,44 @@ function CallBang({ pickerId, pos }: { pickerId: string; pos: [number, number, n
   );
 }
 
-// Направления каждого сборщика между кадрами: куда он шёл последним (смотрит стоящий) и куда смотрел, когда последний раз стоял
-// (из этой точки он «выходит» в начале пути, pickerPose).
+// Последнее направление движения каждого сборщика между кадрами: куда смотрит стоящий (позади него — собака с тележкой).
 const lastAngle = new Map<string, number>();
-const standAngle = new Map<string, number>();
 const DEFAULT_ANGLE = Math.PI / 4;
 
 export default function Pickers() {
   const pickers = useGameStore((s) => s.game.pickers);
   const tasks = useGameStore((s) => s.game.tasks);
+  const deliveries = useGameStore((s) => s.game.deliveries);
+  const pallets = useGameStore((s) => s.game.pallets);
   // В виде стеллажа вблизи сборщики между глазами и полками не рисуются — иначе загораживают товар.
   const focus = useGameStore((s) => closeupFocus(s.game));
   const focusRack = focus ? WAREHOUSE_MAP.racks.find((r) => r.aisle === focus.aisle && r.rack === focus.rack) : undefined;
   return (
     <group>
       {Object.values(pickers).map((p) => {
-        const taskType = p.taskId ? tasks[p.taskId]?.type : undefined;
-        const withCart = taskType !== undefined && CART_TASKS.has(taskType);
-        const action = dogAction(p, taskType);
-        const last = lastAngle.get(p.id) ?? DEFAULT_ANGLE;
-        const pose = pickerPose(p, withCart, standAngle.get(p.id) ?? last, last);
+        const task = p.taskId ? tasks[p.taskId] : undefined;
+        const withCart = task !== undefined && CART_TASKS.has(task.type);
+        const action = dogAction(p, task?.type);
+        const pose = pickerPose(p, withCart, lastAngle.get(p.id) ?? DEFAULT_ANGLE);
         if (pose.moving) {
           const i = Math.min(Math.floor(p.pathProgress), p.path.length - 1);
           const [a, b] = [i === 0 ? p.position : p.path[i - 1], p.path[i]];
           lastAngle.set(p.id, Math.atan2(b.x - a.x, b.z - a.z));
-        } else {
-          standAngle.set(p.id, last);
+        }
+        // приёмка: бросает коробки на ближайшую паллету своей поставки (правка автора 16.10)
+        let throwTarget: [number, number, number] | null = null;
+        if (action === 'throw' && task?.type === 'receiving') {
+          let best = Infinity;
+          for (const id of deliveries[task.payload.deliveryId]?.palletIds ?? []) {
+            const pl = pallets[id];
+            if (!pl) continue;
+            const [x, , z] = cellToWorld(pl.cell);
+            const d = Math.hypot(x - pose.dog[0], z - pose.dog[2]);
+            if (d < best) {
+              best = d;
+              throwTarget = [x, palletTopY(palletBoxes(pl.items.reduce((sum, it) => sum + it.qty, 0))), z];
+            }
+          }
         }
         if (focusRack && blocksCloseup(focusRack, pose.dog)) return null;
         return (
@@ -111,6 +124,7 @@ export default function Pickers() {
               action={action}
               walkPhase={p.pathProgress * Math.PI * 2}
               phase={phaseOffset(p.id)}
+              throwTarget={throwTarget}
             />
             {/* нужна помощь (развилка) — красный «!» над головой с таймером по контуру; клик — окно (решение автора 13.10) */}
             {p.state === 'calling' && <CallBang pickerId={p.id} pos={pose.dog} />}

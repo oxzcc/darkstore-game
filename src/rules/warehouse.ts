@@ -93,6 +93,8 @@ export function findPath(map: WarehouseMap, from: Cell, to: Cell, blocked = bloc
   const steps: Cell[] = [{ x: 1, z: 0 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 0, z: -1 }];
   while (queue.length) {
     const cur = queue.shift()!;
+    // через диван не ходят (W7b, просьба автора 16.10): на место дивана можно только прийти или с него уйти
+    if (cellKey(cur) !== start && isRestSeat(map, cur)) continue;
     for (const d of steps) {
       const next = { x: cur.x + d.x, z: cur.z + d.z };
       const k = cellKey(next);
@@ -148,6 +150,7 @@ export function distancesFrom(map: WarehouseMap, from: Cell, blocked = blockedCe
   while (queue.length) {
     const cur = queue.shift()!;
     const d = dist.get(cellKey(cur))!;
+    if (d > 0 && isRestSeat(map, cur)) continue; // через диван не ходят (W7b) — до места дойти можно, дальше нет
     for (const s of steps) {
       const n = { x: cur.x + s.x, z: cur.z + s.z };
       const k = cellKey(n);
