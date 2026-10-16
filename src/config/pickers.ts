@@ -25,6 +25,9 @@ export type PickerTemplate = {
   accuracy: number;
 };
 
+export const STAT_SCALE = { min: 1, max: 10 };
+export const START_SPECIALIZATION_LEVEL = 1;
+
 const LABRADOR: DogLook = { fur: '#F2E2C2', face: '#FAF1DE', ear: '#E5CFA4', ears: 'floppy', tongue: true };
 const CORGI: DogLook = {
   fur: '#E98A33', face: '#FFF6E8', ear: '#E98A33', earInner: '#F6B6A8', ears: 'tall', tail: ['#E98A33', '#FFF6E8'], tongue: true,
