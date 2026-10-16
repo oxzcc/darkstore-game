@@ -28,9 +28,12 @@ export function restAreaParts(rest: RestFurniture): VoxelPart[] {
       if (alongX) rb(along, h, deep, color, bx + offAlong, y, bz);
       else rb(deep, h, along, color, bx, y, bz + offAlong);
     };
-    box(len, D, 0.42, PALETTE.sofaSeat, 0, D / 2 + 0.02, 0);            // сиденье
-    box(len, BACK, 0.62, PALETTE.sofa, 0, BACK / 2 + 0.02, 0.35);       // спинка
-    for (const k of [-1, 1]) box(ARM, D, 0.62, PALETTE.sofa, k * (len - ARM) / 2, D / 2 + 0.02, 0); // подлокотники
+    // Грани разных брусков не должны совпадать: иначе цвета «дерутся» и мерцают полосами (правка автора 16.10).
+    // Поэтому сиденье и спинка чуть уже и мельче, а подлокотники выступают на сантиметр вперёд и назад.
+    const E = 0.01;
+    box(len - 2 * E, D - 2 * E, 0.42, PALETTE.sofaSeat, 0, D / 2 + 0.02, 0);   // сиденье
+    box(len - 2 * E, BACK, 0.62, PALETTE.sofa, 0, BACK / 2 + 0.02 + E, 0.35);  // спинка
+    for (const k of [-1, 1]) box(ARM, D, 0.6, PALETTE.sofa, k * (len - ARM) / 2, D / 2 + 0.02, 0); // подлокотники
   }
 
   // кулер: белый корпус и голубая бутыль сверху
@@ -43,6 +46,6 @@ export function restAreaParts(rest: RestFurniture): VoxelPart[] {
   const [px, pz] = [(rest.plant.x + 0.5) * s, (rest.plant.z + 0.5) * s];
   rb(0.44, 0.36, 0.44, PALETTE.pot, px, 0, pz);
   rb(0.6, 0.5, 0.6, PALETTE.uniform, px, 0.36, pz);
-  rb(0.4, 0.35, 0.4, PALETTE.sofaSeat, px + 0.1, 0.75, pz + 0.05);
+  rb(0.38, 0.35, 0.38, PALETTE.sofaSeat, px + 0.1, 0.75, pz + 0.05); // край не совпадает с нижней кроной
   return p;
 }

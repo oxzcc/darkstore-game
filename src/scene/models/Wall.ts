@@ -114,7 +114,7 @@ export function wallSideParts(map: WarehouseMap, side: WallSide, tall: boolean):
       const y0 = h - WIN_FROM_TOP, y1 = y0 + WIN_H;
       box(c - WIN_W / 2, c + WIN_W / 2, y0, y1, -t / 2 - 0.02, t / 2 + 0.02, PALETTE.windowFrame);
       box(c - WIN_W / 2 + 0.08, c + WIN_W / 2 - 0.08, y0 + 0.07, y1 - 0.07, -t / 2 - 0.035, t / 2 + 0.035, PALETTE.windowGlass);
-      box(c - 0.03, c + 0.03, y0 + 0.07, y1 - 0.07, -t / 2 - 0.045, t / 2 + 0.045, PALETTE.windowFrame); // перемычка
+      box(c - 0.03, c + 0.03, y0 + 0.06, y1 - 0.06, -t / 2 - 0.045, t / 2 + 0.045, PALETTE.windowFrame); // перемычка (выше и ниже стекла — грани не совпадают)
     }
   }
   return out;

@@ -1,4 +1,4 @@
-// 3D-сцена: камера (CameraRig: изометрия и вид «глазами сборщика»), склад, грузовик и паллеты поставок, сборщики, курьеры и пакеты заказов,
+// 3D-сцена: камера (CameraRig: изометрия и вид «глазами сборщика»), склад, грузовик и паллеты поставок, сборщики, курьеры и пакеты заказов, фон (машины, ветер, птицы, бабочки — Life),
 // выбор стеллажа в мини-игре (RackPicking) и клик по товару у стеллажа (RackCloseup), полка-пятнашки «Глубины» (DepthShelf).
 // Сцена только рисует карту, которую ей передали.
 import { useLayoutEffect, useRef } from 'react';
@@ -20,6 +20,7 @@ import BarcodeShelf from './BarcodeShelf';
 import Deliveries from './Deliveries';
 import World from './World';
 import Couriers from './Couriers';
+import Life from './Life';
 
 type Props = { map: WarehouseMap; stock: Stock };
 
@@ -72,6 +73,7 @@ export default function Scene({ map, stock }: Props) {
       <Sun map={map} />
       <CameraRig map={map} />
       <World map={map} />
+      <Life map={map} />
       <Warehouse map={map} stock={stock} />
       <Deliveries map={map} />
       <Pickers />

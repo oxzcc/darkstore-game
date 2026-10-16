@@ -127,7 +127,7 @@ export default function World({ map }: { map: WarehouseMap }) {
       </mesh>
 
       <VoxelBatch parts={street} />
-      <VoxelBatch parts={decor} />
+      <VoxelBatch parts={decor} wind />
     </group>
   );
 }

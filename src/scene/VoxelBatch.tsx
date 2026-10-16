@@ -10,6 +10,31 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import type { VoxelPart } from './models/ProductItem';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { textureForColor } from './textures';
+import { DECOR } from '../config/decor';
+
+/**
+ * Ветер (W8c): у пакетов с `wind` вершины качаются в видеокарте — тем сильнее, чем выше над землёй (крона гнётся, низ стоит).
+ * Время — игровое (его ставит setWindTime каждый кадр), поэтому на паузе деревья замирают. Тени не качаются — это незаметно.
+ */
+const WIND_TIME = { value: 0 };
+export function setWindTime(t: number) { WIND_TIME.value = t; }
+function windCompile(shader: { uniforms: Record<string, unknown>; vertexShader: string }) {
+  const W = DECOR.life.wind;
+  shader.uniforms.uWindTime = WIND_TIME;
+  shader.vertexShader = 'uniform float uWindTime;\n' + shader.vertexShader.replace('#include <project_vertex>', `
+    vec4 mvPosition = vec4( transformed, 1.0 );
+    #ifdef USE_INSTANCING
+      mvPosition = instanceMatrix * mvPosition;
+    #endif
+    mvPosition = modelMatrix * mvPosition;
+    float windH = max( mvPosition.y - ${W.from.toFixed(3)}, 0.0 );
+    float windP = uWindTime * ${W.speed.toFixed(3)} + mvPosition.x * 0.35 + mvPosition.z * 0.27;
+    mvPosition.x += sin( windP ) * ${W.amount.toFixed(4)} * windH;
+    mvPosition.z += cos( windP * 0.8 ) * ${(W.amount * 0.6).toFixed(4)} * windH;
+    mvPosition = viewMatrix * mvPosition;
+    gl_Position = projectionMatrix * mvPosition;`);
+}
+const windCacheKey = () => 'voxel-wind';
 
 const SOFT = WAREHOUSE_VIEW.softCubes;
 const UNIT = new BoxGeometry(1, 1, 1);
@@ -38,7 +63,7 @@ const step = (v: number) => Math.max(SOFT.sizeStep, Math.round(v / SOFT.sizeStep
 
 type Group = { key: string; color: string; parts: VoxelPart[]; geometry: BufferGeometry; stretch: boolean };
 
-function Batch({ group }: { group: Group }) {
+function Batch({ group, wind }: { group: Group; wind: boolean }) {
   const ref = useRef<InstancedMesh>(null);
   const { parts, stretch } = group;
   useLayoutEffect(() => {
@@ -59,12 +84,17 @@ function Batch({ group }: { group: Group }) {
     // key по числу кубиков: при изменении количества InstancedMesh создаётся заново
     <instancedMesh key={parts.length} ref={ref} args={[group.geometry, undefined, parts.length]} frustumCulled={false} castShadow receiveShadow>
       {/* дерево и картон — с рисованным узором (W4), остальное — ровным цветом */}
-      <meshStandardMaterial color={group.color} map={textureForColor(group.color)} />
+      <meshStandardMaterial
+        key={wind ? 'wind' : 'still'}
+        color={group.color}
+        map={textureForColor(group.color)}
+        {...(wind ? { onBeforeCompile: windCompile, customProgramCacheKey: windCacheKey } : {})}
+      />
     </instancedMesh>
   );
 }
 
-export default function VoxelBatch({ parts, soft = 'light' }: { parts: VoxelPart[]; soft?: Softness }) {
+export default function VoxelBatch({ parts, soft = 'light', wind = false }: { parts: VoxelPart[]; soft?: Softness; wind?: boolean }) {
   const groups = useMemo(() => {
     const map = new Map<string, Group>();
     for (const p of parts) {
@@ -88,7 +118,7 @@ export default function VoxelBatch({ parts, soft = 'light' }: { parts: VoxelPart
   }, [parts, soft]);
   return (
     <group>
-      {groups.map((g) => <Batch key={g.key} group={g} />)}
+      {groups.map((g) => <Batch key={g.key} group={g} wind={wind} />)}
     </group>
   );
 }

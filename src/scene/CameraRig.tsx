@@ -19,6 +19,10 @@ import { closeupFocus } from '../store/selectors';
 
 const SCREEN_FILL = 0.95;                         // доля свободного места, которую занимает склад в общем виде
 const DEPTH = 60;                                 // сколько метров сцены вокруг цели помещается между near и far
+/** Ближняя граница в общем виде — доля расстояния до цели. Чем ближе near к камере, тем грубее буфер глубины: при 5 см
+ *  поверхности в миллиметрах друг от друга (пол и разметка, стекло и рама) «дерутся» и мерцают полосами. В общем виде ближе
+ *  ~30% расстояния ничего нет (камера высоко над складом, даже при самом крупном зуме); у стеллажа (вид вблизи) доля 0 — там работает clipNear. */
+const HOME_NEAR_SHARE = 0.3;
 const NO_FOG = 1e5;                               // дымка так далеко, что её нет
 const GRASS = new Color(PALETTE.grass);
 const FOG = new Color(PALETTE.closeupFog);
@@ -28,7 +32,7 @@ type Size = { width: number; height: number };
 
 /** Куда смотрит камера: цель, направление «от цели к камере», расстояние, угол обзора, поля интерфейса
  *  и сколько метров перед камерой не рисовать. */
-type Pose = { target: Vector3; dir: Vector3; dist: number; fovDeg: number; insets: Insets; clipNear: number };
+type Pose = { target: Vector3; dir: Vector3; dist: number; fovDeg: number; insets: Insets; clipNear: number; nearShare: number };
 
 const rad = (deg: number) => (deg * Math.PI) / 180;
 
@@ -56,6 +60,7 @@ function homePose(map: WarehouseMap, size: Size, panel: number, yaw: number, zoo
     fovDeg,
     insets: ins,
     clipNear: 0,
+    nearShare: HOME_NEAR_SHARE,
   };
 }
 
@@ -71,6 +76,7 @@ function closePose(rack: Rack, insets: Insets): Pose {
     fovDeg: WAREHOUSE_VIEW.closeup.fovDeg,
     insets,
     clipNear: WAREHOUSE_VIEW.closeup.clipNear,
+    nearShare: 0,
   };
 }
 
@@ -87,6 +93,7 @@ function mix(a: Pose, b: Pose, t: number): Pose {
     dist: logLerp(a.dist, b.dist, t),
     // отсечение растёт к концу перелёта — противоположный ряд пропадает, когда камера «проходит» сквозь него
     clipNear: lerp(a.clipNear, b.clipNear, Math.pow(t, 3)),
+    nearShare: lerp(a.nearShare, b.nearShare, t),
     fovDeg: logLerp(a.fovDeg, b.fovDeg, t),
     insets: {
       left: lerp(a.insets.left, b.insets.left, t),
@@ -112,7 +119,7 @@ function apply(camera: PerspectiveCamera, pose: Pose, size: Size) {
     .addScaledVector(right, (-(pose.insets.left - pose.insets.right) / 2) * mPerPx)
     .addScaledVector(up, (-(pose.insets.bottom - pose.insets.top) / 2) * mPerPx);
 
-  camera.near = Math.max(0.05, pose.dist - DEPTH, pose.clipNear);
+  camera.near = Math.max(0.05, pose.dist - DEPTH, pose.clipNear, pose.dist * pose.nearShare);
   camera.far = pose.dist + DEPTH;
   camera.updateProjectionMatrix();
 }
