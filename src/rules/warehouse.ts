@@ -74,6 +74,16 @@ export function blockedCells(map: WarehouseMap): Set<string> {
   ]);
 }
 
+/**
+ * Клетки, по которым ходить нельзя прямо сейчас: всё из `blockedCells` плюс клетки паллет на полу (просьба автора 16.10).
+ * Паллеты появляются и уходят по ходу игры, поэтому их клетки передаются отдельно. Встать рядом с паллетой можно — на неё нельзя.
+ */
+export function blockedWithPallets(map: WarehouseMap, palletCells: Cell[]): Set<string> {
+  const blocked = blockedCells(map);
+  for (const c of palletCells) blocked.add(cellKey(c));
+  return blocked;
+}
+
 /** Клетка — место на диване в зоне отдыха. */
 export function isRestSeat(map: WarehouseMap, c: Cell): boolean {
   return map.rest.seats.some((s) => s.x === c.x && s.z === c.z);

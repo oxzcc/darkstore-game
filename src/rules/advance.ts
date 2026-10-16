@@ -3,7 +3,7 @@
 import type { GameState, ShiftEvent } from '../model/game';
 import type { Picker } from '../model/picker';
 import type { WarehouseMap } from '../model/warehouse';
-import { blockedCells, distancesFrom, findPath } from './warehouse';
+import { blockedWithPallets, distancesFrom, findPath } from './warehouse';
 import type { Cell } from '../model/warehouse';
 import { secondsPerCell } from './time';
 import { createRng } from './random';
@@ -118,7 +118,8 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
   if (state.campaign.phase !== 'running') return { state, events: [] };
 
   const time = state.clock.time + dt * worldSpeed(state);
-  const blocked = blockedCells(map);
+  // паллеты на полу — непроходимые (просьба автора 16.10); пустые паллеты уже убраны со сцены
+  const blocked = blockedWithPallets(map, Object.values(state.pallets).filter((pl) => pl.state !== 'empty').map((pl) => pl.cell));
   const rng = createRng(state.rngSeed);
   const events: ShiftEvent[] = [];
   const newCallers: string[] = []; // кто за этот шаг остановился на развилке
