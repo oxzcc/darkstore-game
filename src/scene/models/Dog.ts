@@ -1,9 +1,10 @@
-// Сборщик-собака по art/reference/character_picker_*.png (W7): зелёная кепка, зелёный фартук с белым бейджем,
-// белая рубашка с короткими рукавами; окрас, уши, хвост и штаны — порода (DogLook в config/pickers.ts).
-// Пропорции игрушечные: голова крупнее, чем на референсе (08, раздел 0). Рост ~1,6 м до верха кепки, стоячие уши — выше.
-// Координаты: y — вверх от пола (0 — подошвы), +z — «вперёд» (куда смотрит морда), x — вбок.
+// Сборщик-собака (W7). Размеры, пропорции и цвета — из концепт-рендера «Даркстор: Moving Out-стиль» (одобрен автором 16.10),
+// окрасы пород — по art/reference/character_picker_*.png. Коренастый «чиби»: голова 0,78 × 0,66 м, туловище 0,64 м в ширину,
+// рост ~1,9 м до верха кепки (стоячие уши — чуть выше). Форма: толстая зелёная кепка с пуговкой и козырьком, белая футболка
+// с зелёным фартуком и бейджем, длинные белые рукава с зелёной манжетой, серые штаны, белые кроссовки с зелёной подошвой.
+// Координаты: y — вверх от пола, +z — «вперёд» (куда смотрит морда), x — вбок.
 //
-// Модель разбита на части (голова, туловище, лапы, руки, хвост). У каждой своя точка поворота (`pivot`):
+// Модель разбита на части (голова, туловище, ноги, руки, хвост) — как в рендере. У каждой своя точка поворота (`pivot`):
 // бруски части заданы относительно неё, поэтому в W7b часть можно качать, просто поворачивая её группу.
 import { PALETTE } from '../../config/palette';
 import type { DogLook } from '../../config/pickers';
@@ -13,119 +14,110 @@ export type DogPartName = 'body' | 'head' | 'legL' | 'legR' | 'armL' | 'armR' | 
 export type DogRigPart = { pivot: [number, number, number]; parts: VoxelPart[] };
 export type DogRig = Record<DogPartName, DogRigPart>;
 
-const SHIRT = '#FAFAF6';
-const BADGE = '#FFFFFF';
-const EYE = '#1E1E22';
-const TONGUE = '#F07A8A';
+const WHITE = '#FFFFFF';
+const EYE = '#241F1F';
+const TONGUE = '#F27B8F';
+const GREEN = PALETTE.uniform;
 
-// Точки поворота, м (тело неподвижно: оно двигается всей фигуркой).
-const HIP = 0.47;      // тазобедренный сустав
-const SHOULDER = 0.9;  // плечо
-const NECK = 0.97;     // шея
+// Точки поворота, м — как группы в рендере.
 const PIVOTS: Record<DogPartName, [number, number, number]> = {
-  body: [0, 0, 0],
-  head: [0, NECK, 0],
-  legL: [-0.11, HIP, 0],
-  legR: [0.11, HIP, 0],
-  armL: [-0.3, SHOULDER, 0],
-  armR: [0.3, SHOULDER, 0],
-  tail: [0, 0.58, -0.17],
+  body: [0, 0.42, 0],     // туловище
+  head: [0, 1.0, 0],      // шея
+  legL: [-0.15, 0.45, 0], // бёдра
+  legR: [0.15, 0.45, 0],
+  armL: [-0.41, 0.92, 0], // плечи
+  armR: [0.41, 0.92, 0],
+  tail: [0, 0.62, -0.22],
 };
 
 type V3 = [number, number, number];
 
-function part(name: DogPartName) {
-  const pivot = PIVOTS[name];
+/**
+ * Брусок «как в рендере»: ширина, высота, глубина, цвет; x, y — НИЗ бруска, z — относительно точки поворота части;
+ * rotZ — наклон вокруг оси взгляда (уши).
+ */
+function builder() {
   const parts: VoxelPart[] = [];
-  /** Брусок в координатах всей собаки — пересчитывается относительно точки поворота части. */
-  const add = (pos: V3, size: V3, color: string, rot?: V3) =>
-    parts.push({ pos: [pos[0] - pivot[0], pos[1] - pivot[1], pos[2] - pivot[2]], size, color, rot });
-  return { rig: { pivot, parts } as DogRigPart, add };
+  const rb = (w: number, h: number, d: number, color: string, x: number, y: number, z: number, rotZ = 0) =>
+    parts.push({ pos: [x, y + h / 2, z], size: [w, h, d], color, rot: rotZ ? [0, 0, rotZ] : undefined });
+  return { parts, rb };
 }
 
-function body(look: DogLook) {
-  const { rig, add } = part('body');
-  add([0, 0.72, 0], [0.46, 0.5, 0.32], SHIRT);                  // рубашка
-  add([0, 0.56, 0], [0.48, 0.18, 0.34], PALETTE.primary);       // низ фартука — вокруг пояса
-  add([0, 0.74, 0.165], [0.36, 0.38, 0.03], PALETTE.primary);   // нагрудник фартука
-  for (const x of [-0.14, 0.14]) add([x, 0.92, 0.1], [0.07, 0.04, 0.16], PALETTE.primary); // лямки через плечо
-  add([0.08, 0.84, 0.185], [0.11, 0.04, 0.02], BADGE);          // бейдж
-  add([0, 0.97, 0.03], [0.26, 0.06, 0.22], look.light);         // шея / грудка
-  return rig;
+function torso(): VoxelPart[] {
+  const { parts, rb } = builder();
+  rb(0.64, 0.56, 0.42, WHITE, 0, 0, 0);       // футболка
+  rb(0.56, 0.5, 0.08, GREEN, 0, 0, 0.2);      // фартук
+  rb(0.2, 0.1, 0.04, WHITE, 0, 0.32, 0.24);   // бейдж
+  return parts;
 }
 
-function head(look: DogLook) {
-  const { rig, add } = part('head');
-  const front = 0.28; // передняя грань головы
-  add([0, 1.23, 0], [0.58, 0.5, 0.54], look.fur);               // голова
-  if (look.mask) add([0, 1.17, front + 0.005], [0.38, 0.3, 0.02], look.light); // светлая «маска» хаски
-  add([0, 1.1, front + 0.07], [0.3, 0.2, 0.16], look.light);    // морда
-  add([0, 1.17, front + 0.16], [0.11, 0.07, 0.04], look.nose);  // нос
-  if (look.tongue) add([0.04, 0.99, front + 0.11], [0.08, 0.1, 0.04], TONGUE); // высунутый язык
-  for (const x of [-0.13, 0.13]) add([x, 1.29, front + 0.02], [0.07, 0.09, 0.02], EYE); // глаза
-  // уши
+function leg(): VoxelPart[] {
+  const { parts, rb } = builder();
+  rb(0.22, 0.34, 0.24, PALETTE.pants, 0, -0.4, 0);   // штанина
+  rb(0.26, 0.13, 0.36, WHITE, 0, -0.47, 0.05);       // кроссовок
+  rb(0.27, 0.04, 0.37, GREEN, 0, -0.47, 0.05);       // зелёная подошва
+  return parts;
+}
+
+function arm(look: DogLook): VoxelPart[] {
+  const { parts, rb } = builder();
+  rb(0.18, 0.4, 0.2, WHITE, 0, -0.42, 0);     // рукав
+  rb(0.2, 0.08, 0.22, GREEN, 0, -0.5, 0);     // манжета
+  rb(0.17, 0.15, 0.19, look.fur, 0, -0.66, 0); // кисть
+  return parts;
+}
+
+function head(look: DogLook): VoxelPart[] {
+  const { parts, rb } = builder();
+  rb(0.78, 0.66, 0.7, look.fur, 0, 0, 0);                    // голова
+  rb(0.5, 0.34, 0.08, look.face, 0, 0.02, 0.33);             // светлая «маска»
+  if (look.patch) rb(0.2, 0.2, 0.05, look.patch, -0.17, 0.33, 0.35);
+  rb(0.36, 0.24, 0.22, look.face, 0, 0.03, 0.42);            // морда
+  rb(0.16, 0.1, 0.08, EYE, 0, 0.17, 0.53);                   // нос
+  for (const x of [-0.18, 0.18]) rb(0.09, 0.11, 0.04, EYE, x, 0.38, 0.36); // глаза
+  rb(0.03, 0.04, 0.02, WHITE, -0.16, 0.45, 0.38);            // блики в глазах
+  rb(0.03, 0.04, 0.02, WHITE, 0.2, 0.45, 0.38);
+  if (look.tongue) rb(0.12, 0.13, 0.05, TONGUE, 0.05, -0.06, 0.49); // язык
   for (const s of [-1, 1]) {
     if (look.ears === 'floppy') {
-      add([s * 0.32, 1.19, -0.02], [0.08, 0.3, 0.22], look.ear);                   // висячее ухо сбоку
+      rb(0.16, 0.38, 0.32, look.ear, s * 0.44, 0.2, -0.02, s * 0.15);              // висячие
+    } else if (look.ears === 'tall') {
+      rb(0.22, 0.36, 0.12, look.ear, s * 0.24, 0.62, -0.12, -s * 0.12);            // стоячие
+      if (look.earInner) rb(0.12, 0.22, 0.04, look.earInner, s * 0.24, 0.68, -0.05, -s * 0.12);
     } else {
-      const big = look.ears === 'bigPointy';
-      const [w, h] = big ? [0.17, 0.27] : [0.14, 0.21];
-      const x = s * (big ? 0.21 : 0.19);
-      const y = 1.48 + h / 2;
-      add([x, y, -0.08], [w, h, 0.08], look.ear, [0, 0, -s * 0.12]);             // стоячее ухо, чуть врозь
-      if (look.earInner) add([x, y - 0.02, -0.035], [w * 0.5, h * 0.6, 0.02], look.earInner, [0, 0, -s * 0.12]);
+      rb(0.3, 0.42, 0.12, look.ear, s * 0.34, 0.58, -0.12, -s * 0.3);              // «летучая мышь»
+      if (look.earInner) rb(0.16, 0.26, 0.04, look.earInner, s * 0.34, 0.63, -0.05, -s * 0.3);
     }
   }
-  // кепка: тулья и козырёк вперёд
-  add([0, 1.53, -0.01], [0.6, 0.12, 0.54], PALETTE.primary);
-  add([0, 1.49, front + 0.08], [0.44, 0.04, 0.2], PALETTE.primary);
-  return rig;
+  rb(0.82, 0.24, 0.74, GREEN, 0, 0.6, -0.02);                // кепка
+  rb(0.66, 0.06, 0.34, GREEN, 0, 0.6, 0.48);                 // козырёк
+  rb(0.12, 0.06, 0.12, PALETTE.uniformDark, 0, 0.84, 0);     // пуговка
+  return parts;
 }
 
-function leg(look: DogLook, name: 'legL' | 'legR') {
-  const { rig, add } = part(name);
-  const x = PIVOTS[name][0];
-  add([x, 0.27, 0], [0.17, 0.4, 0.2], look.legs);               // нога (штаны или шерсть)
-  add([x, 0.05, 0.03], [0.19, 0.1, 0.27], look.feet);           // ботинок или светлая лапа
-  return rig;
-}
-
-function arm(look: DogLook, name: 'armL' | 'armR') {
-  const { rig, add } = part(name);
-  const x = PIVOTS[name][0];
-  add([x, 0.84, 0], [0.14, 0.16, 0.18], SHIRT);                 // короткий рукав
-  add([x, 0.63, 0], [0.12, 0.27, 0.15], look.fur);              // лапа-рука
-  add([x, 0.46, 0.01], [0.13, 0.09, 0.16], look.light);         // кисть
-  return rig;
-}
-
-function tail(look: DogLook) {
-  const { rig, add } = part('tail');
-  const [, py, pz] = PIVOTS.tail;
-  if (look.tail === 'straight') {
-    add([0, py + 0.1, pz - 0.11], [0.09, 0.09, 0.3], look.fur, [0.7, 0, 0]);        // прямой, вверх-назад
-  } else if (look.tail === 'fluffy') {
-    add([0, py + 0.03, pz - 0.07], [0.18, 0.18, 0.15], look.fur);                   // пушистый короткий
-    add([0, py + 0.03, pz - 0.18], [0.14, 0.14, 0.08], look.light);                 // светлый кончик
-  } else {
-    add([0, py + 0.2, pz - 0.15], [0.12, 0.36, 0.28], look.light);                  // бублик
-    add([0, py + 0.2, pz - 0.15], [0.14, 0.15, 0.12], look.fur);                    // тёмная серединка видна сбоку
-  }
-  return rig;
+function tail(look: DogLook): VoxelPart[] {
+  const { parts, rb } = builder();
+  if (!look.tail) return parts;
+  rb(0.2, 0.2, 0.32, look.tail[0], 0, 0, -0.15);
+  rb(0.24, 0.22, 0.2, look.tail[1], 0, 0.08, -0.36);         // светлый кончик
+  return parts;
 }
 
 /** Все части собаки этой породы (W7). */
 export function dogRig(look: DogLook): DogRig {
+  const at = (name: DogPartName, parts: VoxelPart[]) => ({ pivot: PIVOTS[name] as V3, parts });
   return {
-    body: body(look),
-    head: head(look),
-    legL: leg(look, 'legL'),
-    legR: leg(look, 'legR'),
-    armL: arm(look, 'armL'),
-    armR: arm(look, 'armR'),
-    tail: tail(look),
+    body: at('body', torso()),
+    head: at('head', head(look)),
+    legL: at('legL', leg()),
+    legR: at('legR', leg()),
+    armL: at('armL', arm(look)),
+    armR: at('armR', arm(look)),
+    tail: at('tail', tail(look)),
   };
 }
 
-/** Поза рук, когда собака катит тележку: руки вперёд к ручке (поворот вокруг x, радианы). */
+/** Поза рук, когда собака катит тележку: руки вперёд к ручке (поворот вокруг x, радианы) — как в рендере. */
 export const ARMS_ON_CART = -1.25;
+/** Тележка стоит на столько метров впереди собаки — как в рендере. */
+export const CART_AHEAD = 0.8;

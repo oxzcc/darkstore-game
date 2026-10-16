@@ -1,11 +1,12 @@
-// Сборщик на сцене (W7): собака по art/reference/character_picker_*.png (модель — Dog.ts), кольцо под ногами
+// Сборщик на сцене (W7): собака как в концепт-рендере (модель — Dog.ts), кольцо под ногами
 // в цвете сборщика (08, раздел 3.2: цвет сборщика только у кольца и маршрута) и тележка на сборке и выкладке.
 // Части тела — отдельные группы со своей точкой поворота: в W7b они будут качаться при ходьбе и работе.
 import { useMemo } from 'react';
+import { Color } from 'three';
 import type { DogLook } from '../../config/pickers';
 import { WAREHOUSE_VIEW } from '../../config/warehouse';
 import VoxelBatch from '../VoxelBatch';
-import { dogRig, ARMS_ON_CART, type DogPartName, type DogRig } from './Dog';
+import { dogRig, ARMS_ON_CART, CART_AHEAD, type DogPartName, type DogRig } from './Dog';
 import { cartParts } from './Cart';
 
 type Props = {
@@ -17,24 +18,19 @@ type Props = {
   withCart: boolean; // катит тележку (сборка и выкладка, решение автора 16.10)
 };
 
-/** Квадратное кольцо под ногами (ui_06): четыре плоские полоски. */
+/** Кольцо под ногами — как в концепт-рендере: плоская квадратная рамка светлого оттенка цвета сборщика, без теней. */
 function Ring({ color }: { color: string }) {
-  const r = 0.42, w = 0.07, y = 0.02;
-  const strips: { p: [number, number, number]; s: [number, number, number] }[] = [
-    { p: [0, y, -r], s: [2 * r + w, 0.02, w] },
-    { p: [0, y, r], s: [2 * r + w, 0.02, w] },
-    { p: [-r, y, 0], s: [w, 0.02, 2 * r] },
-    { p: [r, y, 0], s: [w, 0.02, 2 * r] },
-  ];
+  const light = useMemo(() => {
+    const c = new Color(color);
+    const hsl = { h: 0, s: 0, l: 0 };
+    c.getHSL(hsl);
+    return new Color().setHSL(hsl.h, Math.min(1, hsl.s * 0.95), hsl.l + (1 - hsl.l) * 0.1);
+  }, [color]);
   return (
-    <group>
-      {strips.map((b, i) => (
-        <mesh key={i} position={b.p} receiveShadow>
-          <boxGeometry args={b.s} />
-          <meshStandardMaterial color={color} />
-        </mesh>
-      ))}
-    </group>
+    <mesh position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, Math.PI / 4]}>
+      <ringGeometry args={[0.5, 0.64, 4, 1]} />
+      <meshBasicMaterial color={light} />
+    </mesh>
   );
 }
 
@@ -43,7 +39,7 @@ function RigPart({ rig, name, rotX = 0 }: { rig: DogRig; name: DogPartName; rotX
   const { pivot, parts } = rig[name];
   return (
     <group position={pivot} rotation={[rotX, 0, 0]}>
-      <VoxelBatch parts={parts} />
+      <VoxelBatch parts={parts} soft="strong" />
     </group>
   );
 }
@@ -65,7 +61,11 @@ export default function Picker({ position, facing, hop, look, ringColor, withCar
       <Ring color={ringColor} />
       <group rotation={[0, facing, 0]} scale={s}>
         {/* тележка катится по полу — без подскока */}
-        {withCart && <VoxelBatch parts={CART} />}
+        {withCart && (
+          <group position={[0, 0, CART_AHEAD]}>
+            <VoxelBatch parts={CART} soft="strong" />
+          </group>
+        )}
         <group position={[0, hop, 0]}>
           <RigPart rig={rig} name="body" />
           <RigPart rig={rig} name="head" />

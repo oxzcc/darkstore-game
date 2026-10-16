@@ -2,18 +2,16 @@
 // Характеристики по шкале 1–10; разные профили, чтобы выбор сборщика имел смысл.
 // Стартовые значения, утверждены автором для первой версии; меняются здесь.
 
-/** Как выглядит порода на сцене (W7, по art/reference/character_picker_*.png). Только для модели, правила это не читают. */
+/** Как выглядит порода на сцене (W7). Размеры и цвета — из концепт-рендера «Даркстор: Moving Out-стиль» (одобрен автором 16.10),
+ *  окрасы — по art/reference/character_picker_*.png. Только для модели, правила это не читают. */
 export type DogLook = {
-  fur: string;        // основной окрас: голова, руки, хвост
-  light: string;      // светлые места: морда, грудь, кончики лап
-  ear: string;        // цвет ушей (у лабрадора чуть темнее шерсти)
+  fur: string;        // основной окрас: голова, кисти
+  face: string;       // светлая «маска» на морде
+  ear: string;        // цвет ушей
   earInner?: string;  // внутренняя сторона стоячих ушей
-  ears: 'floppy' | 'pointy' | 'bigPointy';   // висячие / стоячие / большие стоячие
-  tail: 'straight' | 'fluffy' | 'curl';      // прямой / пушистый короткий / бубликом
-  mask: boolean;      // светлая «маска» на лице (хаски)
-  legs: string;       // штаны или шерсть ног
-  feet: string;       // ботинки или светлые лапы
-  nose: string;
+  ears: 'floppy' | 'tall' | 'bat';   // висячие (лабрадор) / стоячие (корги, хаски) / «летучая мышь» (бульдог)
+  tail?: [string, string];           // хвост: основание и кончик; у лабрадора на рендере хвоста нет
+  patch?: string;     // пятно у глаза (бульдог)
   tongue: boolean;    // высунутый язык
 };
 
@@ -27,21 +25,17 @@ export type PickerTemplate = {
   accuracy: number;
 };
 
-const LABRADOR: DogLook = {
-  fur: '#F2E6CC', light: '#FAF4E6', ear: '#E6D3AC', ears: 'floppy', tail: 'straight', mask: false,
-  legs: '#3A3A3E', feet: '#26262A', nose: '#5A3424', tongue: true,
-};
+const LABRADOR: DogLook = { fur: '#F2E2C2', face: '#FAF1DE', ear: '#E5CFA4', ears: 'floppy', tongue: true };
 const CORGI: DogLook = {
-  fur: '#E39A3B', light: '#F6EFE2', ear: '#E39A3B', earInner: '#F2B8B4', ears: 'bigPointy', tail: 'fluffy', mask: false,
-  legs: '#E39A3B', feet: '#F6EFE2', nose: '#26262A', tongue: true,
+  fur: '#E98A33', face: '#FFF6E8', ear: '#E98A33', earInner: '#F6B6A8', ears: 'tall', tail: ['#E98A33', '#FFF6E8'], tongue: true,
 };
 const HUSKY: DogLook = {
-  fur: '#5E6470', light: '#F2EEE6', ear: '#5E6470', earInner: '#E8D9C2', ears: 'pointy', tail: 'curl', mask: true,
-  legs: '#4A4E58', feet: '#F2EEE6', nose: '#26262A', tongue: false,
+  fur: '#4B5058', face: '#F7F4EE', ear: '#4B5058', earInner: '#F7F4EE', ears: 'tall', tail: ['#4B5058', '#F7F4EE'], tongue: false,
 };
-
-export const STAT_SCALE = { min: 1, max: 10 };
-export const START_SPECIALIZATION_LEVEL = 1;
+/** Бульдог Буля — на будущее (08, раздел 5), в игру пока не входит. */
+export const BULLDOG: DogLook = {
+  fur: '#D9B083', face: '#F3E2C8', ear: '#7A5236', earInner: '#E8A28E', ears: 'bat', patch: '#7A5236', tongue: false,
+};
 
 export const STARTING_PICKERS: PickerTemplate[] = [
   { id: 'lucky', name: 'Лаки',   breed: 'лабрадор', color: '#2280FF', look: LABRADOR, speed: 5, accuracy: 5 }, // ровный середняк
@@ -52,5 +46,5 @@ export const STARTING_PICKERS: PickerTemplate[] = [
 /** Окрас по id сборщика; неизвестный — лабрадор. */
 export const lookOf = (id: string): DogLook => STARTING_PICKERS.find((t) => t.id === id)?.look ?? LABRADOR;
 
-// Четвёртый сборщик на будущее (08, раздел 5), в игру пока не входит. Порода добавится одним объектом DogLook:
+// Четвёртый сборщик на будущее (08, раздел 5), в игру пока не входит:
 // { id: 'bulya', name: 'Буля', breed: 'бульдог', color: '#13B8A8', look: BULLDOG, … }
