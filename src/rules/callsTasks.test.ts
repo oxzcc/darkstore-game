@@ -6,7 +6,7 @@ import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { CALLS, EXPIRY, SITUATIONS, TSD_OPTION_ID } from '../config/calls';
 import { WRITEOFF } from '../config/balance';
 import { buildWarehouseMap } from './warehouse';
-import { createInitialGame } from './game';
+import { gameWithDelivery as createInitialGame } from './testing'; // первая поставка уже у ворот (W8b)
 import { dispatchTask } from './tasks/lifecycle';
 import { advanceWorld } from './advance';
 import { buildPutawayJob, buildReceivingJob, buildWriteoffJob } from './jobs';

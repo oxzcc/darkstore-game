@@ -59,6 +59,9 @@ export type GameState = {
   deliveries: Record<string, Delivery>; // поставки (M7b; 10, раздел 13.2)
   pallets: Record<string, Pallet>;
   nextDeliveryAt: number;               // когда приедет следующая поставка, игровое время
+  /** Грузовик уже едет к воротам с этого момента (W8b): поставка и «Приёмка» появятся, когда он встанет (DELIVERY.driveInSeconds).
+   *  null — не едет. В старых сохранениях поля нет — то же, что null. */
+  truckComing?: number | null;
   nextWriteoffAt: number;               // когда может появиться следующее задание «Списание» (M7e1)
   nextOrderAt: number;                  // раньше этого нового заказа не будет (пауза между заказами, M8d)
   pickers: Record<string, Picker>;

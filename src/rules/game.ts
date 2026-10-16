@@ -43,6 +43,7 @@ export function createInitialGame(map: WarehouseMap, seed: number): GameState {
     pallets: {},
     // для проверки первая поставка может приехать сразу (DELIVERY.firstAtStart)
     nextDeliveryAt: DELIVERY.firstAtStart ? 0 : shiftPlan({ campaign }).deliveryEvery,
+    truckComing: null,
     nextOrderAt: 0,
     nextWriteoffAt: WRITEOFF.firstAtSeconds,
     pickers,

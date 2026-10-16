@@ -6,6 +6,7 @@ import { ORDER, SHIFT_PLAN } from '../config/balance';
 import { HINTS } from '../config/tutorial';
 import { buildWarehouseMap } from './warehouse';
 import { createInitialGame } from './game';
+import { arriveTruckNow } from './testing';
 import { advanceWorld } from './advance';
 import { dispatchTask } from './tasks/lifecycle';
 import { openOrders } from './tasks/generator';
@@ -118,7 +119,9 @@ describe('обучающая смена', () => {
     s = markHintSeen(s, 'start');
     expect(currentHint(s)).toBe('order'); // заказы есть с самого начала
     s = markHintSeen(s, 'order');
-    expect(currentHint(s)).toBe('receiving'); // и приёмка
+    expect(currentHint(s)).toBeNull(); // грузовик ещё едет — приёмки пока нет (W8b)
+    s = arriveTruckNow(s, map);
+    expect(currentHint(s)).toBe('receiving'); // встал у ворот — приёмка
     s = markHintSeen(s, 'receiving');
     expect(currentHint(s)).toBeNull(); // выкладок, списаний и развилок пока нет
     expect(markHintSeen(s, 'receiving')).toBe(s);

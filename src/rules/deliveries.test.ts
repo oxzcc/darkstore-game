@@ -5,7 +5,7 @@ import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { DELIVERY, REWARD } from '../config/balance';
 import { RESULT_SHARE } from '../config/calls';
 import { buildWarehouseMap } from './warehouse';
-import { createInitialGame } from './game';
+import { gameWithDelivery as createInitialGame } from './testing'; // первая поставка уже у ворот (W8b)
 import { dispatchTask } from './tasks/lifecycle';
 import { advanceWorld } from './advance';
 import { buildReceivingJob, etaToTask, pickerActivity } from './jobs';
@@ -14,6 +14,7 @@ import { receiveSeconds } from './time';
 import { acceptDelivery, createDelivery, freeByProduct, freePalletSlots, tickDeliveries, truckAtGate } from './deliveries';
 import { rewardFor } from './rewards';
 import { shiftPlan } from './shiftPlan';
+import { createInitialGame as createGameRaw } from './game';
 
 const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
 /** Интервал поставок первой смены (M8d: из плана смены). */
@@ -31,7 +32,7 @@ const receivingTasks = (s: GameState) =>
 function noDeliveryGame(seed = 1): GameState {
   const g = createInitialGame(map, seed);
   const tasks = Object.fromEntries(Object.entries(g.tasks).filter(([, t]) => t.type !== 'receiving'));
-  return { ...g, tasks, deliveries: {}, pallets: {}, nextDeliveryAt: EVERY };
+  return { ...g, tasks, deliveries: {}, pallets: {}, nextDeliveryAt: EVERY, truckComing: null };
 }
 
 describe('поставка', () => {
@@ -84,18 +85,44 @@ describe('поставка', () => {
   });
 
   it('приезжает по таймеру; пока грузовик у ворот, следующая ждёт', () => {
+    const at = (x: GameState, time: number) => tickDeliveries({ ...x, clock: { ...x.clock, time } });
+    const DRIVE = DELIVERY.driveInSeconds;
     let s = noDeliveryGame();
-    expect(tickDeliveries({ ...s, clock: { ...s.clock, time: EVERY - 1 } })).toEqual({ ...s, clock: { ...s.clock, time: EVERY - 1 } });
-    s = tickDeliveries({ ...s, clock: { ...s.clock, time: EVERY } });
+    expect(at(s, EVERY - 1)).toEqual({ ...s, clock: { ...s.clock, time: EVERY - 1 } });
+    // время пришло — грузовик выехал, но поставки и задания ещё нет (W8b)
+    s = at(s, EVERY);
+    expect(s.truckComing).toBe(EVERY);
+    expect(truckAtGate(s)).toBe(false);
+    expect(receivingTasks(s)).toHaveLength(0);
+    expect(at(s, EVERY + DRIVE - 0.1).deliveries).toEqual({});
+    // доехал — у ворот, задание «Приёмка»; следующая — через интервал после приезда
+    s = at(s, EVERY + DRIVE);
     expect(truckAtGate(s)).toBe(true);
-    expect(s.nextDeliveryAt).toBe(EVERY * 2);
-    // время следующей пришло, но грузовик ещё у ворот — новой поставки нет
-    const late = tickDeliveries({ ...s, clock: { ...s.clock, time: EVERY * 2 } });
+    expect(s.truckComing).toBe(null);
+    expect(receivingTasks(s)).toHaveLength(1);
+    expect(Object.values(s.deliveries)[0].arrivedAt).toBe(EVERY + DRIVE);
+    expect(s.nextDeliveryAt).toBe(EVERY * 2 + DRIVE);
+    // время следующей пришло, но грузовик ещё у ворот — следующий не выезжает
+    const late = at(s, EVERY * 3);
+    expect(late.truckComing ?? null).toBe(null);
     expect(Object.keys(late.deliveries)).toHaveLength(1);
-    // приняли — у ворот свободно, приезжает следующая
+    // приняли — у ворот свободно, выезжает и доезжает следующая
     const d = Object.values(s.deliveries)[0];
-    const after = tickDeliveries(acceptDelivery({ ...s, clock: { ...s.clock, time: EVERY * 2 } }, d.id));
-    expect(Object.keys(after.deliveries)).toHaveLength(2);
+    const leaving = at(acceptDelivery({ ...s, clock: { ...s.clock, time: EVERY * 3 } }, d.id), EVERY * 3);
+    expect(leaving.truckComing).toBe(EVERY * 3);
+    expect(Object.keys(at(leaving, EVERY * 3 + DRIVE).deliveries)).toHaveLength(2);
+  });
+
+  it('в начале смены грузовик сначала едет: задание «Приёмка» появляется, когда он встал у ворот (W8b)', () => {
+    let s = createGameRaw(map, 1);
+    expect(s.truckComing).toBe(0);
+    expect(Object.keys(s.deliveries)).toHaveLength(0);
+    expect(receivingTasks(s)).toHaveLength(0);
+    s = runUntil(s, (x) => receivingTasks(x).length > 0, 30);
+    const d = Object.values(s.deliveries)[0];
+    expect(d.arrivedAt).toBeGreaterThanOrEqual(DELIVERY.driveInSeconds);
+    expect(d.arrivedAt).toBeLessThan(DELIVERY.driveInSeconds + 0.2);
+    expect(receivingTasks(s)[0].deadline).not.toBe(null);
   });
 
   it('нет мест под паллеты — поставка не приезжает', () => {

@@ -4,6 +4,7 @@ import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { TIMING } from '../config/balance';
 import { buildWarehouseMap, zoneCells } from './warehouse';
 import { createInitialGame } from './game';
+import { gameWithDelivery } from './testing';
 import { openOrders, openTasks } from './tasks/generator';
 import { dispatchTask } from './tasks/lifecycle';
 import { advanceWorld } from './advance';
@@ -129,7 +130,7 @@ describe('выполнение задания', () => {
 
   it('сборщики не встают друг в друга: на фасовке у каждого своё место', () => {
     for (const seed of [1, 2, 3, 4, 5]) {
-      let s = createInitialGame(map, seed);
+      let s = gameWithDelivery(map, seed); // три задания на старте: два заказа и приёмка (грузовик уже у ворот, W8b)
       for (const pid of ['lucky', 'korzh', 'buran']) s = dispatch(s, map, openTasks(s)[0].id, pid); // любое задание: заказов может быть меньше трёх (M8d)
       const allIdle = (x: GameState) => Object.values(x.pickers).every((p) => p.state === 'idle');
       s = runUntil(s, allIdle).s;
@@ -140,7 +141,7 @@ describe('выполнение задания', () => {
   });
 
   it('пока работают, двое не стоят в одной клетке', () => {
-    let s = createInitialGame(map, 11);
+    let s = gameWithDelivery(map, 11);
     for (const pid of ['lucky', 'korzh', 'buran']) s = dispatch(s, map, openTasks(s)[0].id, pid);
     for (let t = 0; t < 300; t += 0.1) {
       s = advanceWorld(s, map, 0.1).state;
