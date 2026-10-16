@@ -40,7 +40,7 @@ describe('карта склада', () => {
   it('длина стеллажа — одна настройка', () => {
     const racks = generateRacks({ ...WAREHOUSE_LAYOUT.racks, rackLength: 1 });
     expect(racks[0].cells).toHaveLength(1);
-    expect(racks[1].cell.z - racks[0].cell.z).toBe(-1);
+    expect(racks[1].cell.x - racks[0].cell.x).toBe(1); // ряды вдоль x (16.10)
   });
 
   it('cellToWorld ставит центр клетки', () => {
