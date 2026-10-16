@@ -11,7 +11,7 @@ import { useGameStore } from '../store/gameStore';
 import { packedOrders } from '../store/selectors';
 import VoxelBatch from './VoxelBatch';
 import OrderBag from './models/OrderBag';
-import { bikeParts } from './models/Bike';
+import { BIKE_SEAT, bikeParts } from './models/Bike';
 import { dogRig, type DogPartName, type DogRig } from './models/Dog';
 import { dogPose, phaseOffset } from './dogAnim';
 import { bagOnTable, courierAt, planCouriers, type CourierPlan } from './couriers';
@@ -77,7 +77,7 @@ function Courier({ plan }: { plan: CourierPlan }) {
     const d = f.dog;
     const fx = Math.sin(d.heading), fz = Math.cos(d.heading);
     const target: [number, number, number] = d.action === 'ride'
-      ? [d.pos[0] - fx * 0.05, d.pos[1] + 0.43, d.pos[2] - fz * 0.05]
+      ? [d.pos[0] + fx * BIKE_SEAT.ahead, d.pos[1] + BIKE_SEAT.hip, d.pos[2] + fz * BIKE_SEAT.ahead]
       : d.pos;
     const jump = Math.hypot(target[0] - r.position.x, target[1] - r.position.y, target[2] - r.position.z);
     if (!placed.current || jump < 0.3) r.position.set(...target);
