@@ -37,4 +37,8 @@ export type WarehouseMap = {
   openings: WallOpening[];
   /** Столы фасовки: левая клетка стола, стол 2×1 занимает её и соседнюю справа (+x). По ним не ходят. */
   tables: Cell[];
+  /** Зона отдыха (W7b): места на диване, куда садятся на перерыве, куда сидящие смотрят, и клетки кулера и растения (по ним не ходят). */
+  rest: RestFurniture;
 };
+
+export type RestFurniture = { seats: Cell[]; facing: Cell; cooler: Cell; plant: Cell };

@@ -42,6 +42,7 @@ export function buildWarehouseMap(layout: WarehouseLayout): WarehouseMap {
     passages: layout.passages,
     openings: layout.openings,
     tables: layout.tables,
+    rest: layout.rest,
   };
 }
 
@@ -63,12 +64,19 @@ export function tableCells(left: Cell): Cell[] {
   return [left, { x: left.x + 1, z: left.z }];
 }
 
-/** Клетки, по которым ходить нельзя: стеллажи и столы фасовки (W7a). Зоны и проходы проходимы. */
+/** Клетки, по которым ходить нельзя: стеллажи, столы фасовки (W7a), кулер и растение в зоне отдыха (W7b). Зоны, проходы и диван проходимы. */
 export function blockedCells(map: WarehouseMap): Set<string> {
   return new Set([
     ...map.racks.flatMap((r) => r.cells.map(cellKey)),
     ...map.tables.flatMap(tableCells).map(cellKey),
+    cellKey(map.rest.cooler),
+    cellKey(map.rest.plant),
   ]);
+}
+
+/** Клетка — место на диване в зоне отдыха. */
+export function isRestSeat(map: WarehouseMap, c: Cell): boolean {
+  return map.rest.seats.some((s) => s.x === c.x && s.z === c.z);
 }
 
 /**

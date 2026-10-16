@@ -3,7 +3,7 @@
 import type { Picker as PickerData } from '../model/picker';
 import { lookOf } from '../config/pickers';
 import { CALLS } from '../config/calls';
-import { FLOOR_MARKINGS } from '../config/warehouse';
+import { FLOOR_MARKINGS, WAREHOUSE_VIEW } from '../config/warehouse';
 import { useGameStore, WAREHOUSE_MAP } from '../store/gameStore';
 import { cellToWorld } from '../rules/warehouse';
 import PickerModel from './models/Picker';
@@ -14,8 +14,12 @@ import { closeupFocus } from '../store/selectors';
 import SceneHtml from './SceneHtml';
 import type { CSSProperties } from 'react';
 
+const CALL_Y = 2.6; // «!» над головой собаки (рост ~1,9 м, W7a); покачивается, как метка на рендере
 // Тележка — у заданий, где сборщик возит товар: сборка и выкладка (W7, решение автора 16.10, вариант «а»).
 const CART_TASKS = new Set(['order', 'putaway']);
+// На перерыве сидят на диване лицом в зал (W7b, решение автора 16.10; места — WAREHOUSE_LAYOUT.rest).
+const SEAT_FACING = Math.atan2(WAREHOUSE_MAP.rest.facing.x, WAREHOUSE_MAP.rest.facing.z);
+const onSeat = (c: { x: number; z: number }) => WAREHOUSE_MAP.rest.seats.some((s) => s.x === c.x && s.z === c.z);
 
 /** Пунктир оставшегося пути в цвете сборщика (ui_03). */
 function Route({ p, from }: { p: PickerData; from: [number, number, number] }) {
@@ -53,7 +57,7 @@ function CallBang({ pickerId, pos }: { pickerId: string; pos: [number, number, n
   if (!call) return null;
   const left = call.expiresAt === null ? 1 : Math.max(0, call.expiresAt - time) / CALLS.answerSeconds;
   return (
-    <SceneHtml position={[pos[0], 2.1, pos[2]]} center zIndexRange={[20, 0]}>
+    <SceneHtml position={[pos[0], CALL_Y + Math.sin(time * WAREHOUSE_VIEW.pickerAnim.callBobSpeed) * WAREHOUSE_VIEW.pickerAnim.callBob, pos[2]]} center zIndexRange={[20, 0]}>
       <button className="call-bang" title="Нужна помощь — нажмите" onClick={() => openCall(call.id)}>
         <svg viewBox="0 0 44 44" className="call-bang-timer" aria-hidden>
           <rect x="2" y="2" width="40" height="40" pathLength={100} className="track" />
@@ -80,7 +84,9 @@ export default function Pickers() {
   return (
     <group>
       {Object.values(pickers).map((p) => {
-        const withCart = p.taskId !== null && CART_TASKS.has(tasks[p.taskId]?.type ?? '');
+        const taskType = p.taskId ? tasks[p.taskId]?.type : undefined;
+        const withCart = taskType !== undefined && CART_TASKS.has(taskType);
+        const action = dogAction(p, taskType);
         const last = lastAngle.get(p.id) ?? DEFAULT_ANGLE;
         const pose = pickerPose(p, withCart, standAngle.get(p.id) ?? last, last);
         if (pose.moving) {
@@ -96,12 +102,13 @@ export default function Pickers() {
             {p.path.length > 0 && <Route p={p} from={pose.cart?.pos ?? pose.dog} />}
             <PickerModel
               position={pose.dog}
-              facing={pose.facing}
+              facing={action === 'sit' && onSeat(p.position) ? SEAT_FACING : pose.facing}
               hop={pose.hop}
               look={lookOf(p.id)}
               ringColor={p.color}
               cart={pose.cart}
-              action={dogAction(p)}
+              moving={pose.moving}
+              action={action}
               walkPhase={p.pathProgress * Math.PI * 2}
               phase={phaseOffset(p.id)}
             />

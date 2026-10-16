@@ -11,6 +11,7 @@ import { WAREHOUSE_LAYOUT, WAREHOUSE_VIEW } from '../config/warehouse';
 import { PALETTE } from '../config/palette';
 import { rackParts } from './models/Rack';
 import { packingTableParts } from './models/PackingTable';
+import { restAreaParts } from './models/RestArea';
 import { doorParts, doorSignPose, wallBox, wallGradientBoxes, wallHeight, wallSideParts } from './models/Wall';
 import { gateParts } from './models/Gate';
 import type { VoxelPart } from './models/ProductItem';
@@ -202,7 +203,7 @@ export default function Warehouse({ map, stock }: Props) {
   const { floorThickness: ft } = WAREHOUSE_VIEW;
   // рисованная плитка (W4): узор повторяется по метрам, цвет — из палитры; трава — в World.tsx (W5)
   const floorMap = useMemo(() => tiled(tilesTexture(), map.width, map.depth, TEXTURE_METERS.tiles), [map]);
-  const furniture = useMemo(() => [...allRackParts(map), ...allTableParts()], [map]);
+  const furniture = useMemo(() => [...allRackParts(map), ...allTableParts(), ...restAreaParts(map.rest)], [map]);
   // ворота и дверь выдачи не опускаются вместе со стеной
   const gates = useMemo(
     () => map.openings.flatMap((o) => (o.kind === 'gate' ? gateParts(map, o) : doorParts(map, o))),

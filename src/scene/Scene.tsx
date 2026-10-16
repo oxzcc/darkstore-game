@@ -10,6 +10,7 @@ import { PALETTE } from '../config/palette';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
 import Warehouse from './Warehouse';
 import Pickers from './Pickers';
+import ShelfTargets from './ShelfTargets';
 import CameraRig from './CameraRig';
 import RackPicking from './RackPicking';
 import RackCloseup from './RackCloseup';
@@ -73,6 +74,7 @@ export default function Scene({ map, stock }: Props) {
       <Warehouse map={map} stock={stock} />
       <Deliveries map={map} />
       <Pickers />
+      <ShelfTargets map={map} />
       <RackPicking map={map} />
       <RackCloseup map={map} stock={stock} />
       <DepthShelf map={map} />

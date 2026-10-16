@@ -144,7 +144,7 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
       p = { ...p, state: 'resting' };
       if (isRestingInPlace(p)) {
         p = restFor(p, dt * worldSpeedFor(state, id));
-        if (p.stats.fatigue <= 0) p = endRest({ ...state, pickers: { ...state.pickers, [id]: p } }, id).pickers[id];
+        if (p.stats.fatigue <= 0) p = endRest({ ...state, pickers: { ...state.pickers, [id]: p } }, id, map).pickers[id];
       }
       pickers[id] = p;
       continue;
