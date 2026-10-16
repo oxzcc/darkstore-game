@@ -179,7 +179,7 @@ function WallShade({ map }: { map: WarehouseMap }) {
     g.fillRect(0, 0, 4, 64);
     return new CanvasTexture(c);
   }, []);
-  const s = WAREHOUSE_VIEW.cellSize, W = map.width * s, D = map.depth * s, y = 0.006;
+  const s = WAREHOUSE_VIEW.cellSize, W = map.width * s, D = map.depth * s, y = 0.011; // над заливкой зон (верх 0,008), под разметкой
   // полоса вдоль стены: центр, длина, поворот (тёмный край текстуры — к стене)
   const strips: { pos: [number, number, number]; len: number; rotZ: number }[] = [
     { pos: [W / 2, y, width / 2], len: W, rotZ: 0 },             // север
