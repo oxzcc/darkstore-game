@@ -10,6 +10,9 @@ import { PALETTE } from '../../config/palette';
 import type { DogLook } from '../../config/pickers';
 import type { VoxelPart } from './ProductItem';
 
+/** Форма: сборщик (фартук, белые рукава) или курьер (W8a, art/reference/character_courier_*.png: открытая зелёная куртка). */
+export type DogOutfit = 'picker' | 'courier';
+
 export type DogPartName = 'body' | 'head' | 'legL' | 'legR' | 'armL' | 'armR' | 'tail';
 export type DogRigPart = { pivot: [number, number, number]; parts: VoxelPart[] };
 export type DogRig = Record<DogPartName, DogRigPart>;
@@ -43,24 +46,46 @@ function builder() {
   return { parts, rb };
 }
 
-function torso(): VoxelPart[] {
+function torso(outfit: DogOutfit): VoxelPart[] {
   const { parts, rb } = builder();
+  if (outfit === 'courier') {
+    // как на character_courier_*.png: открытая зелёная куртка поверх белой футболки
+    rb(0.62, 0.54, 0.4, WHITE, 0, 0.01, 0);     // футболка
+    rb(0.68, 0.58, 0.3, GREEN, 0, 0, -0.07);    // куртка: спина и бока
+    for (const s of [-1, 1]) rb(0.19, 0.58, 0.15, GREEN, s * 0.245, 0, 0.14); // полы куртки, между ними — футболка
+    for (const s of [-1, 1]) rb(0.1, 0.1, 0.08, GREEN, s * 0.2, 0.5, 0.2);    // воротник
+    return parts;
+  }
   rb(0.64, 0.56, 0.42, WHITE, 0, 0, 0);       // футболка
   rb(0.56, 0.5, 0.08, GREEN, 0, 0, 0.2);      // фартук
   rb(0.2, 0.1, 0.04, WHITE, 0, 0.32, 0.24);   // бейдж
   return parts;
 }
 
-function leg(): VoxelPart[] {
+function leg(outfit: DogOutfit): VoxelPart[] {
   const { parts, rb } = builder();
   rb(0.22, 0.34, 0.24, PALETTE.pants, 0, -0.4, 0);   // штанина
+  if (outfit === 'courier') {
+    // у курьера наоборот: зелёный кроссовок с белой подошвой и белой полоской
+    rb(0.26, 0.13, 0.36, GREEN, 0, -0.43, 0.05);
+    rb(0.27, 0.05, 0.37, WHITE, 0, -0.47, 0.05);
+    rb(0.14, 0.03, 0.02, WHITE, 0, -0.36, 0.235);
+    return parts;
+  }
   rb(0.26, 0.13, 0.36, WHITE, 0, -0.47, 0.05);       // кроссовок
   rb(0.27, 0.04, 0.37, GREEN, 0, -0.47, 0.05);       // зелёная подошва
   return parts;
 }
 
-function arm(look: DogLook): VoxelPart[] {
+function arm(look: DogLook, outfit: DogOutfit): VoxelPart[] {
   const { parts, rb } = builder();
+  if (outfit === 'courier') {
+    // короткий зелёный рукав куртки с белой полосой, дальше лапа
+    rb(0.2, 0.3, 0.22, GREEN, 0, -0.32, 0);
+    rb(0.21, 0.07, 0.23, WHITE, 0, -0.38, 0);
+    rb(0.17, 0.3, 0.19, look.fur, 0, -0.66, 0);
+    return parts;
+  }
   rb(0.18, 0.4, 0.2, WHITE, 0, -0.42, 0);     // рукав
   rb(0.2, 0.08, 0.22, GREEN, 0, -0.5, 0);     // манжета
   rb(0.17, 0.15, 0.19, look.fur, 0, -0.66, 0); // кисть
@@ -103,16 +128,16 @@ function tail(look: DogLook): VoxelPart[] {
   return parts;
 }
 
-/** Все части собаки этой породы (W7). */
-export function dogRig(look: DogLook): DogRig {
+/** Все части собаки этой породы (W7); `outfit` — форма сборщика или курьера (W8a). */
+export function dogRig(look: DogLook, outfit: DogOutfit = 'picker'): DogRig {
   const at = (name: DogPartName, parts: VoxelPart[]) => ({ pivot: PIVOTS[name] as V3, parts });
   return {
-    body: at('body', torso()),
+    body: at('body', torso(outfit)),
     head: at('head', head(look)),
-    legL: at('legL', leg()),
-    legR: at('legR', leg()),
-    armL: at('armL', arm(look)),
-    armR: at('armR', arm(look)),
+    legL: at('legL', leg(outfit)),
+    legR: at('legR', leg(outfit)),
+    armL: at('armL', arm(look, outfit)),
+    armR: at('armR', arm(look, outfit)),
     tail: at('tail', tail(look)),
   };
 }

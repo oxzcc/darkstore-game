@@ -66,20 +66,11 @@ export function packingTableParts(length = 2): VoxelPart[] {
   // на столе: коробка слева и диспенсер скотча справа
   box(-len / 2 + 0.35, 0.02, 0.36, 0.3, 0.2, HEIGHT, -0.06);
 
-  // посередине — белые пакеты для заказов (просьба автора 16.10): высокий пакет и рядом пониже, чуть повёрнут;
-  // сверху загнутый край, спереди тёмная прорезь-ручка и зелёный логотип
-  const bag = (x: number, z: number, h: number, turn: number) => {
-    const w = 0.3, d = 0.2;
-    const r: VoxelPart['rot'] = [0, turn, 0];
-    const front = (dz: number): [number, number] => [x - Math.sin(turn) * dz, z - Math.cos(turn) * dz]; // точка на лицевой стороне (−z)
-    add([x, HEIGHT + h / 2, z], [w, h, d], PALETTE.bag, r);
-    add([x, HEIGHT + h + 0.012, z], [w + 0.01, 0.024, d + 0.01], PALETTE.bagFold, r);            // загнутый край
-    const [hx, hz] = front(d / 2 + 0.002);
-    add([hx, HEIGHT + h - 0.06, hz], [0.11, 0.03, 0.006], PALETTE.metalDark, r);              // ручка-прорезь
-    add([hx, HEIGHT + h * 0.42, hz], [0.08, 0.08, 0.006], PALETTE.uniform, r);                // логотип
-  };
-  bag(-0.12, 0.04, 0.36, 0.08);
-  bag(0.24, -0.02, 0.28, -0.12);
+  // пустые сложенные пакеты стопкой у задней кромки (W8a): пакеты с заказами ставит сцена (scene/OrderBags.tsx), когда заказ зафасован
+  for (let i = 0; i < 4; i++) {
+    add([-0.62 + i * 0.004, HEIGHT + 0.012 + i * 0.02, 0.27], [0.3, 0.018, 0.2], i % 2 ? PALETTE.bagFold : PALETTE.bag, [0, 0.05 * (i % 2 ? 1 : -1), 0]);
+  }
+  add([-0.62, HEIGHT + 0.09, 0.27], [0.08, 0.006, 0.08], PALETTE.uniform);  // логотип на верхнем
   const dx = len / 2 - 0.3;
   add([dx, HEIGHT + 0.05, 0], [0.16, 0.1, 0.12], PALETTE.metal);              // корпус
   add([dx + 0.085, HEIGHT + 0.07, 0], [0.012, 0.13, 0.12], PALETTE.accentGreen); // зелёная боковина

@@ -46,6 +46,9 @@ export const STARTING_PICKERS: PickerTemplate[] = [
   { id: 'buran', name: 'Буран',  breed: 'хаски',    color: '#9B4DFF', look: HUSKY,    speed: 3, accuracy: 7 }, // медленный, но точный
 ];
 
+/** Породы курьеров у двери выдачи (W8a, art/reference/character_courier_*.png) — только декорация. */
+export const COURIER_LOOKS: DogLook[] = [LABRADOR, CORGI, HUSKY, BULLDOG];
+
 /** Окрас по id сборщика; неизвестный — лабрадор. */
 export const lookOf = (id: string): DogLook => STARTING_PICKERS.find((t) => t.id === id)?.look ?? LABRADOR;
 

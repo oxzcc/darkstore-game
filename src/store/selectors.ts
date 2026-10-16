@@ -20,6 +20,7 @@ import type { Call } from '../model/call';
 import type { CallFlash, ResultCard } from './gameStore';
 import type { Address } from '../model/address';
 import type { Stock } from '../model/stock';
+import type { Cell } from '../model/warehouse';
 import { WAREHOUSE_MAP } from './gameStore';
 import { isLastShift, shiftSecondsLeft } from '../rules/shift';
 import { secondsToTake } from '../rules/deadline';
@@ -506,6 +507,22 @@ export function pickerShelfTargets(pickers: GameState['pickers'], tasks: GameSta
       if (next && (next.kind === 'pick' || next.kind === 'place')) address = task.payload.lines[next.lineIndex]?.address;
     }
     if (address) out.push({ pickerId: p.id, color: p.color, address });
+  }
+  return out;
+}
+
+/**
+ * Закрытые заказы смены для пакетов на столах и курьеров (W8a): когда закрыт, где фасовали, что в заказе.
+ * Только для сцены; расписание курьеров считает scene/couriers.ts.
+ */
+export type PackedOrderInfo = { taskId: string; at: number; cell: Cell | null; items: { productId: string; qty: number }[] };
+export function packedOrders(game: GameState): PackedOrderInfo[] {
+  const out: PackedOrderInfo[] = [];
+  for (const e of game.shiftLog) {
+    if (e.kind !== 'taskDone') continue;
+    const t = game.tasks[e.taskId];
+    if (!t || t.type !== 'order') continue;
+    out.push({ taskId: e.taskId, at: e.at, cell: e.cell ?? null, items: t.payload.lines.map((l) => ({ productId: l.productId, qty: l.qty })) });
   }
   return out;
 }
