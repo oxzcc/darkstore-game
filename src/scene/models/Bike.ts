@@ -7,14 +7,24 @@ import type { VoxelPart } from './ProductItem';
 /** Где сидит курьер: сдвиг вперёд от середины велосипеда и высота бёдер над землёй, м (W8a). Кофр — позади, его не закрывает. */
 export const BIKE_SEAT = { ahead: 0.1, hip: 0.43 };
 
-/** Круглое колесо (правка автора 16.10): шина и обод — 12-угольники из трёх брусков, повёрнутых на 30°, со скруглёнными рёбрами. */
+/**
+ * Круглое колесо (правка автора 16.10): правильный 12-угольник из 6 планок, повёрнутых на 30°. Каждая планка длиной
+ * с два «внутренних радиуса» и шириной со сторону многоугольника — её углы ложатся ровно на окружность, поэтому без зубцов.
+ */
+export function roundParts(r: number): { size: [number, number]; angle: number }[] {
+  const n = 6;
+  const apothem = r * Math.cos(Math.PI / (2 * n));
+  const side = 2 * r * Math.sin(Math.PI / (2 * n));
+  return Array.from({ length: n }, (_, i) => ({ size: [2 * apothem, side], angle: (i * Math.PI) / n }));
+}
+
 function wheel(add: (pos: VoxelPart['pos'], size: VoxelPart['size'], color: string, rot?: VoxelPart['rot']) => void, x: number) {
-  for (let i = 0; i < 3; i++) {
-    const r: VoxelPart['rot'] = [0, 0, (i * Math.PI) / 6];
-    add([x, 0.32, 0], [0.64, 0.64, 0.1], PALETTE.truckDark, r);   // шина
-    add([x, 0.32, 0], [0.4, 0.4, 0.11], PALETTE.truckTrim, r);    // обод
-    add([x, 0.32, 0], [0.13, 0.13, 0.13], PALETTE.truckDark, r);  // втулка
-  }
+  const disc = (r: number, depth: number, color: string) => {
+    for (const b of roundParts(r)) add([x, 0.32, 0], [b.size[0], b.size[1], depth], color, [0, 0, b.angle]);
+  };
+  disc(0.32, 0.1, PALETTE.truckDark);   // шина
+  disc(0.2, 0.11, PALETTE.truckTrim);   // обод
+  disc(0.07, 0.13, PALETTE.truckDark);  // втулка
 }
 
 export function bikeParts(): VoxelPart[] {
