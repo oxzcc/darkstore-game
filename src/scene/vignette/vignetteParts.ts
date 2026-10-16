@@ -21,12 +21,6 @@ export type VignetteDogPose = {
   bob: number;
 };
 
-/**
- * Насколько отводить поднятую лапу в сторону (радианы, вокруг z), чтобы она проходила снаружи от головы и ушей:
- * плечо на 0,41 м от центра, а голова с висячими ушами — до 0,52 м. Меньше — рукав «въезжает» в голову.
- */
-export const RAISED_ARM_OUT = 0.6;
-
 /** Поза в момент `t` (секунды реального времени: окно открыто, а мир на паузе). */
 export function vignettePose(pose: VignettePose, t: number): VignetteDogPose {
   const p: VignetteDogPose = {
@@ -37,8 +31,8 @@ export function vignettePose(pose: VignettePose, t: number): VignetteDogPose {
     case 'call': {
       // машет правой лапой над головой, в левой — ТСД перед собой (как «зовёт» на складе)
       const w = Math.sin(t * WAREHOUSE_VIEW.pickerAnim.waveSpeed);
-      // лапа машет снаружи от головы и ушей: отведена в сторону (вокруг z) не меньше чем на RAISED_ARM_OUT
-      p.armR = [-2.55 + w * 0.12, RAISED_ARM_OUT + 0.18 + w * 0.18];
+      // лапа машет снаружи от головы и ушей: отведена в сторону (вокруг z) не меньше чем на raisedArmOut (config/warehouse.ts)
+      p.armR = [-2.55 + w * 0.12, WAREHOUSE_VIEW.pickerAnim.raisedArmOut + 0.18 + w * 0.18];
       p.armL = [-1.05, -0.1];
       p.head = [-0.08, Math.sin(t * 1.3) * 0.12];
       p.tail = Math.sin(t * 12) * 0.5;
@@ -67,8 +61,8 @@ export function vignettePose(pose: VignettePose, t: number): VignetteDogPose {
     case 'cheer': {
       // обе лапы вверх, прыгает
       const k = Math.sin(t * 7);
-      p.armL = [-2.75, -(RAISED_ARM_OUT + 0.1) + k * 0.08];
-      p.armR = [-2.75, RAISED_ARM_OUT + 0.1 - k * 0.08];
+      p.armL = [-2.75, -(WAREHOUSE_VIEW.pickerAnim.raisedArmOut + 0.1) + k * 0.08];
+      p.armR = [-2.75, WAREHOUSE_VIEW.pickerAnim.raisedArmOut + 0.1 - k * 0.08];
       p.head = [-0.15, 0];
       p.tail = Math.sin(t * 16) * 0.6;
       p.bob = Math.abs(Math.sin(t * 4)) * 0.12;

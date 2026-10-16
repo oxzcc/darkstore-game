@@ -12,7 +12,6 @@ export type DogLook = {
   ears: 'floppy' | 'tall' | 'bat';   // висячие (лабрадор) / стоячие (корги, хаски) / «летучая мышь» (бульдог)
   tail?: [string, string];           // хвост: основание и кончик; у лабрадора на рендере хвоста нет
   patch?: string;     // пятно у глаза (бульдог)
-  tongue: boolean;    // высунутый язык
 };
 
 export type PickerTemplate = {
@@ -28,16 +27,16 @@ export type PickerTemplate = {
 export const STAT_SCALE = { min: 1, max: 10 };
 export const START_SPECIALIZATION_LEVEL = 1;
 
-const LABRADOR: DogLook = { fur: '#F2E2C2', face: '#FAF1DE', ear: '#E5CFA4', ears: 'floppy', tongue: true };
+const LABRADOR: DogLook = { fur: '#F2E2C2', face: '#FAF1DE', ear: '#E5CFA4', ears: 'floppy' };
 const CORGI: DogLook = {
-  fur: '#E98A33', face: '#FFF6E8', ear: '#E98A33', earInner: '#F6B6A8', ears: 'tall', tail: ['#E98A33', '#FFF6E8'], tongue: true,
+  fur: '#E98A33', face: '#FFF6E8', ear: '#E98A33', earInner: '#F6B6A8', ears: 'tall', tail: ['#E98A33', '#FFF6E8'],
 };
 const HUSKY: DogLook = {
-  fur: '#4B5058', face: '#F7F4EE', ear: '#4B5058', earInner: '#F7F4EE', ears: 'tall', tail: ['#4B5058', '#F7F4EE'], tongue: false,
+  fur: '#4B5058', face: '#F7F4EE', ear: '#4B5058', earInner: '#F7F4EE', ears: 'tall', tail: ['#4B5058', '#F7F4EE'],
 };
 /** Бульдог Буля — на будущее (08, раздел 5), в игру пока не входит. */
 export const BULLDOG: DogLook = {
-  fur: '#D9B083', face: '#F3E2C8', ear: '#7A5236', earInner: '#E8A28E', ears: 'bat', patch: '#7A5236', tongue: false,
+  fur: '#D9B083', face: '#F3E2C8', ear: '#7A5236', earInner: '#E8A28E', ears: 'bat', patch: '#7A5236',
 };
 
 export const STARTING_PICKERS: PickerTemplate[] = [

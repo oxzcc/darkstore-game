@@ -98,15 +98,17 @@ export function dogPose(action: DogAction, t: number, walkPhase: number, cart: b
       if (ph < a.throwWindup) {
         const k = ph / a.throwWindup;
         const arm = -2.6 - k * 0.4;
-        pose.armL = [arm, 0];
-        pose.armR = [arm, 0];
+        pose.armL = [arm, -a.raisedArmOut];
+        pose.armR = [arm, a.raisedArmOut];
         pose.lean = -k * 0.15;
         pose.box = { k: 0, spin: 0 };
       } else {
         const k = (ph - a.throwWindup) / (1 - a.throwWindup);
         const arm = -2.6 + Math.min(1, k * 3) * 1.6;
-        pose.armL = [arm, 0];
-        pose.armR = [arm, 0];
+        // лапы над головой разведены в стороны, чтобы не проходить сквозь голову (правка автора 17.10)
+        const out = a.raisedArmOut * (1 - Math.min(1, k * 3));
+        pose.armL = [arm, -out];
+        pose.armR = [arm, out];
         pose.lean = Math.min(1, k * 3) * 0.12;
         pose.box = { k, spin: k * 5 };
       }
@@ -123,7 +125,9 @@ export function dogPose(action: DogAction, t: number, walkPhase: number, cart: b
     }
     case 'call': {
       // машет правой лапой над головой
-      pose.armR = [-2.7 + Math.sin(tt * a.waveSpeed) * 0.2, Math.sin(tt * a.waveSpeed) * 0.35];
+      // машет снаружи от головы и ушей: лапа всегда отведена в сторону не меньше чем на raisedArmOut
+      const w = Math.sin(tt * a.waveSpeed);
+      pose.armR = [-2.55 + w * 0.12, a.raisedArmOut + 0.18 + w * 0.18];
       pose.head = [-0.1, Math.sin(tt * 1.3) * 0.15];
       pose.tail = Math.sin(tt * a.tailFast) * a.tailSwing;
       break;
