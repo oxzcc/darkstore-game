@@ -41,6 +41,7 @@ export function buildWarehouseMap(layout: WarehouseLayout): WarehouseMap {
     zones: layout.zones,
     passages: layout.passages,
     openings: layout.openings,
+    tables: layout.tables,
   };
 }
 
@@ -57,9 +58,17 @@ export function cellToWorld(cell: Cell): [number, number, number] {
 
 const cellKey = (c: Cell) => `${c.x},${c.z}`;
 
-/** Клетки, по которым ходить нельзя: стеллажи. Зоны и проходы проходимы. */
+/** Клетки стола фасовки: левая и соседняя справа (стол 2×1 вдоль x). */
+export function tableCells(left: Cell): Cell[] {
+  return [left, { x: left.x + 1, z: left.z }];
+}
+
+/** Клетки, по которым ходить нельзя: стеллажи и столы фасовки (W7a). Зоны и проходы проходимы. */
 export function blockedCells(map: WarehouseMap): Set<string> {
-  return new Set(map.racks.flatMap((r) => r.cells.map(cellKey)));
+  return new Set([
+    ...map.racks.flatMap((r) => r.cells.map(cellKey)),
+    ...map.tables.flatMap(tableCells).map(cellKey),
+  ]);
 }
 
 /**
