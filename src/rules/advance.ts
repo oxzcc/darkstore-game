@@ -180,7 +180,7 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
       // была развилка — окно результата с раскрытием исхода; иначе обычная всплывашка.
       // Ошибки «сам ошибся с количеством» у заказа с развилкой больше нет — исход только от развилки (14.10).
       const reveal = calls.length > 0 ? { chances, roll, base, calls, final: outcome } : undefined;
-      events.push({ kind: 'taskDone', taskId: task.id, pickerId: p.id, outcome, at: time, ...(reveal ? { reveal } : {}) });
+      events.push({ kind: 'taskDone', taskId: task.id, pickerId: p.id, outcome, at: time, cell: p.position, ...(reveal ? { reveal } : {}) });
       // опыт по типу задания (зависит от исхода) и усталость (M8c)
       p = { ...growAfterTask(p, task.type, outcome), state: 'idle', taskId: null, job: null, path: [], pathProgress: 0 };
     }

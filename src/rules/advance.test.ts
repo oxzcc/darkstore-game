@@ -86,6 +86,8 @@ describe('выполнение задания', () => {
     expect(p.state).toBe('idle');
     expect(p.job).toBe(null);
     expect(zoneCells(map, 'packing').some((c) => c.x === p.position.x && c.z === p.position.z)).toBe(true);
+    // событие помнит, где фасовал: туда, на ближний стол, встаёт пакет (W8a)
+    expect(events[0].kind === 'taskDone' && events[0].cell).toEqual(p.position);
     expect(s3.clock.time > s0.clock.time).toBe(true);
   });
 

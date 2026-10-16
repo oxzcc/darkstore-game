@@ -9,6 +9,7 @@ import type { Product } from './product';
 import type { Stock } from './stock';
 import type { Outcome, Task } from './task';
 import type { Campaign } from './campaign';
+import type { Cell } from './warehouse';
 
 /** Что случилось — для всплывающих сообщений и итогов смены. */
 export type ShiftEvent =
@@ -19,6 +20,7 @@ export type ShiftEvent =
       outcome: Outcome;
       at: number;             // игровое время
       reveal?: OutcomeReveal; // была развилка — окно результата с раскрытием исхода (10, раздел 3)
+      cell?: Cell;            // где стоял сборщик, закончив (у заказа — у какого стола фасовал; W8a: туда встаёт пакет)
     }
   | {
       kind: 'taskExpired';    // срок взять задание вышел (M8b): штраф; kept — задание осталось (выкладка, списание)
