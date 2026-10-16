@@ -21,6 +21,12 @@ export type VignetteDogPose = {
   bob: number;
 };
 
+/**
+ * Насколько отводить поднятую лапу в сторону (радианы, вокруг z), чтобы она проходила снаружи от головы и ушей:
+ * плечо на 0,41 м от центра, а голова с висячими ушами — до 0,52 м. Меньше — рукав «въезжает» в голову.
+ */
+export const RAISED_ARM_OUT = 0.6;
+
 /** Поза в момент `t` (секунды реального времени: окно открыто, а мир на паузе). */
 export function vignettePose(pose: VignettePose, t: number): VignetteDogPose {
   const p: VignetteDogPose = {
@@ -31,16 +37,18 @@ export function vignettePose(pose: VignettePose, t: number): VignetteDogPose {
     case 'call': {
       // машет правой лапой над головой, в левой — ТСД перед собой (как «зовёт» на складе)
       const w = Math.sin(t * WAREHOUSE_VIEW.pickerAnim.waveSpeed);
-      p.armR = [-2.7 + w * 0.2, w * 0.35];
+      // лапа машет снаружи от головы и ушей: отведена в сторону (вокруг z) не меньше чем на RAISED_ARM_OUT
+      p.armR = [-2.55 + w * 0.12, RAISED_ARM_OUT + 0.18 + w * 0.18];
       p.armL = [-1.05, -0.1];
       p.head = [-0.08, Math.sin(t * 1.3) * 0.12];
       p.tail = Math.sin(t * 12) * 0.5;
       break;
     }
     case 'oops': {
-      // «ой»: правая лапа чешет затылок, левая растерянно в сторону, смотрит вниз на упавшее
-      p.armR = [-2.5 + Math.sin(t * 6) * 0.08, -0.55];
-      p.armL = [-0.35, -0.55];
+      // «ой»: растерянно разводит лапами в стороны (не к голове — иначе лапа уходит в голову), смотрит вниз на упавшее
+      const k = Math.sin(t * 2.4) * 0.06;
+      p.armR = [-0.55 + k, 0.75];
+      p.armL = [-0.55 - k, -0.75];
       p.head = [0.22, 0.25 + Math.sin(t * 1.1) * 0.06];
       p.roll = Math.sin(t * 1.6) * 0.03;
       p.tail = Math.sin(t * 2) * 0.12;
@@ -59,8 +67,8 @@ export function vignettePose(pose: VignettePose, t: number): VignetteDogPose {
     case 'cheer': {
       // обе лапы вверх, прыгает
       const k = Math.sin(t * 7);
-      p.armL = [-2.8, -0.3 + k * 0.1];
-      p.armR = [-2.8, 0.3 - k * 0.1];
+      p.armL = [-2.75, -(RAISED_ARM_OUT + 0.1) + k * 0.08];
+      p.armR = [-2.75, RAISED_ARM_OUT + 0.1 - k * 0.08];
       p.head = [-0.15, 0];
       p.tail = Math.sin(t * 16) * 0.6;
       p.bob = Math.abs(Math.sin(t * 4)) * 0.12;
@@ -83,21 +91,21 @@ export function faceParts(mood: VignetteMood): VoxelPart[] {
       // брови домиком: внутренние концы выше
       brow(-0.18, 0.56, 0.3);
       brow(0.18, 0.56, -0.3);
-      out.push({ pos: [0, 0.095, 0.537], size: [0.1, 0.03, 0.02], color: VIGNETTE.mouth });
+      out.push({ pos: [0, 0.095, 0.549], size: [0.1, 0.03, 0.02], color: VIGNETTE.mouth });
       break;
     case 'oops':
       brow(-0.18, 0.565, 0.42);
       brow(0.18, 0.565, -0.42);
-      out.push({ pos: [0, 0.1, 0.537], size: [0.08, 0.07, 0.02], color: VIGNETTE.mouth }); // «о»
+      out.push({ pos: [0, 0.1, 0.549], size: [0.08, 0.07, 0.02], color: VIGNETTE.mouth }); // «о»
       out.push({ pos: [0.5, 0.68, 0.16], size: [0.07, 0.11, 0.06], color: VIGNETTE.sweat });
       break;
     case 'happy':
       // брови подняты и ровные, широкая улыбка
       brow(-0.18, 0.58, 0);
       brow(0.18, 0.58, 0);
-      out.push({ pos: [0, 0.1, 0.537], size: [0.18, 0.04, 0.02], color: VIGNETTE.mouth });
-      out.push({ pos: [-0.1, 0.125, 0.537], size: [0.04, 0.04, 0.02], color: VIGNETTE.mouth });
-      out.push({ pos: [0.1, 0.125, 0.537], size: [0.04, 0.04, 0.02], color: VIGNETTE.mouth });
+      out.push({ pos: [0, 0.1, 0.549], size: [0.18, 0.04, 0.02], color: VIGNETTE.mouth });
+      out.push({ pos: [-0.1, 0.125, 0.549], size: [0.04, 0.04, 0.02], color: VIGNETTE.mouth });
+      out.push({ pos: [0.1, 0.125, 0.549], size: [0.04, 0.04, 0.02], color: VIGNETTE.mouth });
       break;
   }
   return out;
