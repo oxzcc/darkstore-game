@@ -2,7 +2,7 @@
 // сцена только ставит фигурку между клетками. На паузе прогресс не меняется — фигурка стоит.
 import type { Picker as PickerData } from '../model/picker';
 import type { Cell } from '../model/warehouse';
-import { STARTING_PICKERS } from '../config/pickers';
+import { lookOf } from '../config/pickers';
 import { CALLS } from '../config/calls';
 import { FLOOR_MARKINGS } from '../config/warehouse';
 import { useGameStore, WAREHOUSE_MAP } from '../store/gameStore';
@@ -15,8 +15,8 @@ import type { CSSProperties } from 'react';
 
 const HOP_HEIGHT = 0.06;  // высота подскока при ходьбе
 const HOPS_PER_CELL = 2;  // два шажка на клетку
-const FUR_DEFAULT = '#D9C4A0';
-const furOf = (id: string) => STARTING_PICKERS.find((t) => t.id === id)?.fur ?? FUR_DEFAULT;
+// Тележка — у заданий, где сборщик возит товар: сборка и выкладка (W7, решение автора 16.10, вариант «а»).
+const CART_TASKS = new Set(['order', 'putaway']);
 
 /** Где сейчас фигурка: между клетками маршрута по дробному прогрессу. Плюс направление и подскок. */
 function placement(p: PickerData) {
@@ -87,6 +87,7 @@ const lastFacing = new Map<string, number>();
 
 export default function Pickers() {
   const pickers = useGameStore((s) => s.game.pickers);
+  const tasks = useGameStore((s) => s.game.tasks);
   // В виде стеллажа вблизи сборщики между глазами и полками не рисуются — иначе загораживают товар.
   const focus = useGameStore((s) => closeupFocus(s.game));
   const focusRack = focus ? WAREHOUSE_MAP.racks.find((r) => r.aisle === focus.aisle && r.rack === focus.rack) : undefined;
@@ -99,7 +100,14 @@ export default function Pickers() {
         return (
           <group key={p.id}>
             {p.path.length > 0 && <Route p={p} from={pos} />}
-            <PickerModel position={pos} facing={lastFacing.get(p.id) ?? Math.PI / 4} hop={hop} fur={furOf(p.id)} ringColor={p.color} />
+            <PickerModel
+              position={pos}
+              facing={lastFacing.get(p.id) ?? Math.PI / 4}
+              hop={hop}
+              look={lookOf(p.id)}
+              ringColor={p.color}
+              withCart={p.taskId !== null && CART_TASKS.has(tasks[p.taskId]?.type ?? '')}
+            />
             {/* нужна помощь (развилка) — красный «!» над головой с таймером по контуру; клик — окно (решение автора 13.10) */}
             {p.state === 'calling' && <CallBang pickerId={p.id} pos={pos} />}
           </group>
