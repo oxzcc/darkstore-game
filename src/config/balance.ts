@@ -76,6 +76,9 @@ export const REWARD = {
  */
 export const DELIVERY = {
   firstAtStart: true,         // для проверки: первая поставка приезжает сразу при старте
+  /** Сколько секунд грузовик едет от края экрана до ворот (W8b): поставка и задание «Приёмка» появляются, когда он встал.
+   *  Сцена подгоняет под это число подъезд грузовика (scene/truckDrive.ts). 0 — поставка появляется сразу, как раньше. */
+  driveInSeconds: 8,
   pallets: [1, 3] as [number, number],          // паллет в поставке
   productsPerPallet: [2, 4] as [number, number], // видов товара на паллете
   qtyPerProduct: [4, 8] as [number, number],    // штук одного товара

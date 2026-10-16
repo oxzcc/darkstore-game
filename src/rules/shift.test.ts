@@ -5,7 +5,7 @@ import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { SHIFT, WRITEOFF } from '../config/balance';
 import { PRODUCTS } from '../config/products';
 import { buildWarehouseMap } from './warehouse';
-import { createInitialGame } from './game';
+import { gameWithDelivery as createInitialGame } from './testing'; // первая поставка уже у ворот (W8b)
 import { advanceWorld } from './advance';
 import { dispatchTask } from './tasks/lifecycle';
 import { openOrders } from './tasks/generator';

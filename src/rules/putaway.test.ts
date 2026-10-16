@@ -4,7 +4,7 @@ import type { PutawayTask, ReceivingTask } from '../model/task';
 import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { PUTAWAY, REWARD } from '../config/balance';
 import { buildWarehouseMap } from './warehouse';
-import { createInitialGame } from './game';
+import { gameWithDelivery as createInitialGame } from './testing'; // первая поставка уже у ворот (W8b)
 import { dispatchTask } from './tasks/lifecycle';
 import { advanceWorld } from './advance';
 import { buildPutawayJob, pickerActivity } from './jobs';

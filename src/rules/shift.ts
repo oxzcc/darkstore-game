@@ -137,6 +137,7 @@ export function startNextShift(state: GameState, map: WarehouseMap): GameState {
     deliveries,
     pallets,
     nextDeliveryAt: 0, // поставку задаём ниже, по плану новой смены
+    truckComing: null, // ехавший к воротам грузовик в новую смену не приезжает — поставка выедет заново
     nextOrderAt: 0,
     nextWriteoffAt: WRITEOFF.firstAtSeconds,
   };

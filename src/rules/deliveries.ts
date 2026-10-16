@@ -1,5 +1,5 @@
 // Поставки и приёмка (M7b; docs/03-warehouse-flow.md, раздел 4; docs/10, раздел 13.2).
-// Грузовик приезжает по таймеру, паллеты сразу встают в зону приёмки, появляется задание «Приёмка».
+// Грузовик выезжает по таймеру и едет к воротам DELIVERY.driveInSeconds (W8b); встал — паллеты в зоне приёмки, появляется задание «Приёмка».
 // Принятые паллеты ждут выкладки (M7c). Что на паллете, то и принимается при любом исходе (10, раздел 11.6).
 import type { GameState } from '../model/game';
 import type { Address } from '../model/address';
@@ -121,11 +121,24 @@ export function createDelivery(state: GameState, rng: Rng, now: number): GameSta
  */
 export function tickDeliveries(state: GameState): GameState {
   const now = state.clock.time;
-  if (now < state.nextDeliveryAt) return state;
-  const rng = createRng(state.rngSeed);
-  const next = createDelivery(state, rng, now);
-  if (!next) return state;
-  return { ...next, rngSeed: rng.seed(), nextDeliveryAt: now + shiftPlan(state).deliveryEvery }; // интервал — из плана смены (M8d)
+  let s = state;
+  // пришло время и у ворот есть место — грузовик выезжает (W8b): поставки и задания ещё нет, на сцене он едет к воротам
+  if ((s.truckComing ?? null) === null) {
+    if (now < s.nextDeliveryAt || truckAtGate(s) || freePalletSlots(s).length === 0) return state;
+    s = { ...s, truckComing: now };
+  }
+  // доехал — паллеты в зоне приёмки, задание «Приёмка»
+  if (now < (s.truckComing ?? now) + DELIVERY.driveInSeconds) return s;
+  const rng = createRng(s.rngSeed);
+  const next = createDelivery(s, rng, now);
+  if (!next) return s; // место заняли, пока ехал, — постоит и встанет, когда освободится
+  return { ...next, rngSeed: rng.seed(), truckComing: null, nextDeliveryAt: now + shiftPlan(state).deliveryEvery }; // интервал — из плана смены (M8d)
+}
+
+/** Грузовик едет к воротам: сколько секунд уже в пути (для сцены); null — не едет. */
+export function truckComingFor(state: GameState): number | null {
+  const since = state.truckComing ?? null;
+  return since === null ? null : Math.max(0, state.clock.time - since);
 }
 
 /** Приёмка закрыта: паллеты приняты (ждут выкладки), грузовик уезжает. Не зависит от исхода (10, раздел 11.6). */

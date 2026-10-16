@@ -12,11 +12,13 @@ import { createOrder } from './tasks/generator';
 
 export { isTutorial, shiftPlan } from './shiftPlan';
 
-/** Сколько «работы» сейчас: сборщики с заданием (не на перерыве) + задания, которые ещё никто не взял. */
+/** Сколько «работы» сейчас: сборщики с заданием (не на перерыве) + задания, которые ещё никто не взял
+ *  + грузовик, который едет к воротам (его «Приёмка» вот-вот появится, W8b). */
 export function workload(state: GameState): number {
   const busy = Object.values(state.pickers).filter((p) => p.taskId !== null).length;
   const open = Object.values(state.tasks).filter((t) => t.status === 'new').length;
-  return busy + open;
+  const coming = (state.truckComing ?? null) !== null ? 1 : 0;
+  return busy + open + coming;
 }
 
 /** Сколько «работы» хочет смена: сборщики × целевая загрузка. */

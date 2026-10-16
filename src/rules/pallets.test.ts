@@ -4,7 +4,7 @@ import type { GameState } from '../model/game';
 import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { DELIVERY } from '../config/balance';
 import { blockedWithPallets, buildWarehouseMap, findPath } from './warehouse';
-import { createInitialGame } from './game';
+import { gameWithDelivery as createInitialGame } from './testing'; // первая поставка уже у ворот (W8b)
 import { dispatchTask } from './tasks/lifecycle';
 import { advanceWorld } from './advance';
 

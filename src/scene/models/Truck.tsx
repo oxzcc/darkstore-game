@@ -3,18 +3,19 @@
 // Начало координат — середина заднего края (тем краем грузовик встаёт к воротам), длина идёт по +z.
 import { PALETTE } from '../../config/palette';
 import VoxelBatch from '../VoxelBatch';
+import { roundParts } from './Bike';
 
-type Part = { pos: [number, number, number]; size: [number, number, number]; color: string };
+type Part = { pos: [number, number, number]; size: [number, number, number]; color: string; rot?: [number, number, number] };
 
 const W = 1.9;        // ширина
 const BOX_L = 3.4;    // фургон
 const CAB_L = 1.3;    // кабина
-const WHEEL = 0.7;    // колесо (куб)
+const WHEEL = 0.7;    // колесо (диаметр)
 const FRAME_Y = 0.45; // верх рамы
 
 function parts(): Part[] {
   const p: Part[] = [];
-  const add = (pos: Part['pos'], size: Part['size'], color: string) => p.push({ pos, size, color });
+  const add = (pos: Part['pos'], size: Part['size'], color: string, rot?: Part['rot']) => p.push(rot ? { pos, size, color, rot } : { pos, size, color });
 
   // рама под всем грузовиком
   add([0, FRAME_Y - 0.12, (BOX_L + CAB_L) / 2], [W * 0.9, 0.24, BOX_L + CAB_L], PALETTE.truckDark);
@@ -48,11 +49,15 @@ function parts(): Part[] {
   for (const s of [-1, 1]) add([s * (W / 2 - 0.22), FRAME_Y + 0.38, front + 0.03], [0.26, 0.2, 0.04], PALETTE.truckLight);
   add([0, FRAME_Y + 0.05, front + 0.08], [W + 0.06, 0.22, 0.16], PALETTE.truckTrim);
 
-  // колёса: под кабиной и под задом фургона
+  // колёса: под кабиной и под задом фургона; круглые, как у велосипедов (W8b): 12-угольник из планок (roundParts)
   for (const z of [0.85, cabZ]) {
     for (const s of [-1, 1]) {
-      add([s * (W / 2 - 0.12), WHEEL / 2, z], [0.32, WHEEL, WHEEL], PALETTE.truckDark);
-      add([s * (W / 2 + 0.05), WHEEL / 2, z], [0.02, WHEEL * 0.4, WHEEL * 0.4], PALETTE.truckTrim);
+      for (const b of roundParts(WHEEL / 2)) {
+        add([s * (W / 2 - 0.12), WHEEL / 2, z], [0.32, b.size[0], b.size[1]], PALETTE.truckDark, [b.angle, 0, 0]);
+      }
+      for (const b of roundParts(WHEEL * 0.21)) {
+        add([s * (W / 2 + 0.05), WHEEL / 2, z], [0.02, b.size[0], b.size[1]], PALETTE.truckTrim, [b.angle, 0, 0]);
+      }
     }
   }
   return p;
