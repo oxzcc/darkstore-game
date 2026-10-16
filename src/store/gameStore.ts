@@ -253,7 +253,7 @@ export const useGameStore = create<Store>()(persist((set) => ({
 
   dismissHint: (id) => set((s) => ({ game: markHintSeen(s.game, id) })),
   sendToRest: (pickerId) => set((s) => ({ game: sendToRest(s.game, WAREHOUSE_MAP, pickerId) })),
-  endRest: (pickerId) => set((s) => ({ game: endRest(s.game, pickerId) })),
+  endRest: (pickerId) => set((s) => ({ game: endRest(s.game, pickerId, WAREHOUSE_MAP) })),
   nextShift: () => set((s) => ({ game: startNextShift(s.game, WAREHOUSE_MAP), ui: clearWindows(s.ui) })),
   finishCampaign: () => set((s) => ({ game: finishCampaign(s.game) })),
   restartCampaign: () => set((s) => ({ game: createInitialGame(WAREHOUSE_MAP, newSeed()), ui: clearWindows(s.ui) })),

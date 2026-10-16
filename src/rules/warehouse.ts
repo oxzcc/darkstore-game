@@ -42,6 +42,7 @@ export function buildWarehouseMap(layout: WarehouseLayout): WarehouseMap {
     passages: layout.passages,
     openings: layout.openings,
     tables: layout.tables,
+    rest: layout.rest,
   };
 }
 
@@ -63,12 +64,29 @@ export function tableCells(left: Cell): Cell[] {
   return [left, { x: left.x + 1, z: left.z }];
 }
 
-/** Клетки, по которым ходить нельзя: стеллажи и столы фасовки (W7a). Зоны и проходы проходимы. */
+/** Клетки, по которым ходить нельзя: стеллажи, столы фасовки (W7a), кулер и растение в зоне отдыха (W7b). Зоны, проходы и диван проходимы. */
 export function blockedCells(map: WarehouseMap): Set<string> {
   return new Set([
     ...map.racks.flatMap((r) => r.cells.map(cellKey)),
     ...map.tables.flatMap(tableCells).map(cellKey),
+    cellKey(map.rest.cooler),
+    cellKey(map.rest.plant),
   ]);
+}
+
+/**
+ * Клетки, по которым ходить нельзя прямо сейчас: всё из `blockedCells` плюс клетки паллет на полу (просьба автора 16.10).
+ * Паллеты появляются и уходят по ходу игры, поэтому их клетки передаются отдельно. Встать рядом с паллетой можно — на неё нельзя.
+ */
+export function blockedWithPallets(map: WarehouseMap, palletCells: Cell[]): Set<string> {
+  const blocked = blockedCells(map);
+  for (const c of palletCells) blocked.add(cellKey(c));
+  return blocked;
+}
+
+/** Клетка — место на диване в зоне отдыха. */
+export function isRestSeat(map: WarehouseMap, c: Cell): boolean {
+  return map.rest.seats.some((s) => s.x === c.x && s.z === c.z);
 }
 
 /**
@@ -85,6 +103,8 @@ export function findPath(map: WarehouseMap, from: Cell, to: Cell, blocked = bloc
   const steps: Cell[] = [{ x: 1, z: 0 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 0, z: -1 }];
   while (queue.length) {
     const cur = queue.shift()!;
+    // через диван не ходят (W7b, просьба автора 16.10): на место дивана можно только прийти или с него уйти
+    if (cellKey(cur) !== start && isRestSeat(map, cur)) continue;
     for (const d of steps) {
       const next = { x: cur.x + d.x, z: cur.z + d.z };
       const k = cellKey(next);
@@ -140,6 +160,7 @@ export function distancesFrom(map: WarehouseMap, from: Cell, blocked = blockedCe
   while (queue.length) {
     const cur = queue.shift()!;
     const d = dist.get(cellKey(cur))!;
+    if (d > 0 && isRestSeat(map, cur)) continue; // через диван не ходят (W7b) — до места дойти можно, дальше нет
     for (const s of steps) {
       const n = { x: cur.x + s.x, z: cur.z + s.z };
       const k = cellKey(n);

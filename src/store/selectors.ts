@@ -484,3 +484,28 @@ export function hintView(game: GameState, openCallId: string | null) {
 
 /** Плашка «обучение» у таймера смены. */
 export const tutorialShift = (game: GameState) => isTutorial(game);
+
+/**
+ * Какую полку сейчас подсвечивать у каждого сборщика (W7b; 08, раздел 6: «нужная полка подсвечивается цветом сборщика, который туда идёт»):
+ * полка ближайшей впереди позиции сборки или выкладки; у списания — полка партии, пока её не сняли. Нет такой — сборщика в списке нет.
+ */
+export function pickerShelfTargets(pickers: GameState['pickers'], tasks: GameState['tasks']): { pickerId: string; color: string; address: Address }[] {
+  const out: { pickerId: string; color: string; address: Address }[] = [];
+  for (const p of Object.values(pickers)) {
+    const job = p.job;
+    const task = p.taskId ? tasks[p.taskId] : undefined;
+    if (!job || !task) continue;
+    const rest = job.steps.slice(job.stepIndex);
+    let address: Address | undefined;
+    if (task.type === 'writeoff') {
+      // пока не закончен шаг «Снимает с полки» (первый рабочий шаг)
+      const takeAt = job.steps.findIndex((s) => s.kind === 'work');
+      if (takeAt >= job.stepIndex) address = task.payload.address;
+    } else if (task.type === 'order' || task.type === 'putaway') {
+      const next = rest.find((s) => s.kind === 'pick' || s.kind === 'place');
+      if (next && (next.kind === 'pick' || next.kind === 'place')) address = task.payload.lines[next.lineIndex]?.address;
+    }
+    if (address) out.push({ pickerId: p.id, color: p.color, address });
+  }
+  return out;
+}

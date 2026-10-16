@@ -4,11 +4,17 @@ import type { TaskType } from '../model/task';
 import type { Cell, WarehouseMap } from '../model/warehouse';
 import type { PickerTemplate } from '../config/pickers';
 import { START_SPECIALIZATION_LEVEL } from '../config/pickers';
+import { blockedCells, isRestSeat } from './warehouse';
 
 const TASK_TYPES: TaskType[] = ['order', 'putaway', 'receiving', 'writeoff'];
 
-/** Клетки зоны отдыха по порядку: здесь сборщики стоят на старте смены (07, раздел 2). */
+/** Клетки зоны отдыха по порядку, кроме дивана, кулера и растения: здесь сборщики стоят на старте смены (07, раздел 2). */
 function restCells(map: WarehouseMap): Cell[] {
+  const blocked = blockedCells(map);
+  return allRestCells(map).filter((c) => !blocked.has(`${c.x},${c.z}`) && !isRestSeat(map, c));
+}
+
+function allRestCells(map: WarehouseMap): Cell[] {
   const rest = map.zones.find((z) => z.type === 'rest');
   if (!rest) throw new Error('На карте нет зоны отдыха');
   const cells: Cell[] = [];
