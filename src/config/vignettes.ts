@@ -2,7 +2,7 @@
 // Только отображение: правила это не читают. Сцена — «рецепт»: где стоит собака, какая у неё поза и эмоция,
 // какой реквизит вокруг и откуда смотрит камера. Порода берётся от сборщика, товар — от позиции задания,
 // поэтому одна строка рецепта годится для всех сборщиков и любого товара.
-// Сделано: портрет в окне развилки (V1); набор реквизита, поз и эмоций (V2a); сцены итога сборки (V2b), приёмки (V2c) и выкладки (V2d) — config/vignetteScenes/.
+// Сделано: портрет в окне развилки (V1); набор реквизита, поз и эмоций (V2a); сцены итога сборки (V2b), приёмки (V2c), выкладки (V2d) и списания (V2e) — config/vignetteScenes/.
 // Ключ сцены итога: «ситуация.вариант.ok|bad» (vignetteKey); нет рецепта — в окне остаётся заглушка.
 
 import { BULLDOG, type DogLook } from './pickers';
@@ -10,6 +10,7 @@ import { SCENE_BG } from './vignetteScenes/kit';
 import { ORDER_SCENES } from './vignetteScenes/order';
 import { RECEIVING_SCENES } from './vignetteScenes/receiving';
 import { PUTAWAY_SCENES } from './vignetteScenes/putaway';
+import { WRITEOFF_SCENES } from './vignetteScenes/writeoff';
 
 type V3 = [number, number, number];
 
@@ -144,6 +145,7 @@ export const RESULT_VIGNETTES: Record<string, VignetteRecipe> = {
   ...ORDER_SCENES,
   ...RECEIVING_SCENES,
   ...PUTAWAY_SCENES,
+  ...WRITEOFF_SCENES,
 };
 
 export const vignetteKey = (situationId: string, optionId: string, worked: boolean) =>
