@@ -324,6 +324,14 @@ export function resultView(game: GameState, card: ResultCard) {
     rating: { got: reward.rating, of: task.reward.rating },
     xp: RESULT_XP,
     outcome: reveal.final,
+    /** Для сценки-иллюстрации итога (config/vignettes.ts): какая развилка, какой вариант, сработал ли, какой товар. */
+    art: c ? {
+      situationId: c.situationId,
+      optionId: c.optionId,
+      worked,
+      tsd: c.tsd ?? null,
+      product: game.products[all[c.lineIndex]?.productId ?? '']?.look ?? null,
+    } : null,
   };
 }
 

@@ -18,7 +18,20 @@ import CameraControls from './ui/CameraControls';
 import TopBar from './ui/TopBar';
 import ShiftSummary from './ui/ShiftSummary';
 import TutorialHint from './ui/TutorialHint';
+import type { Picker } from './model/picker';
+import type { ResultArt } from './ui/ResultWindow';
+import { lookOf } from './config/pickers';
+import { resultVignette } from './config/vignettes';
+import { PickerPortrait, ResultVignette } from './scene/vignette/Vignette';
 import './ui/theme.css';
+
+// Сценки-иллюстрации (прототип 16.10) передаются в окна отсюда: интерфейс сам 3D не импортирует (09, раздел 3).
+const renderPortrait = (p: Picker) => <PickerPortrait look={lookOf(p.id)} />;
+const renderArt = (a: ResultArt) => {
+  if (a.tsd) return null; // итоги игр на ТСД — пока заглушка
+  const recipe = resultVignette(a.situationId, a.optionId, a.worked);
+  return recipe ? <ResultVignette recipe={recipe} look={lookOf(a.picker.id)} product={a.product} /> : null;
+};
 
 export default function App() {
   const stock = useGameStore((s) => s.game.stock);
@@ -38,8 +51,8 @@ export default function App() {
         <TsdOffer />
         <TsdHint />
         <TsdPanel />
-        <CallWindow />
-        <ResultWindow />
+        <CallWindow renderPortrait={renderPortrait} />
+        <ResultWindow renderArt={renderArt} />
         {!closeup && <TopBar />}
         <SpeedControls />
         {!closeup && <CameraControls />}
