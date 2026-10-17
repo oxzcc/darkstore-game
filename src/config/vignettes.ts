@@ -2,10 +2,12 @@
 // Только отображение: правила это не читают. Сцена — «рецепт»: где стоит собака, какая у неё поза и эмоция,
 // какой реквизит вокруг и откуда смотрит камера. Порода берётся от сборщика, товар — от позиции задания,
 // поэтому одна строка рецепта годится для всех сборщиков и любого товара.
-// Сделано: портрет в окне развилки и две сцены итога у ситуации «Тяжёлое наверху» (V1); набор реквизита, поз и эмоций (V2a).
+// Сделано: портрет в окне развилки (V1); набор реквизита, поз и эмоций (V2a); сцены итога сборки (V2b, config/vignetteScenes/order.ts).
 // Ключ сцены итога: «ситуация.вариант.ok|bad» (vignetteKey); нет рецепта — в окне остаётся заглушка.
 
 import { BULLDOG, type DogLook } from './pickers';
+import { SCENE_BG } from './vignetteScenes/kit';
+import { ORDER_SCENES } from './vignetteScenes/order';
 
 type V3 = [number, number, number];
 
@@ -91,7 +93,7 @@ export const VIGNETTE = {
   floorColor: '#DED8C0',   // как пол склада (PALETTE.floor)
   driverLook: { fur: '#9A6A45', face: '#EBD3B2', ear: '#6E4529', ears: 'floppy' } as DogLook, // водитель поставки — своя порода, не из сборщиков
   otherPickerLook: BULLDOG, // «другой сборщик» в сценках — бульдог Буля (08, раздел 5: в игру пока не входит, поэтому не совпадёт с героем сценки)
-  wallColor: '#E8E1CC',    // фон за сценой итога — тёплый, как стена вдали
+  wallColor: SCENE_BG,     // фон за сценой итога — тёплый, как стена вдали
   sweat: '#7FD3FF',        // капля пота у «ой»
   brow: '#3A2F2A',
   mouth: '#3A2F2A',
@@ -105,35 +107,9 @@ export const PORTRAIT: VignetteRecipe = {
   background: null,
 };
 
-const SIDE_CAMERA: VignetteCamera = { target: [0.1, 1.05, 0.2], azimuthDeg: 18, elevationDeg: 16, distance: 5.0, fovDeg: 28 };
-
-/** Сцены итога развилки. Ключ — vignetteKey(ситуация, вариант, сработало ли). */
+/** Сцены итога развилки. Ключ — vignetteKey(ситуация, вариант, сработало ли). Рецепты — в config/vignetteScenes/ по типам заданий. */
 export const RESULT_VIGNETTES: Record<string, VignetteRecipe> = {
-  // «Тяжёлое наверху» → «Снять одному» → не сработало: упаковка выскользнула, товар раскатился по полу
-  'heavy.alone.bad': {
-    dog: { at: [0.35, 0, 0.55], turn: 0.35, pose: 'oops', mood: 'oops', hold: null },
-    props: [
-      { kind: 'rack', at: [-0.2, 0, -0.75], top: 'gap' },
-      { kind: 'box', at: [-0.95, 0.2, 0.55], rot: [0, 0.5, 1.2], open: true },
-      { kind: 'product', at: [-0.45, 0.1, 0.95], rot: [Math.PI / 2, 0, 0.4] },
-      { kind: 'product', at: [-0.05, 0.1, 1.25], rot: [Math.PI / 2, 0, -0.9] },
-      { kind: 'product', at: [1.1, 0.1, 1.05], rot: [Math.PI / 2, 0, 1.6] },
-      { kind: 'product', at: [-1.4, 0, 1.0], rot: [0, 0.4, 0] },
-      { kind: 'product', at: [1.45, 0.1, 0.35], rot: [Math.PI / 2, 0, 0.2] },
-    ],
-    camera: SIDE_CAMERA,
-    background: VIGNETTE.wallColor,
-  },
-  // «Тяжёлое наверху» → «Взять стремянку» → сработало: стремянка у стеллажа, собака довольно несёт упаковку
-  'heavy.ladder.ok': {
-    dog: { at: [0.75, 0, 0.6], turn: -0.25, pose: 'carry', mood: 'happy', hold: 'productBox' },
-    props: [
-      { kind: 'rack', at: [-0.2, 0, -0.75], top: 'gap' },
-      { kind: 'ladder', at: [-0.55, 0, 0.05], turn: 0.15 },
-    ],
-    camera: SIDE_CAMERA,
-    background: VIGNETTE.wallColor,
-  },
+  ...ORDER_SCENES,
 };
 
 export const vignetteKey = (situationId: string, optionId: string, worked: boolean) =>

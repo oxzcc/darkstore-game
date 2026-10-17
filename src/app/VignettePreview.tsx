@@ -8,7 +8,7 @@ import {
   RESULT_VIGNETTES, VIGNETTE,
   type VignetteCamera, type VignetteHold, type VignetteMood, type VignettePose, type VignetteRecipe,
 } from '../config/vignettes';
-import { SITUATION_BY_ID } from '../config/calls';
+import { SITUATION_BY_ID, SITUATIONS } from '../config/calls';
 import { PickerPortrait, ResultVignette } from '../scene/vignette/Vignette';
 import '../ui/theme.css';
 
@@ -115,12 +115,21 @@ function Row({ title, children }: { title: string; children: ReactNode }) {
   return <div className="vg-field"><span>{title}</span>{children}</div>;
 }
 
+const TASK_NAME: Record<string, string> = { order: 'Сборка', receiving: 'Приёмка', putaway: 'Выкладка', writeoff: 'Списание' };
+
+/** Подпись ситуации: тип задания и начало реплики сборщика (без подстановок). */
+function situationTitle(id: string): string {
+  const s = SITUATION_BY_ID[id];
+  const speech = s.speech.replace(/\{[a-z]+\}/g, '…').split(/[.?!]/)[0];
+  return `${TASK_NAME[s.taskType] ?? s.taskType}: ${speech.length > 42 ? speech.slice(0, 40) + '…' : speech}`;
+}
+
 function captionFor(key: string): string {
   const [sid, oid, verdict] = key.split('.');
   const s = SITUATION_BY_ID[sid];
   const o = s?.options.find((x) => x.id === oid);
   if (!o) return key;
-  return `${o.label} → ${verdict === 'ok' ? o.okTitle : o.badTitle}`;
+  return `${o.label} → ${verdict === 'ok' ? '✓ ' + o.okTitle : '✕ ' + o.badTitle}`;
 }
 
 const PRODUCT_ITEMS: [string, string][] = Object.values(PRODUCTS).map((p) => [p.id, p.name]);
@@ -134,7 +143,12 @@ export default function VignettePreview() {
   const [hold, setHold] = useState<VignetteHold>('tsd');
   const [kit, setKit] = useState(0);
   const resultKeys = Object.keys(RESULT_VIGNETTES);
-  const [resultKey, setResultKey] = useState(resultKeys[0]);
+  // ситуации, у которых есть сцены, по порядку config/calls.ts; внутри — варианты «сработало / не сработало»
+  const situations = SITUATIONS.filter((x) => resultKeys.some((k) => k.startsWith(x.id + '.')));
+  const [situationId, setSituationId] = useState(situations[0]?.id ?? '');
+  const keysOfSituation = resultKeys.filter((k) => k.startsWith(situationId + '.'));
+  const [pickedKey, setResultKey] = useState(keysOfSituation[0] ?? '');
+  const resultKey = keysOfSituation.includes(pickedKey) ? pickedKey : keysOfSituation[0];
 
   const look = STARTING_PICKERS.find((p) => p.id === pickerId)!.look;
   const product = PRODUCTS[productId]?.look ?? null;
@@ -169,11 +183,12 @@ export default function VignettePreview() {
       <div className="vg-result-box"><ResultVignette recipe={KIT[kit][1]} look={look} product={product} /></div>
 
       <h2>Сцены итога (окно итога, 770 × 260)</h2>
-      <Row title="Сцена"><Buttons items={resultKeys.map((k) => [k, captionFor(k)] as [string, string])} value={resultKey} onPick={setResultKey} /></Row>
+      <Row title="Ситуация"><Buttons items={situations.map((x) => [x.id, situationTitle(x.id)] as [string, string])} value={situationId} onPick={setSituationId} /></Row>
+      <Row title="Итог"><Buttons items={keysOfSituation.map((k) => [k, captionFor(k)] as [string, string])} value={resultKey} onPick={setResultKey} /></Row>
       <div className="vg-col">
         {STARTING_PICKERS.map((p) => (
           <figure key={p.id}>
-            <div className="vg-result-box"><ResultVignette recipe={RESULT_VIGNETTES[resultKey]} look={p.look} product={product} /></div>
+            <div className="vg-result-box">{resultKey && <ResultVignette recipe={RESULT_VIGNETTES[resultKey]} look={p.look} product={product} />}</div>
             <figcaption>{p.name}</figcaption>
           </figure>
         ))}

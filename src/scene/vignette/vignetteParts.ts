@@ -50,6 +50,10 @@ const BOX_GRIP: V3 = [0.33, 0.76, 0.66];
 const TWO_GRIP: V3 = [0.34, 0.74, 0.62];
 /** Где правая кисть держит одну штуку товара. */
 const ONE_GRIP: V3 = [0.34, 0.82, 0.62];
+/** Где левая кисть держит ТСД экраном к себе (в позах, где левая лапа свободна). */
+const TSD_GRIP: V3 = [-0.3, 0.86, 0.6];
+/** Позы, где левая лапа свободна и может поднять ТСД перед собой. */
+const LEFT_FREE: VignettePose[] = ['idle', 'think', 'oops', 'tired', 'walk', 'impatient', 'point', 'squeeze'];
 
 /**
  * Поднятая лапа — вверх-вперёд, перед ушами, а не в сторону (правка автора 17.10: в стороны руки торчали далеко от тела).
@@ -221,6 +225,8 @@ export function vignettePose(pose: VignettePose, t: number, hold: VignetteHold =
     p.armL = mirror(p.armR);
   } else if (hold === 'product' && !['call', 'cheer', 'reach', 'point'].includes(pose)) {
     p.armR = armTo(ONE_GRIP);
+  } else if (hold === 'tsd' && LEFT_FREE.includes(pose)) {
+    p.armL = armTo(TSD_GRIP);
   }
   if (hold === 'box' || hold === 'productBox' || hold === 'twoProducts') {
     p.armR = [p.armR[0] + breath, p.armR[1]];
