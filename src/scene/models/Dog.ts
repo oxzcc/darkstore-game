@@ -19,7 +19,6 @@ export type DogRig = Record<DogPartName, DogRigPart>;
 
 const WHITE = '#FFFFFF';
 const EYE = '#241F1F';
-const TONGUE = '#F27B8F';
 const GREEN = PALETTE.uniform;
 
 // Точки поворота, м — как группы в рендере.
@@ -102,7 +101,6 @@ function head(look: DogLook): VoxelPart[] {
   for (const x of [-0.18, 0.18]) rb(0.09, 0.11, 0.04, EYE, x, 0.38, 0.36); // глаза
   rb(0.03, 0.035, 0.02, WHITE, -0.16, 0.45, 0.38);           // блики в глазах
   rb(0.03, 0.035, 0.02, WHITE, 0.2, 0.45, 0.38);
-  if (look.tongue) rb(0.12, 0.13, 0.05, TONGUE, 0.05, -0.06, 0.49); // язык
   for (const s of [-1, 1]) {
     if (look.ears === 'floppy') {
       rb(0.16, 0.38, 0.32, look.ear, s * 0.44, 0.2, -0.02, s * 0.15);              // висячие
