@@ -1,5 +1,5 @@
 // 3D-сцена: камера (CameraRig: изометрия и вид «глазами сборщика»), склад, грузовик и паллеты поставок, сборщики, курьеры и пакеты заказов, фон (машины, ветер, птицы, бабочки — Life),
-// выбор стеллажа в мини-игре (RackPicking) и клик по товару у стеллажа (RackCloseup), полка-пятнашки «Глубины» (DepthShelf).
+// пины новых заданий (TaskPins), выбор стеллажа в мини-игре (RackPicking) и клик по товару у стеллажа (RackCloseup), полка-пятнашки «Глубины» (DepthShelf).
 // Сцена только рисует карту, которую ей передали.
 import { useLayoutEffect, useRef } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
@@ -21,6 +21,7 @@ import Deliveries from './Deliveries';
 import World from './World';
 import Couriers from './Couriers';
 import Life from './Life';
+import TaskPins from './TaskPins';
 
 type Props = { map: WarehouseMap; stock: Stock };
 
@@ -78,6 +79,7 @@ export default function Scene({ map, stock }: Props) {
       <Deliveries map={map} />
       <Pickers />
       <Couriers map={map} />
+      <TaskPins map={map} />
       <ShelfTargets map={map} />
       <RackPicking map={map} />
       <RackCloseup map={map} stock={stock} />

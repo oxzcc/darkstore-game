@@ -29,6 +29,9 @@ import { isTutorial } from '../rules/shiftPlan';
 import { currentHint } from '../rules/tutorial';
 import { HINTS } from '../config/tutorial';
 import { DEADLINE, SHIFT } from '../config/balance';
+import { TASK_PINS } from '../config/warehouse';
+import { cellToWorld } from '../rules/warehouse';
+import type { WarehouseMap } from '../model/warehouse';
 
 /** Открытые задания по порядку появления. */
 export function openTaskList(tasks: GameState['tasks']): Task[] {
@@ -531,6 +534,78 @@ export function packedOrders(game: GameState): PackedOrderInfo[] {
     const t = game.tasks[e.taskId];
     if (!t || t.type !== 'order') continue;
     out.push({ taskId: e.taskId, at: e.at, cell: e.cell ?? null, items: t.payload.lines.map((l) => ({ productId: l.productId, qty: l.qty })) });
+  }
+  return out;
+}
+
+// ---------- Пины заданий на складе (T1) ----------
+
+export type TaskPin = {
+  id: string;
+  type: Task['type'];
+  /** Где остриё пина в мире: x, y (высота), z. */
+  pos: [number, number, number];
+  /** Сколько времени осталось взять задание, доля 0…1 (кольцо). null — срока нет (просрочено или не посчитан). */
+  left: number | null;
+  warn: boolean;
+  overdue: boolean;
+};
+
+/** Среднее мировых точек клеток (центр группы паллет). */
+function centerOf(cells: Cell[]): [number, number] {
+  const pts = cells.map(cellToWorld);
+  return [pts.reduce((s, p) => s + p[0], 0) / pts.length, pts.reduce((s, p) => s + p[2], 0) / pts.length];
+}
+
+/**
+ * Пины новых заданий: над чем висит каждый (решение автора 18.10). Приёмка — над паллетами поставки,
+ * выкладка — над своей паллетой, списание — над стеллажом с адресом, сборка — над столами фасовки (по одному на стол, дальше — следующим рядом).
+ */
+export function taskPins(game: GameState, map: WarehouseMap): TaskPin[] {
+  const H = TASK_PINS.height;
+  const out: TaskPin[] = [];
+  let orderIndex = 0;
+  for (const t of openTaskList(game.tasks)) {
+    let xz: [number, number] | null = null;
+    if (t.type === 'order') {
+      const tables = map.tables;
+      if (tables.length) {
+        const k = orderIndex++;
+        const [x, , z] = cellToWorld(tables[k % tables.length]);
+        // стол 2×1: левая клетка + соседняя справа — пин над серединой; следующий ряд — ближе к центру склада
+        const row = Math.floor(k / tables.length);
+        const dir = tables[0].z > map.depth / 2 ? -1 : 1;
+        xz = [x + 0.5, z + dir * row * TASK_PINS.orderRowStep];
+      }
+    } else if (t.type === 'putaway') {
+      const [x, , z] = cellToWorld(t.payload.palletCell);
+      xz = [x, z];
+    } else if (t.type === 'receiving') {
+      const cells = (game.deliveries[t.payload.deliveryId]?.palletIds ?? [])
+        .map((id) => game.pallets[id]?.cell).filter((c): c is Cell => !!c);
+      if (cells.length) xz = centerOf(cells);
+    } else if (t.type === 'writeoff') {
+      const a = t.payload.address;
+      const rack = map.racks.find((r) => r.aisle === a.aisle && r.rack === a.rack);
+      if (rack) xz = centerOf(rack.cells);
+    }
+    if (!xz) {
+      // запасной вариант — над клеткой подхода зоны задания
+      const zone = t.location.kind === 'zone' ? map.zones.find((zn) => zn.type === (t.location as { zone: string }).zone) : undefined;
+      if (!zone) continue;
+      const [x, , z] = cellToWorld(zone.access);
+      xz = [x, z];
+    }
+    const secs = secondsToTake(game, t);
+    const total = t.deadline !== null ? t.deadline - t.createdAt : 0;
+    out.push({
+      id: t.id,
+      type: t.type,
+      pos: [xz[0], H[t.type], xz[1]],
+      left: secs === null || total <= 0 ? null : Math.min(1, secs / total),
+      warn: secs !== null && secs <= DEADLINE.warnSeconds,
+      overdue: !!t.overdue,
+    });
   }
   return out;
 }
