@@ -2,7 +2,7 @@
 // и в таблице нет лишних ключей (например, после переименования варианта в config/calls.ts).
 import { describe, expect, it } from 'vitest';
 import { SITUATIONS } from '../calls';
-import { RESULT_VIGNETTES, vignetteKey } from '../vignettes';
+import { RESULT_VIGNETTES, TSD_VIGNETTES, tsdVignetteKey, vignetteKey } from '../vignettes';
 
 /** Типы заданий, для которых сцены уже нарисованы. */
 const DONE: string[] = ['order', 'receiving', 'putaway', 'writeoff'];
@@ -24,5 +24,11 @@ describe('сценки итога', () => {
   it('каждый ключ таблицы — существующий вариант ситуации', () => {
     const known = new Set(SITUATIONS.flatMap((s) => s.options.flatMap((o) => [vignetteKey(s.id, o.id, true), vignetteKey(s.id, o.id, false)])));
     expect(Object.keys(RESULT_VIGNETTES).filter((k) => !known.has(k))).toEqual([]);
+  });
+
+  it('у каждой ситуации с игрой на ТСД есть сцены всех трёх исходов, лишних нет', () => {
+    const want = SITUATIONS.filter((s) => s.tsdGame).flatMap((s) => (['perfect', 'withErrors', 'failed'] as const).map((o) => tsdVignetteKey(s.id, o)));
+    expect(want.filter((k) => !TSD_VIGNETTES[k])).toEqual([]);
+    expect(Object.keys(TSD_VIGNETTES).filter((k) => !want.includes(k))).toEqual([]);
   });
 });
