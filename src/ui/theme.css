@@ -63,7 +63,7 @@ button { font-family: inherit; }
 .vx-body.window { background: var(--window); }
 
 /* ---------- раскладка поверх сцены ---------- */
-.hud { position: absolute; inset: 0; pointer-events: none; }
+.hud { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
 .hud > * { pointer-events: auto; }
 
 .panel-title {
@@ -627,6 +627,9 @@ svg.i.sm { width: 18px; height: 18px; }
 .vg-page .vg-result-box { margin-top: 10px; }
 
 /* ---------- T1, 18.10: пины заданий на складе (вариант «а»: иконка с кольцом-таймером, хвостик — одно целое с кругом) ---------- */
+/* слой пинов — между сценой и интерфейсом (App): окна всегда поверх пинов; клики сквозь слой — в сцену, кроме самих пинов */
+.pin-layer { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.pin-layer .task-pin { pointer-events: auto; }
 /* Html из drei ставит левый верхний угол в точку — сдвигаем, чтобы в точке было остриё хвостика */
 .task-pin-anchor { transform: translate(-50%, -100%); }
 .task-pin { position: relative; display: block; width: 46px; height: 57px; padding: 0; border: 0; background: none; cursor: pointer;

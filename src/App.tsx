@@ -1,10 +1,9 @@
 // Собирает экран игры: 3D-сцена и интерфейс поверх неё.
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Scene from './scene/Scene';
 import { seenStock } from './rules/minigames/picking';
 import GameLoop from './app/GameLoop';
 import { useGameStore, WAREHOUSE_MAP } from './store/gameStore';
-import TaskPanel from './ui/TaskPanel';
 import PickerPanel from './ui/PickerPanel';
 import AssignDialog from './ui/AssignDialog';
 import Toasts from './ui/Toasts';
@@ -39,12 +38,15 @@ export default function App() {
   const seen = useMemo(() => seenStock(stock, actions), [stock, actions]);
   // У стеллажа вид во весь экран (06, раздел 2.3): список заданий и карточки сборщиков прячутся.
   const closeup = useGameStore((s) => (s.game.minigame?.atFocus ?? false) || s.game.tsdGame !== null);
+  // Слой для пинов заданий (T1): лежит между сценой и интерфейсом, поэтому окна всегда поверх пинов (правка автора 18.10).
+  const [pinLayer, setPinLayer] = useState<HTMLDivElement | null>(null);
   return (
     <>
       <GameLoop />
-      <Scene map={WAREHOUSE_MAP} stock={seen} />
+      <Scene map={WAREHOUSE_MAP} stock={seen} pinLayer={pinLayer} />
+      <div className="pin-layer" ref={setPinLayer} />
+      {/* панели заданий слева больше нет — задания видны пинами на складе (решение автора 18.10) */}
       <div className="hud">
-        {!closeup && <TaskPanel />}
         {!closeup && <PickerPanel />}
         <AssignDialog />
         <TsdOffer />

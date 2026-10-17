@@ -23,7 +23,8 @@ import Couriers from './Couriers';
 import Life from './Life';
 import TaskPins from './TaskPins';
 
-type Props = { map: WarehouseMap; stock: Stock };
+/** pinLayer — слой страницы под интерфейсом, куда рисуются пины заданий (его создаёт App). */
+type Props = { map: WarehouseMap; stock: Stock; pinLayer: HTMLElement | null };
 
 // Свет подобран так, чтобы верх объектов был ровно цвета палитры, а бока — темнее (числа — WAREHOUSE_VIEW.light).
 // Без обработки цветов (flat) Three.js делит свет на π, поэтому умножаем на π.
@@ -64,7 +65,7 @@ function Sun({ map }: { map: WarehouseMap }) {
   );
 }
 
-export default function Scene({ map, stock }: Props) {
+export default function Scene({ map, stock, pinLayer }: Props) {
   // flat — без «киношной» обработки цветов, чтобы они совпадали с палитрой из 08.
   return (
     // Камера перспективная, но дома смотрит издалека с узким углом — выглядит как изометрия (CameraRig).
@@ -79,7 +80,7 @@ export default function Scene({ map, stock }: Props) {
       <Deliveries map={map} />
       <Pickers />
       <Couriers map={map} />
-      <TaskPins map={map} />
+      <TaskPins map={map} layer={pinLayer} />
       <ShelfTargets map={map} />
       <RackPicking map={map} />
       <RackCloseup map={map} stock={stock} />
