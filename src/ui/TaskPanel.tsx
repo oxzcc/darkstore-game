@@ -1,6 +1,6 @@
 // Панель заданий слева (ui_01). Новое задание — клик открывает «Кого отправить?».
 // Задание в работе остаётся в списке с аватаром сборщика, пока не завершится.
-import { useMemo } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { assigneeOf, clockText, money, panelTaskList, takeTimer, taskSummary } from '../store/selectors';
 import { TASK_TYPE_LOOK, taskTitle } from './labels';
@@ -29,10 +29,10 @@ export default function TaskPanel() {
           return (
             <Vx
               key={t.id}
-              className={`task-card${t.id === selectedId ? ' selected' : ''}${isNew ? '' : ' busy'}`}
+              className={`task-card${t.id === selectedId ? ' selected' : ''}${isNew ? '' : ' busy'}${isNew && timer?.warn ? ' hot' : ''}`}
               onClick={isNew ? () => openAssign(t.id) : undefined}
             >
-              <Vx className="task-icon"><Icon name={TASK_TYPE_LOOK[t.type].icon} /></Vx>
+              <Vx className="task-icon" style={{ '--tint': TASK_TYPE_LOOK[t.type].tint } as CSSProperties}><Icon name={TASK_TYPE_LOOK[t.type].icon} /></Vx>
               <div className="task-main">
                 <div className="task-name">{taskTitle(t)}</div>
                 <div className={`task-sub${t.overdue ? ' overdue' : ''}`}>
