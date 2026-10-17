@@ -5,7 +5,7 @@ import { SITUATIONS } from '../calls';
 import { RESULT_VIGNETTES, vignetteKey } from '../vignettes';
 
 /** Типы заданий, для которых сцены уже нарисованы. */
-const DONE: string[] = ['order'];
+const DONE: string[] = ['order', 'receiving'];
 
 describe('сценки итога', () => {
   it('у каждого варианта готовых типов есть сцены ok и bad', () => {
