@@ -12,6 +12,7 @@ import { PALETTE } from '../config/palette';
 import { rackParts } from './models/Rack';
 import { packingTableParts } from './models/PackingTable';
 import { restAreaParts } from './models/RestArea';
+import { scrapAreaParts } from './models/ScrapArea';
 import { doorParts, doorSignPose, wallBox, wallGradientBoxes, wallHeight, wallSideParts } from './models/Wall';
 import { gateParts } from './models/Gate';
 import type { VoxelPart } from './models/ProductItem';
@@ -119,6 +120,41 @@ function DoorSign({ map, door }: { map: WarehouseMap; door: WallOpening }) {
   );
 }
 
+/** Табличка «БРАК» на ограждении зоны брака: белые буквы с рамкой поверх красной подложки (подложка — брусок в ScrapArea). */
+function ScrapSign({ pos, rotY }: { pos: [number, number, number]; rotY: number }) {
+  const tex = useMemo(() => {
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 128;
+    return new CanvasTexture(c);
+  }, []);
+  useEffect(() => {
+    const draw = () => {
+      const c = tex.image as HTMLCanvasElement;
+      const g = c.getContext('2d')!;
+      g.clearRect(0, 0, c.width, c.height);
+      g.fillStyle = PALETTE.scrapRed;
+      g.fillRect(0, 0, c.width, c.height);
+      g.strokeStyle = '#FFFFFF';
+      g.lineWidth = 8;
+      g.strokeRect(12, 12, c.width - 24, c.height - 24);
+      g.fillStyle = '#FFFFFF';
+      g.font = "700 62px 'X5 Sans', system-ui, sans-serif";
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('БРАК', c.width / 2, c.height / 2 + 4);
+      tex.needsUpdate = true;
+    };
+    draw();
+    document.fonts?.ready.then(draw);
+  }, [tex]);
+  return (
+    <mesh position={pos} rotation={[0, rotY, 0]}>
+      <planeGeometry args={[0.6, 0.3]} />
+      <meshBasicMaterial map={tex} toneMapped={false} />
+    </mesh>
+  );
+}
+
 /**
  * Четыре стены (W1, W3). Каждая — в двух видах: высокая и низкая. Та, что между камерой и складом, показывается низкой
  * («срез», как в Moving Out и The Sims): высокая плавно уходит в землю, низкая поднимается.
@@ -203,7 +239,8 @@ export default function Warehouse({ map, stock }: Props) {
   const { floorThickness: ft } = WAREHOUSE_VIEW;
   // рисованная плитка (W4): узор повторяется по метрам, цвет — из палитры; трава — в World.tsx (W5)
   const floorMap = useMemo(() => tiled(tilesTexture(), map.width, map.depth, TEXTURE_METERS.tiles), [map]);
-  const furniture = useMemo(() => [...allRackParts(map), ...allTableParts(), ...restAreaParts(map.rest)], [map]);
+  const scrap = useMemo(() => scrapAreaParts(map), [map]);
+  const furniture = useMemo(() => [...allRackParts(map), ...allTableParts(), ...restAreaParts(map.rest), ...scrap.frame], [map, scrap]);
   // ворота и дверь выдачи не опускаются вместе со стеной
   const gates = useMemo(
     () => map.openings.flatMap((o) => (o.kind === 'gate' ? gateParts(map, o) : doorParts(map, o))),
@@ -227,6 +264,8 @@ export default function Warehouse({ map, stock }: Props) {
       {doors.map((d, i) => <DoorSign key={i} map={map} door={d} />)}
 
       <VoxelBatch parts={furniture} soft="strong" />
+      <VoxelBatch parts={scrap.clutter} />
+      {scrap.sign && <ScrapSign pos={scrap.sign.pos} rotY={scrap.sign.rotY} />}
 
       <ShelfGoods map={map} stock={stock} />
     </group>

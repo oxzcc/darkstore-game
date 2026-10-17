@@ -2,7 +2,7 @@
 // Расстановка повторяет макет ui_01: приёмка и ворота слева внизу, стеллажи справа,
 // фасовка вдоль нижней стены, дверь выдачи справа внизу, отдых и брак у левой стены.
 // Все числа — стартовые; меняются здесь, без правки логики.
-import type { Cell, Passage, RestFurniture, WallOpening, Zone } from '../model/warehouse';
+import type { Cell, Passage, RestFurniture, ScrapFurniture, WallOpening, Zone } from '../model/warehouse';
 
 export type RackLayout = {
   aisles: number;
@@ -30,6 +30,7 @@ export type WarehouseLayout = {
   /** Столы фасовки (2×1 вдоль x, лицом к проходу −z): левая клетка стола. Клетки столов заняты — сборщик фасует, стоя перед столом. */
   tables: Cell[];
   rest: RestFurniture;
+  scrap: ScrapFurniture;
 };
 
 export const WAREHOUSE_LAYOUT: WarehouseLayout = {
@@ -70,6 +71,12 @@ export const WAREHOUSE_LAYOUT: WarehouseLayout = {
     facing: { x: 1, z: 0 },
     cooler: { x: 2, z: 1 },
     plant: { x: 2, z: 3 },
+  },
+  // зона брака (просьба автора 18.10, по рендеру «Зона брака»): сетчатое ограждение по краю зоны, вход — только с клетки подхода;
+  // красный контейнер в дальнем углу у стены, рядом бак под упаковку и паллета с мятыми коробками. Эти клетки заняты.
+  scrap: {
+    bin: { x: 0, z: 5 },
+    junk: [{ x: 0, z: 7 }, { x: 1, z: 7 }],
   },
 };
 

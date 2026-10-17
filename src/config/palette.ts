@@ -79,7 +79,10 @@ export const PALETTE = {
   paper: '#FBFAF5',
   scrapFloor: '#FCE6E5',   // зона брака: заливка, полосы, ограждение, контейнер (как на складе, palette.zones.scrap)
   scrapRed: '#F0373B',
+  scrapRedDark: '#B82227', // борт и рёбра контейнера, подложка таблички «БРАК» (зона брака в мире, 18.10)
   fence: '#2B2B30',
+  fenceLight: '#4A4F58',   // прутки сетки, пятки и колпачки столбиков ограждения
+  binDark: '#5F646C',      // крышка и дно серого бака в зоне брака
   phone: '#2A2B2F',
   phoneGood: '#E7F4DC',
   phoneBad: '#FDEBD3',

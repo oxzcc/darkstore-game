@@ -43,6 +43,7 @@ export function buildWarehouseMap(layout: WarehouseLayout): WarehouseMap {
     openings: layout.openings,
     tables: layout.tables,
     rest: layout.rest,
+    scrap: layout.scrap,
   };
 }
 
@@ -64,13 +65,15 @@ export function tableCells(left: Cell): Cell[] {
   return [left, { x: left.x + 1, z: left.z }];
 }
 
-/** Клетки, по которым ходить нельзя: стеллажи, столы фасовки (W7a), кулер и растение в зоне отдыха (W7b). Зоны, проходы и диван проходимы. */
+/** Клетки, по которым ходить нельзя: стеллажи, столы фасовки (W7a), кулер и растение в зоне отдыха (W7b), контейнер и брак в зоне брака. Зоны, проходы и диван проходимы. */
 export function blockedCells(map: WarehouseMap): Set<string> {
   return new Set([
     ...map.racks.flatMap((r) => r.cells.map(cellKey)),
     ...map.tables.flatMap(tableCells).map(cellKey),
     cellKey(map.rest.cooler),
     cellKey(map.rest.plant),
+    cellKey(map.scrap.bin),
+    ...map.scrap.junk.map(cellKey),
   ]);
 }
 
@@ -87,6 +90,20 @@ export function blockedWithPallets(map: WarehouseMap, palletCells: Cell[]): Set<
 /** Клетка — место на диване в зоне отдыха. */
 export function isRestSeat(map: WarehouseMap, c: Cell): boolean {
   return map.rest.seats.some((s) => s.x === c.x && s.z === c.z);
+}
+
+/**
+ * Шаг с клетки `a` на соседнюю `b` перелезает через ограждение зоны брака: одна клетка внутри зоны, другая снаружи,
+ * и это не вход (клетка подхода `access` и соседняя с ней клетка зоны). Стены склада ограждение не трогает.
+ */
+export function crossesFence(map: WarehouseMap, a: Cell, b: Cell): boolean {
+  const zone = map.zones.find((z) => z.type === 'scrap');
+  if (!zone) return false;
+  const inside = (c: Cell) => c.x >= zone.from.x && c.x <= zone.to.x && c.z >= zone.from.z && c.z <= zone.to.z;
+  const ia = inside(a), ib = inside(b);
+  if (ia === ib) return false;
+  const out = ia ? b : a;
+  return !(out.x === zone.access.x && out.z === zone.access.z);
 }
 
 /**
@@ -108,7 +125,7 @@ export function findPath(map: WarehouseMap, from: Cell, to: Cell, blocked = bloc
     for (const d of steps) {
       const next = { x: cur.x + d.x, z: cur.z + d.z };
       const k = cellKey(next);
-      if (!inside(next) || blocked.has(k) || cameFrom.has(k)) continue;
+      if (!inside(next) || blocked.has(k) || cameFrom.has(k) || crossesFence(map, cur, next)) continue;
       cameFrom.set(k, cur);
       if (k === goal) {
         const path: Cell[] = [];
@@ -164,7 +181,7 @@ export function distancesFrom(map: WarehouseMap, from: Cell, blocked = blockedCe
     for (const s of steps) {
       const n = { x: cur.x + s.x, z: cur.z + s.z };
       const k = cellKey(n);
-      if (n.x < 0 || n.z < 0 || n.x >= map.width || n.z >= map.depth || blocked.has(k) || dist.has(k)) continue;
+      if (n.x < 0 || n.z < 0 || n.x >= map.width || n.z >= map.depth || blocked.has(k) || dist.has(k) || crossesFence(map, cur, n)) continue;
       dist.set(k, d + 1);
       queue.push(n);
     }
