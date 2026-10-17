@@ -67,7 +67,29 @@ export const PALETTE = {
   // анимации сборщиков (W7b)
   tsdBody: '#2A2B2F',    // ТСД в лапе
   tsdScreen: '#7FC743',
-  ladder: '#C3C9D1',     // стремянка в сценках-иллюстрациях (config/vignettes.ts); ступени — uniform
+  ladder: '#C3C9D1',
+  // сценки-иллюстрации (V2a, config/vignettes.ts): водитель поставки, зона брака, телефон клиента, значки
+  driverCap: '#F08A24',    // оранжевая кепка водителя
+  driverShirt: '#3E5C8A',  // синяя рубашка и рукава
+  driverVest: '#F7B32B',   // сигнальный жилет…
+  driverStripe: '#F4F1E6', // …со светлой полосой
+  driverJeans: '#2F3F5C',
+  boots: '#6B4A31',
+  clipboard: '#9C6B3F',    // планшет с накладной
+  paper: '#FBFAF5',
+  scrapFloor: '#FCE6E5',   // зона брака: заливка, полосы, ограждение, контейнер (как на складе, palette.zones.scrap)
+  scrapRed: '#F0373B',
+  fence: '#2B2B30',
+  phone: '#2A2B2F',
+  phoneGood: '#E7F4DC',
+  phoneBad: '#FDEBD3',
+  iconBadge: '#FFFFFF',
+  iconInk: '#3A342A',
+  iconOk: '#5DB531',
+  iconBad: '#F0373B',
+  iconStar: '#FFC629',
+  doorFrame: '#3B3F48',
+  doorLeaf: '#E9E4D6',     // стремянка в сценках-иллюстрациях (config/vignettes.ts); ступени — uniform
   dust: '#FFFFFF',       // пыль из-под колёс тележки
 };
 
