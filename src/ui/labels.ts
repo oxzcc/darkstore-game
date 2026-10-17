@@ -16,12 +16,13 @@ export const OUTCOME_LOOK: Record<Outcome, { name: string; color: string; icon: 
  * Тип задания: название и значок (08, раздел 10.2). Название одного цвета у всех типов — различаются значком и подписью
  * (строгое цветовое кодирование, 10, раздел 13.1). Списание — урна с крестом (08, раздел 10.2).
  */
-export const TASK_TYPE_LOOK: Record<TaskType, { name: string; icon: IconName; receipt: string; doneBy: string }> = {
+export const TASK_TYPE_LOOK: Record<TaskType, { name: string; icon: IconName; receipt: string; doneBy: string; tint: string }> = {
   // receipt и doneBy — шапка чека в окне итога: «ЗАКАЗ №12 · собрал Лаки» (ui_12)
-  order: { name: 'Сборка', icon: 'pick', receipt: 'ЗАКАЗ', doneBy: 'собрал' },
-  receiving: { name: 'Приёмка', icon: 'truck', receipt: 'ПРИЁМКА', doneBy: 'принял' },
-  putaway: { name: 'Выкладка', icon: 'rack', receipt: 'ВЫКЛАДКА', doneBy: 'выложил' },
-  writeoff: { name: 'Списание', icon: 'scrap', receipt: 'СПИСАНИЕ', doneBy: 'списал' },
+  // tint — пастельная плитка под значком в панели заданий (концепт-рендер, 17.10)
+  order: { name: 'Сборка', icon: 'pick', receipt: 'ЗАКАЗ', doneBy: 'собрал', tint: '#EFE3FF' },
+  receiving: { name: 'Приёмка', icon: 'truck', receipt: 'ПРИЁМКА', doneBy: 'принял', tint: '#DBE9FF' },
+  putaway: { name: 'Выкладка', icon: 'rack', receipt: 'ВЫКЛАДКА', doneBy: 'выложил', tint: '#D6F6F1' },
+  writeoff: { name: 'Списание', icon: 'scrap', receipt: 'СПИСАНИЕ', doneBy: 'списал', tint: '#FFE0E0' },
 };
 
 /** «Сборка №12», «Приёмка №15». */
