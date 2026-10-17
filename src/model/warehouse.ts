@@ -39,6 +39,11 @@ export type WarehouseMap = {
   tables: Cell[];
   /** Зона отдыха (W7b): места на диване, куда садятся на перерыве, куда сидящие смотрят, и клетки кулера и растения (по ним не ходят). */
   rest: RestFurniture;
+  /** Зона брака: клетка красного контейнера и клетки с накопленным браком (паллета, бак). По ним не ходят. */
+  scrap: ScrapFurniture;
 };
+
+/** Мебель зоны брака. Зона обнесена ограждением, войти можно только с клетки подхода (`Zone.access`). */
+export type ScrapFurniture = { bin: Cell; junk: Cell[] };
 
 export type RestFurniture = { seats: Cell[]; facing: Cell; cooler: Cell; plant: Cell };
