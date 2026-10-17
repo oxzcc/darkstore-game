@@ -16,12 +16,12 @@ export type VignetteMood = 'call' | 'happy' | 'oops' | 'think' | 'tired' | 'angr
  * Поза собаки (V2a). Все поднятые лапы — снаружи от головы (pickerAnim.raisedArmOut).
  * call — машет; oops — разводит лапами; carry — несёт перед собой; cheer — лапы вверх и прыгает;
  * idle — стоит; walk — идёт; reach — тянется лапой вверх к полке; kneel — сидит на полу у нижней полки;
- * push — толкает тележку; armsCrossed — лапы сложены (водитель ждёт); squeeze — протискивается боком;
+ * push — толкает тележку; impatient — нетерпеливо ждёт (притопывает, лапы чуть в стороны); squeeze — протискивается боком;
  * think — лапа у морды; tired — сутулится; point — показывает лапой вперёд; compare — сравнивает две штуки в лапах.
  */
 export type VignettePose =
   | 'call' | 'oops' | 'carry' | 'cheer'
-  | 'idle' | 'walk' | 'reach' | 'kneel' | 'push' | 'armsCrossed' | 'squeeze' | 'think' | 'tired' | 'point' | 'compare';
+  | 'idle' | 'walk' | 'reach' | 'kneel' | 'push' | 'impatient' | 'squeeze' | 'think' | 'tired' | 'point' | 'compare';
 
 /**
  * Что в лапах: ТСД (левая лапа); коробка с товаром задания или закрытая коробка (перед собой, поза carry);

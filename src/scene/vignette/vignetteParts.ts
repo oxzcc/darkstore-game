@@ -2,7 +2,7 @@
 // Чистые функции без React: поза по времени и списки брусков (VoxelPart) для VoxelBatch.
 // Правило для новых брусков (как во всех моделях): грани брусков разного цвета не должны лежать в одной плоскости.
 import type { ProductLook } from '../../model/product';
-import type { ShelfFill, VignetteIcon, VignetteMood, VignettePose, VignetteProp } from '../../config/vignettes';
+import type { ShelfFill, VignetteHold, VignetteIcon, VignetteMood, VignettePose, VignetteProp } from '../../config/vignettes';
 import { VIGNETTE } from '../../config/vignettes';
 import { PALETTE } from '../../config/palette';
 import { WAREHOUSE_VIEW } from '../../config/warehouse';
@@ -13,7 +13,7 @@ import { ladderParts } from '../models/Ladder';
 import { cartParts } from '../models/Cart';
 import { palletParts } from '../models/Pallet';
 import { packingTableParts } from '../models/PackingTable';
-import { ARMS_ON_CART } from '../models/Dog';
+import { ARMS_ON_CART, DOG_ARM } from '../models/Dog';
 import { RACK_BOARD, shelfY } from '../rackGeometry';
 
 /** Поза: повороты частей тела (радианы, оси — как в dogAnim.ts) и подскок всей фигурки. */
@@ -27,31 +27,61 @@ export type VignetteDogPose = {
   bob: number;                                    // подскок (минус — присел)
 };
 
-const OUT = () => WAREHOUSE_VIEW.pickerAnim.raisedArmOut;
+type V3 = [number, number, number];
 
-/** Поза в момент `t` (секунды реального времени: окно открыто, а мир на паузе). */
-export function vignettePose(pose: VignettePose, t: number): VignetteDogPose {
+/**
+ * Углы руки, при которых кисть смотрит в точку `target` (координаты собаки: x вбок, y вверх, z вперёд).
+ * У модели рука — один брусок без локтя, поэтому углы на глаз дают кисть мимо коробки; здесь они считаются.
+ * Порядок поворотов — как у группы руки (Euler XYZ): сначала вбок (z), потом вперёд-назад (x).
+ * Если точка ближе длины руки, кисть встаёт чуть дальше по тому же направлению.
+ */
+export function armTo(target: V3): [number, number] {
+  const sx = Math.sign(target[0]) * DOG_ARM.shoulderX;
+  const dx = target[0] - sx, dy = target[1] - DOG_ARM.shoulderY, dz = target[2];
+  const len = Math.hypot(dx, dy, dz) || 1;
+  const z = Math.asin(Math.max(-1, Math.min(1, dx / len)));
+  const x = Math.atan2(-dz / len, -dy / len);
+  return [x, z];
+}
+
+/** Где кисти держат коробку: по бокам коробки (коробка 0,5 м шириной — в Vignette.tsx, `HELD_BOX`). */
+const BOX_GRIP: V3 = [0.33, 0.76, 0.66];
+/** Где кисти держат по штуке товара (поза «сравнивает» и предмет «два товара»). */
+const TWO_GRIP: V3 = [0.34, 0.74, 0.62];
+/** Где правая кисть держит одну штуку товара. */
+const ONE_GRIP: V3 = [0.34, 0.82, 0.62];
+
+/**
+ * Поднятая лапа — вверх-вперёд, перед ушами, а не в сторону (правка автора 17.10: в стороны руки торчали далеко от тела).
+ * `out` — немного наружу, чтобы не задеть голову и висячие уши; `x` — насколько вверх (−2,2 — вверх-вперёд, −2,6 — почти вертикально).
+ * Проверено расчётом: при x ≈ −2,2…−2,3 и out ≈ 0,45…0,5 рука проходит мимо головы и ушей лабрадора.
+ */
+const RAISED = (x: number, out: number): [number, number] => [x, out];
+
+/** Поза в момент `t` (секунды реального времени: окно открыто, а мир на паузе). `hold` — что в лапах: руки тянутся к предмету. */
+export function vignettePose(pose: VignettePose, t: number, hold: VignetteHold = null): VignetteDogPose {
   const p: VignetteDogPose = {
     legL: 0, legR: 0, armL: [0, 0], armR: [0, 0], head: [0, Math.sin(t * 0.9) * 0.1],
     tail: Math.sin(t * 4) * 0.35, roll: 0, lean: 0, bob: Math.abs(Math.sin(t * 2.2)) * 0.02,
   };
+  const mirror = ([x, z]: [number, number]): [number, number] => [x, -z];
   switch (pose) {
     case 'idle':
       break;
     case 'call': {
-      // машет правой лапой снаружи от головы и ушей, в левой — ТСД перед собой (как «зовёт» на складе)
+      // машет правой лапой вверх-вперёд перед ухом, в левой — ТСД перед собой
       const w = Math.sin(t * WAREHOUSE_VIEW.pickerAnim.waveSpeed);
-      p.armR = [-2.55 + w * 0.12, OUT() + 0.18 + w * 0.18];
+      p.armR = RAISED(-2.2 + w * 0.08, 0.47 + w * 0.08);
       p.armL = [-1.05, -0.1];
       p.head = [-0.08, Math.sin(t * 1.3) * 0.12];
       p.tail = Math.sin(t * 12) * 0.5;
       break;
     }
     case 'oops': {
-      // «ой»: растерянно разводит лапами в стороны, смотрит вниз на упавшее
-      const k = Math.sin(t * 2.4) * 0.06;
-      p.armR = [-0.55 + k, 0.75];
-      p.armL = [-0.55 - k, -0.75];
+      // «ой»: лапы чуть вперёд и в стороны ладонями вверх, смотрит вниз на упавшее
+      const k = Math.sin(t * 2.4) * 0.05;
+      p.armR = [-0.75 + k, 0.4];
+      p.armL = [-0.75 - k, -0.4];
       p.head = [0.22, 0.25 + Math.sin(t * 1.1) * 0.06];
       p.roll = Math.sin(t * 1.6) * 0.03;
       p.tail = Math.sin(t * 2) * 0.12;
@@ -59,19 +89,19 @@ export function vignettePose(pose: VignettePose, t: number): VignetteDogPose {
       break;
     }
     case 'carry': {
-      // несёт перед собой и радостно подпрыгивает
-      p.armL = [-1.15, 0];
-      p.armR = [-1.15, 0];
+      // несёт перед собой и радостно подпрыгивает (кисти — на боках коробки, см. ниже)
+      p.armR = armTo(BOX_GRIP);
+      p.armL = mirror(p.armR);
       p.head = [-0.12, Math.sin(t * 1.4) * 0.1];
       p.tail = Math.sin(t * 14) * 0.6;
       p.bob = Math.abs(Math.sin(t * 3.2)) * 0.06;
       break;
     }
     case 'cheer': {
-      // обе лапы вверх (снаружи от головы), прыгает
-      const k = Math.sin(t * 7);
-      p.armL = [-2.75, -(OUT() + 0.1) + k * 0.08];
-      p.armR = [-2.75, OUT() + 0.1 - k * 0.08];
+      // обе лапы вверх-вперёд перед ушами, прыгает
+      const k = Math.sin(t * 7) * 0.08;
+      p.armR = RAISED(-2.2 + k, 0.47);
+      p.armL = mirror(RAISED(-2.2 - k, 0.47));
       p.head = [-0.15, 0];
       p.tail = Math.sin(t * 16) * 0.6;
       p.bob = Math.abs(Math.sin(t * 4)) * 0.12;
@@ -81,18 +111,18 @@ export function vignettePose(pose: VignettePose, t: number): VignetteDogPose {
       const s = Math.sin(t * 6);
       p.legL = s * 0.5;
       p.legR = -s * 0.5;
-      p.armL = [-s * 0.4, 0];
-      p.armR = [s * 0.4, 0];
+      p.armL = [-s * 0.4, -0.05];
+      p.armR = [s * 0.4, 0.05];
       p.roll = s * 0.04;
       p.tail = Math.sin(t * 12) * 0.5;
       p.bob = Math.abs(s) * 0.05;
       break;
     }
     case 'reach': {
-      // тянется правой лапой вверх к полке, на цыпочках, смотрит вверх
+      // тянется правой лапой вверх-вперёд к полке, на цыпочках, смотрит вверх
       const k = Math.sin(t * 3) * 0.05;
-      p.armR = [-2.8 + k, OUT() + 0.05];
-      p.armL = [-0.25, -0.2];
+      p.armR = RAISED(-2.3 + k, 0.5);
+      p.armL = [-0.2, -0.08];
       p.head = [-0.35, 0];
       p.lean = -0.04;
       p.bob = 0.05 + Math.abs(Math.sin(t * 3)) * 0.03;
@@ -100,11 +130,11 @@ export function vignettePose(pose: VignettePose, t: number): VignetteDogPose {
       break;
     }
     case 'kneel': {
-      // сидит на полу у нижней полки: ноги вперёд, лапы тянутся к полке, голова чуть вниз
+      // сидит на полу у нижней полки: ноги вперёд, лапы тянутся вперёд, голова чуть вниз
       const k = Math.sin(t * 2.5) * 0.08;
       p.legL = p.legR = -1.45;
-      p.armR = [-1.25 + k, 0.08];
-      p.armL = [-1.25 - k, -0.08];
+      p.armR = [-1.25 + k, 0.04];
+      p.armL = [-1.25 - k, -0.04];
       p.head = [0.18, Math.sin(t * 1.2) * 0.1];
       p.lean = 0.08;
       p.bob = -0.4;
@@ -121,11 +151,11 @@ export function vignettePose(pose: VignettePose, t: number): VignetteDogPose {
       p.tail = Math.sin(t * 10) * 0.4;
       break;
     }
-    case 'armsCrossed': {
-      // лапы сложены перед собой, нетерпеливо постукивает ногой
-      p.armR = [-1.35, -0.45];
-      p.armL = [-1.35, 0.45];
-      p.head = [-0.05, Math.sin(t * 0.8) * 0.15];
+    case 'impatient': {
+      // нетерпеливо ждёт: лапы чуть назад и в стороны (сложить их на груди без локтя нельзя), притопывает, качает головой
+      p.armR = [0.2, 0.18];
+      p.armL = [0.2, -0.18];
+      p.head = [-0.05, Math.sin(t * 2.2) * 0.2];
       p.legR = Math.max(0, Math.sin(t * 7)) * -0.25;
       p.tail = Math.sin(t * 2) * 0.15;
       p.bob = 0;
@@ -144,20 +174,20 @@ export function vignettePose(pose: VignettePose, t: number): VignetteDogPose {
       break;
     }
     case 'think': {
-      // правая лапа у морды (впереди неё, не в голове), левая под локтем; голова набок
-      p.armR = [-2.0, -0.25];
-      p.armL = [-0.9, 0.35];
+      // правая лапа вперёд под мордой (ниже головы — без локтя выше не поднять, не задев голову), левая опущена; голова набок
+      p.armR = armTo([0.36, 0.98, 0.72]);
+      p.armL = [0.05, -0.05];
       p.head = [0.05, 0.2 + Math.sin(t * 0.7) * 0.05];
       p.tail = Math.sin(t * 1.5) * 0.15;
       p.bob = 0;
       break;
     }
     case 'tired': {
-      // сутулится: наклон вперёд, голова вниз, лапы висят, тяжело дышит
+      // сутулится: наклон вперёд, голова вниз, лапы висят вдоль тела, тяжело дышит
       p.lean = 0.14;
       p.head = [0.32, 0];
-      p.armR = [0.05, 0.12];
-      p.armL = [0.05, -0.12];
+      p.armR = [0.05, 0.04];
+      p.armL = [0.05, -0.04];
       p.roll = Math.sin(t * 1.4) * 0.03;
       p.tail = 0;
       p.bob = -Math.abs(Math.sin(t * 1.4)) * 0.03;
@@ -165,20 +195,36 @@ export function vignettePose(pose: VignettePose, t: number): VignetteDogPose {
     }
     case 'point': {
       // показывает правой лапой вперёд, смотрит туда же
-      p.armR = [-1.55 + Math.sin(t * 3) * 0.05, 0.1];
-      p.armL = [-0.2, -0.15];
+      p.armR = [-1.55 + Math.sin(t * 3) * 0.05, 0.08];
+      p.armL = [-0.1, -0.04];
       p.head = [-0.05, 0.2];
       p.tail = Math.sin(t * 8) * 0.4;
       break;
     }
     case 'compare': {
-      // держит по штуке в каждой лапе и переводит взгляд с одной на другую
-      p.armR = [-1.35, 0.32];
-      p.armL = [-1.35, -0.32];
+      // держит по штуке в каждой лапе перед собой и переводит взгляд с одной на другую
+      p.armR = armTo(TWO_GRIP);
+      p.armL = mirror(p.armR);
       p.head = [0.15, Math.sin(t * 1.5) * 0.35];
       p.tail = Math.sin(t * 2) * 0.15;
       break;
     }
+  }
+  // предмет в лапах сильнее позы: коробку держат обе кисти по бокам, два товара — обе перед собой,
+  // одну штуку — правая (если правая не занята: машет, тянется, показывает)
+  const breath = Math.sin(t * 2) * 0.02;
+  if (hold === 'box' || hold === 'productBox') {
+    p.armR = armTo(BOX_GRIP);
+    p.armL = mirror(p.armR);
+  } else if (hold === 'twoProducts') {
+    p.armR = armTo(TWO_GRIP);
+    p.armL = mirror(p.armR);
+  } else if (hold === 'product' && !['call', 'cheer', 'reach', 'point'].includes(pose)) {
+    p.armR = armTo(ONE_GRIP);
+  }
+  if (hold === 'box' || hold === 'productBox' || hold === 'twoProducts') {
+    p.armR = [p.armR[0] + breath, p.armR[1]];
+    p.armL = [p.armL[0] + breath, p.armL[1]];
   }
   return p;
 }

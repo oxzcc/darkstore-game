@@ -14,7 +14,7 @@ import '../ui/theme.css';
 
 const POSES: [VignettePose, string][] = [
   ['idle', 'стоит'], ['walk', 'идёт'], ['call', 'зовёт'], ['oops', 'ой'], ['carry', 'несёт'], ['cheer', 'радуется'],
-  ['reach', 'тянется вверх'], ['kneel', 'у нижней полки'], ['push', 'толкает тележку'], ['armsCrossed', 'лапы сложены'],
+  ['reach', 'тянется вверх'], ['kneel', 'у нижней полки'], ['push', 'толкает тележку'], ['impatient', 'ждёт, притопывая'],
   ['squeeze', 'протискивается'], ['think', 'думает'], ['tired', 'устал'], ['point', 'показывает'], ['compare', 'сравнивает'],
 ];
 const MOODS: [VignetteMood, string][] = [
@@ -60,7 +60,7 @@ const KIT: [string, VignetteRecipe][] = [
     props: [
       { kind: 'truck', at: [2.6, 0, -5.6] },
       { kind: 'pallet', at: [-1.7, 0, -0.8], boxes: 9 },
-      { kind: 'npc', role: 'driver', at: [0.9, 0, 0.2], turn: -0.5, pose: 'armsCrossed', mood: 'angry', hold: null },
+      { kind: 'npc', role: 'driver', at: [0.9, 0, 0.2], turn: -0.5, pose: 'impatient', mood: 'angry', hold: null },
     ],
     camera: WIDE, background: BG,
   }],

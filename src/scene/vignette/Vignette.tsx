@@ -18,6 +18,8 @@ import { TEXTURE_METERS, tiled, tilesTexture } from '../textures';
 import { boxParts, faceParts, productPiece, propParts, STILL_PROPS, vignettePose } from './vignetteParts';
 
 const L = WAREHOUSE_VIEW.light;
+/** Где коробка в лапах (низ коробки, координаты собаки): между кистями, их держит vignettePose (BOX_GRIP). */
+const HELD_BOX: [number, number, number] = [0, 0.57, 0.62];
 const PARTS: DogPartName[] = ['body', 'head', 'legL', 'legR', 'armL', 'armR', 'tail'];
 const deg = (d: number) => (d * Math.PI) / 180;
 
@@ -110,7 +112,7 @@ function ActorFigure({ look, outfit, actor, product }: { look: DogLook; outfit: 
   const phase = useMemo(() => (actor.at[0] * 1.7 + actor.at[2] * 2.3) % 6, [actor.at]);
 
   useFrame((state) => {
-    const p = vignettePose(actor.pose, state.clock.elapsedTime + phase);
+    const p = vignettePose(actor.pose, state.clock.elapsedTime + phase, actor.hold);
     const g = parts.current;
     const set = (obj: Group | undefined, x: number, y = 0, z = 0) => obj?.rotation.set(x, y, z);
     set(g.legL, p.legL);
@@ -154,7 +156,7 @@ function ActorFigure({ look, outfit, actor, product }: { look: DogLook; outfit: 
         ))}
         {/* перед собой: вскрытая коробка со штукой товара сверху или закрытая коробка */}
         {(actor.hold === 'productBox' || actor.hold === 'box') && (
-          <group position={[0, 0.6, 0.5]}>
+          <group position={HELD_BOX}>
             <VoxelBatch parts={actor.hold === 'box' ? closedBox : openBox} />
             {actor.hold === 'productBox' && (
               <group position={[0, 0.37, 0]}>
