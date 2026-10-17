@@ -83,11 +83,41 @@ export type VignetteCamera = {
   fovDeg: number;
 };
 
+/**
+ * Задник сцены итога (правка автора 17.10): hall — стена склада со стеллажами и коробками; dock — та же стена с проёмом ворот
+ * (сквозь него грузовик); home — у клиента: стена дома, окно, растение, деревянный пол. Портрету задник не нужен.
+ */
+export type VignetteBackdrop = 'hall' | 'dock' | 'home';
+
 export type VignetteRecipe = {
   dog: VignetteActor;
+  backdrop?: VignetteBackdrop; // по умолчанию — hall (если у сцены есть фон)
   props: VignetteProp[];
   camera: VignetteCamera;
   background: string | null; // цвет фона; null — прозрачный (портрет на подложке окна)
+};
+
+/** Размеры и цвета задника (scene/vignette/Backdrop.tsx). Стена — вдоль x, передняя грань на z = wallZ. */
+export const BACKDROP = {
+  wallZ: -2.7,
+  wallThickness: 0.3,
+  wallHeight: 3.4,      // выше, чем на складе (1,75 м): в кадре сценки стена должна закрывать фон
+  wallHalfWidth: 9,
+  plinth: 0.28,
+  ribStep: 0.42,        // шаг рёбер профлиста — как на складе (models/Wall.ts)
+  windowY0: 2.55,       // лента окон под крышей
+  windowY1: 3.1,
+  gate: [1.35, 3.65] as [number, number], // проём ворот (dock): грузовик поставки стоит по x 2,5 ± 0,95
+  gateHeight: 2.6,
+  lineColor: '#F2C230', // жёлтая разметка пола
+  fogFrom: 2,           // дымка: начинается за целью сцены на столько метров…
+  fogTo: 16,            // …и густеет к этому расстоянию
+  homeWall: '#EFE2C6',
+  homePanel: '#D8C29C',
+  homeTrim: '#FBF7EE',
+  homeFloor: '#D9B98F',
+  picture: '#8CC0D8',
+  pot: '#C9734A',
 };
 
 export const VIGNETTE = {
