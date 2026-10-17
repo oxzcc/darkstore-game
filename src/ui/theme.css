@@ -13,7 +13,10 @@
   --window: #F6EEDD;        /* фон больших окон */
   --text: #3A342A;
   --text-mute: #8C8270;
-  --outline: #D6C4A0;       /* светлый тёплый аутлайн (не чёрный) */
+  --outline: #D6C4A0;       /* светлые линии внутри окон (разделители, рамки чеков) */
+  --edge-color: #3A342A;    /* аутлайн карточек — тёмный, как в концепт-рендере (17.10) */
+  --line-in: #E5DCC6;       /* рамка вложенных карточек: строки заданий, варианты в окнах */
+  --shadow-c: #8A6A44;      /* тень-плашка снизу: коричневая, не чёрная (правка автора 17.10) */
   --divider: #EADFC9;
   --track: #EADFC9;         /* пустая часть полосок */
   --tag: #5E5546;           /* тёмная плашка адреса */
@@ -24,9 +27,9 @@
   --failed: #F0373B;
   --late: #B9BFB2;
 
-  --cut: 10px;              /* скошенный угол */
-  --edge: 2.5px;            /* толщина аутлайна */
-  --shadow: drop-shadow(0 4px 6px rgba(80, 55, 20, 0.25));
+  --cut: 10px;              /* размер угла; скругление = 1,6 × --cut (10 → 16 px, 8 → 13 px, 6 → 10 px) */
+  --edge: 3px;              /* толщина аутлайна */
+  --shadow: 0 5px 2px var(--shadow-c); /* сдвиг вниз 5 px, чуть размыта */
 }
 
 * { box-sizing: border-box; }
@@ -34,23 +37,28 @@ html, body, #root { margin: 0; width: 100%; height: 100%; overflow: hidden; }
 body { font-family: 'X5 Sans', system-ui, sans-serif; color: var(--text); background: #B1CF75; } /* как трава (PALETTE.grass) */
 button { font-family: inherit; }
 
-/* ---------- скошенная подложка: тень → аутлайн → тело ---------- */
-.vx { filter: var(--shadow); }
+/* ---------- подложка карточки (стиль концепт-рендера, 17.10): тень-плашка → тёмный аутлайн → тело ---------- */
 .vx > .vx-edge { height: 100%; } /* подложка заполняет весь блок, если у него задан размер */
 .btn > .vx { height: 100%; }
 .vx-edge {
-  background: var(--outline);
+  --radius: calc(var(--cut) * 1.6);
+  background: var(--edge-color);
   padding: var(--edge);
-  clip-path: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)),
-    calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 .vx-body {
-  --cut-in: calc(var(--cut) - 1px);
   background: var(--card);
   height: 100%;
-  clip-path: polygon(var(--cut-in) 0, calc(100% - var(--cut-in)) 0, 100% var(--cut-in), 100% calc(100% - var(--cut-in)),
-    calc(100% - var(--cut-in)) 100%, var(--cut-in) 100%, 0 calc(100% - var(--cut-in)), 0 var(--cut-in));
+  border-radius: max(2px, calc(var(--radius) - var(--edge)));
+  overflow: hidden;
 }
+/* карточка внутри окна или панели — белая, со светлой рамкой и без тени (строки заданий в рендере) */
+:where(.vx-body .vx) > .vx-edge { background: var(--line-in); box-shadow: none; }
+:where(.vx-body .vx) > .vx-edge > .vx-body { background: #fff; }
+/* кнопки и в окнах остаются «объёмными» */
+.btn > .vx > .vx-edge { background: var(--edge-color); box-shadow: var(--shadow); }
+.btn > .vx > .vx-edge > .vx-body { background: var(--card); }
 /* большие окна: фон чуть темнее и еле заметный шахматный узор (08, раздел 3.1) */
 .vx-body.window {
   background-color: var(--window);
@@ -69,7 +77,7 @@ button { font-family: inherit; }
 }
 .count {
   position: absolute; right: 12px; min-width: 26px; height: 24px; padding: 0 6px;
-  display: grid; place-items: center; background: var(--primary); color: #fff; font-size: 15px;
+  display: grid; place-items: center; background: var(--primary); color: #fff; font-size: 15px; border-radius: 7px;
 }
 
 /* ---------- панель заданий (слева, ui_01) ---------- */
@@ -81,7 +89,13 @@ button { font-family: inherit; }
 .task-card.selected > .vx-edge { background: var(--primary); }
 .task-card:hover > .vx-edge > .vx-body { background: #FFFDF6; }
 .task-icon { width: 46px; height: 46px; flex: none; --cut: 6px; }
-.task-icon > .vx-edge > .vx-body { display: grid; place-items: center; background: #fff; }
+/* значок задания — пастельная плитка своего типа, без рамки (концепт-рендер, 17.10) */
+.task-icon > .vx-edge { background: transparent; padding: 0; }
+.task-icon > .vx-edge > .vx-body { display: grid; place-items: center; background: var(--tint, #fff); border-radius: 12px; }
+.task-card.hot > .vx-edge { background: var(--failed); }
+.task-card.hot { animation: wob 1.4s ease-in-out infinite; }
+@keyframes wob { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-1.2deg); } }
+@media (prefers-reduced-motion: reduce) { .task-card.hot { animation: none; } }
 .task-main { flex: 1; min-width: 0; }
 .task-name { font-weight: 700; font-size: 18px; }
 .task-sub { font-size: 13px; color: var(--text-mute); margin-top: 2px; white-space: nowrap; }
@@ -102,7 +116,7 @@ button { font-family: inherit; }
 
 /* сегментная полоска (усталость) */
 .seg { display: flex; gap: 3px; }
-.seg i { width: 12px; height: 12px; background: var(--track); }
+.seg i { width: 12px; height: 8px; border-radius: 2px; background: var(--track); }
 .seg i.on { background: var(--seg-color, var(--failed)); }
 
 /* ---------- окно назначения (справа, ui_03) ---------- */
@@ -117,7 +131,7 @@ button { font-family: inherit; }
 .order-line .places { margin-left: auto; color: var(--text-mute); font-size: 13px; font-variant-numeric: tabular-nums; }
 .order-line { display: flex; align-items: center; gap: 8px; font-size: 15px; }
 .order-line .qty { color: var(--text-mute); }
-.tag { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; background: var(--tag); color: #fff;
+.tag { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: 6px; background: var(--tag); color: #fff;
   font-size: 14px; font-weight: 700; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
 
 .choice { cursor: pointer; --cut: 8px; }
@@ -142,7 +156,7 @@ button { font-family: inherit; }
 .btn { flex: 1; height: 52px; border: 0; padding: 0; background: none; cursor: pointer; --cut: 8px; }
 .btn > .vx > .vx-edge > .vx-body { display: grid; place-items: center; font-weight: 700; font-size: 18px; letter-spacing: 0.06em; text-transform: uppercase; }
 .btn.primary { flex: 2; }
-.btn.primary > .vx > .vx-edge { background: var(--primary-lo); }
+.btn.primary > .vx > .vx-edge { background: var(--edge-color); }
 .btn.primary > .vx > .vx-edge > .vx-body { background: var(--primary); color: #fff; }
 .btn:disabled { cursor: not-allowed; opacity: 0.5; }
 
@@ -162,9 +176,9 @@ svg.i.sm { width: 18px; height: 18px; }
 
 /* пауза / ×1 / ×2 справа сверху (ui_01) */
 .speed { position: absolute; right: 16px; top: 16px; display: flex; gap: 8px; }
-.btn.sq { flex: none; width: 64px; height: 60px; }
+.btn.sq { flex: none; width: 48px; height: 48px; --cut: 7px; } /* квадраты как в концепт-рендере */
 .btn.sq > .vx > .vx-edge > .vx-body { font-size: 20px; letter-spacing: 0; text-transform: none; }
-.btn.sq.on > .vx > .vx-edge { background: var(--primary-lo); }
+.btn.sq.on > .vx > .vx-edge { background: var(--edge-color); }
 .btn.sq.on > .vx > .vx-edge > .vx-body { background: var(--primary); color: #fff; }
 .btn.sq.on svg.i { color: #fff; }
 .btn.sq:disabled { opacity: 1; cursor: default; }
@@ -537,7 +551,9 @@ svg.i.sm { width: 18px; height: 18px; }
 .topbar-slot { position: relative; }
 .stat-tile { --cut: 8px; }
 .stat-tile > .vx-edge > .vx-body { display: flex; align-items: center; gap: 12px; padding: 8px 18px 8px 12px; min-width: 150px; }
-.stat-tile svg.i { width: 34px; height: 34px; }
+/* значок плашки — круг с аутлайном: часы на белом, деньги и рейтинг на жёлтом (концепт-рендер) */
+.stat-tile svg.i { width: 38px; height: 38px; padding: 5px; border-radius: 50%; border: 3px solid var(--edge-color); background: #FFC629; }
+.topbar-slot:first-child .stat-tile svg.i { background: #fff; }
 .stat-tile small { display: block; font-size: 12px; color: var(--text-mute); line-height: 1.1; }
 .stat-tile b { display: block; font-size: 26px; font-weight: 700; line-height: 1.1; white-space: nowrap; }
 .gains { position: absolute; top: 100%; left: 0; right: 0; height: 0; }
