@@ -6,7 +6,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { PerspectiveCamera, type Group } from 'three';
 import type { DogLook } from '../../config/pickers';
 import type { ProductLook } from '../../model/product';
-import { PORTRAIT, VIGNETTE, type VignetteActor, type VignetteCamera, type VignetteRecipe } from '../../config/vignettes';
+import { BACKDROP, PORTRAIT, VIGNETTE, type VignetteActor, type VignetteCamera, type VignetteRecipe } from '../../config/vignettes';
 import { PALETTE } from '../../config/palette';
 import { WAREHOUSE_VIEW } from '../../config/warehouse';
 import VoxelBatch from '../VoxelBatch';
@@ -14,7 +14,8 @@ import { dogRig, type DogOutfit, type DogPartName } from '../models/Dog';
 import Truck from '../models/Truck';
 import OrderBag from '../models/OrderBag';
 import type { BagLook } from '../couriers';
-import { TEXTURE_METERS, tiled, tilesTexture } from '../textures';
+import { planksTexture, TEXTURE_METERS, tiled, tilesTexture } from '../textures';
+import Backdrop from './Backdrop';
 import { boxParts, faceParts, productPiece, propParts, STILL_PROPS, vignettePose } from './vignetteParts';
 
 const L = WAREHOUSE_VIEW.light;
@@ -189,13 +190,22 @@ function Stage({ recipe, look, product }: { recipe: VignetteRecipe; look: DogLoo
     [recipe, product],
   );
   const bag = useMemo(() => bagLookFor(product), [product]);
-  const floorMap = useMemo(() => tiled(tilesTexture(), 30, 30, TEXTURE_METERS.tiles), []);
+  const backdrop = recipe.background ? recipe.backdrop ?? 'hall' : null;
+  const home = backdrop === 'home';
+  const floorMap = useMemo(
+    () => (home ? tiled(planksTexture(), 30, 30, TEXTURE_METERS.planks) : tiled(tilesTexture(), 30, 30, TEXTURE_METERS.tiles)),
+    [home],
+  );
   const [tx, , tz] = recipe.camera.target;
   return (
     <>
     {/* фон — прямо у сцены (attach="background" цепляется к родителю), остальное в группе, которую не «утилизировать»:
         бруски и текстуры общие со складом */}
     {recipe.background && <color attach="background" args={[recipe.background]} />}
+    {/* лёгкая дымка цвета фона: задник не спорит с героем сцены */}
+    {recipe.background && (
+      <fog attach="fog" args={[recipe.background, recipe.camera.distance + BACKDROP.fogFrom, recipe.camera.distance + BACKDROP.fogTo]} />
+    )}
     <group dispose={null}>
       <Aim cam={recipe.camera} />
       <hemisphereLight args={[L.skyColor, L.groundColor, L.sky * Math.PI]} />
@@ -205,10 +215,10 @@ function Stage({ recipe, look, product }: { recipe: VignetteRecipe; look: DogLoo
         color={L.sunColor}
         intensity={L.sun * Math.PI}
         shadow-mapSize={[1024, 1024]}
-        shadow-camera-left={-6}
-        shadow-camera-right={6}
-        shadow-camera-top={6}
-        shadow-camera-bottom={-6}
+        shadow-camera-left={-8}
+        shadow-camera-right={8}
+        shadow-camera-top={8}
+        shadow-camera-bottom={-8}
         shadow-camera-near={1}
         shadow-camera-far={30}
         shadow-bias={L.shadowBias}
@@ -218,9 +228,10 @@ function Stage({ recipe, look, product }: { recipe: VignetteRecipe; look: DogLoo
       {recipe.background && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
           <planeGeometry args={[30, 30]} />
-          <meshStandardMaterial color={PALETTE.floor} map={floorMap} />
+          <meshStandardMaterial color={home ? BACKDROP.homeFloor : PALETTE.floor} map={floorMap} />
         </mesh>
       )}
+      {backdrop && <Backdrop kind={backdrop} />}
       {still.length > 0 && <VoxelBatch parts={still} soft="strong" />}
       {recipe.props.map((p, i) => {
         switch (p.kind) {

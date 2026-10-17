@@ -56,12 +56,15 @@ export const boxesFallen = (): VignetteProp[] => [
  * `pose`, `mood` — как собака относится к итогу.
  */
 export const customer = (reaction: 'good' | 'bad', pose: VignettePose, mood: VignetteMood, extra: VignetteProp[] = []): VignetteRecipe =>
-  scene(dog(pose, mood, null, [0.25, 0, 0.45], 0.2), [
-    { kind: 'door', at: [-1.45, 0, -0.9] },
-    { kind: 'bag', at: [-1.25, 0, -0.25], turn: 0.3 },
-    { kind: 'phone', at: [1.25, 1.35, 0.1], turn: -0.15, reaction },
-    ...extra,
-  ], WIDE_CAMERA);
+  ({
+    ...scene(dog(pose, mood, null, [0.25, 0, 0.45], 0.2), [
+      { kind: 'door', at: [-1.45, 0, -2.45] },              // дверь — у стены дома (задник home)
+      { kind: 'bag', at: [-1.25, 0, -1.8], turn: 0.3 },
+      { kind: 'phone', at: [1.25, 1.35, 0.1], turn: -0.15, reaction },
+      ...extra,
+    ], WIDE_CAMERA),
+    backdrop: 'home',
+  });
 
 /** Стол фасовки с пакетом заказа. */
 export const packing = (): VignetteProp[] => [
@@ -71,3 +74,16 @@ export const packing = (): VignetteProp[] => [
 
 /** Второй стеллаж правее — «соседняя полка». */
 export const NEIGHBOR_AT: V3 = [1.85, 0, -0.75];
+
+// ── Приёмка (V2c): зона у ворот ──
+/** Паллета поставки слева от собаки. */
+export const PALLET_AT: V3 = [-0.9, 0, -0.55];
+export const pallet = (boxes = 8, at: V3 = PALLET_AT): VignetteProp => ({ kind: 'pallet', at, boxes });
+/** Грузовик у ворот — справа сзади, кабиной от камеры (задний край ближе к нам). */
+export const truck = (): VignetteProp => ({ kind: 'truck', at: [2.5, 0, -5.4] });
+/** Водитель поставки (собака своей породы в своей одежде, решение 17.10). */
+export const driver = (pose: VignettePose, mood: VignetteMood, hold: VignetteHold = null, at: V3 = [1.35, 0, 0.25], turn = -0.7): VignetteProp =>
+  ({ kind: 'npc', role: 'driver', at, turn, pose, mood, hold });
+/** Сцена у ворот: паллета, грузовик сзади (если `withTruck`), собака и что ещё нужно. Камера — широкая. */
+export const dock = (d: VignetteActor, extra: VignetteProp[] = [], boxes = 8, withTruck = true): VignetteRecipe =>
+  ({ ...scene(d, [pallet(boxes), ...(withTruck ? [truck()] : []), ...extra], WIDE_CAMERA), backdrop: 'dock' });
