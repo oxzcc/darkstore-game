@@ -10,7 +10,7 @@
   --primary-hi: #5CB80F;
   --primary-lo: #2D6200;
   --card: #FFF9EC;          /* подложки карточек, слегка тёплые */
-  --window: #F6EEDD;        /* фон больших окон */
+  --window: #F9EEDB;        /* фон больших окон, однотонный (18.10) */
   --text: #3A342A;
   --text-mute: #8C8270;
   --outline: #D6C4A0;       /* светлые линии внутри окон (разделители, рамки чеков) */
@@ -59,12 +59,8 @@ button { font-family: inherit; }
 /* кнопки и в окнах остаются «объёмными» */
 .btn > .vx > .vx-edge { background: var(--edge-color); box-shadow: var(--shadow); }
 .btn > .vx > .vx-edge > .vx-body { background: var(--card); }
-/* большие окна: фон чуть темнее и еле заметный шахматный узор (08, раздел 3.1) */
-.vx-body.window {
-  background-color: var(--window);
-  background-image: conic-gradient(rgba(140, 105, 50, 0.05) 25%, transparent 0 50%, rgba(140, 105, 50, 0.05) 0 75%, transparent 0);
-  background-size: 48px 48px;
-}
+/* большие окна: однотонный фон (правка автора 18.10: шахматный узор убран) */
+.vx-body.window { background: var(--window); }
 
 /* ---------- раскладка поверх сцены ---------- */
 .hud { position: absolute; inset: 0; pointer-events: none; }
