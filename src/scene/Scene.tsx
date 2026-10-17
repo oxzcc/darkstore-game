@@ -78,7 +78,7 @@ export default function Scene({ map, stock, pinLayer }: Props) {
       <Life map={map} />
       <Warehouse map={map} stock={stock} />
       <Deliveries map={map} />
-      <Pickers />
+      <Pickers layer={pinLayer} />
       <Couriers map={map} />
       <TaskPins map={map} layer={pinLayer} />
       <ShelfTargets map={map} />
