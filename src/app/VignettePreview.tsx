@@ -5,11 +5,12 @@ import { useState, type ReactNode } from 'react';
 import { STARTING_PICKERS } from '../config/pickers';
 import { PRODUCTS } from '../config/products';
 import {
-  RESULT_VIGNETTES, VIGNETTE,
+  RESULT_VIGNETTES, TSD_VIGNETTES, VIGNETTE, tsdVignetteKey,
   type VignetteCamera, type VignetteHold, type VignetteMood, type VignettePose, type VignetteRecipe,
 } from '../config/vignettes';
 import { SITUATION_BY_ID, SITUATIONS } from '../config/calls';
 import { PickerPortrait, ResultVignette } from '../scene/vignette/Vignette';
+import type { Outcome } from '../model/task';
 import '../ui/theme.css';
 
 const POSES: [VignettePose, string][] = [
@@ -132,6 +133,9 @@ function captionFor(key: string): string {
   return `${o.label} → ${verdict === 'ok' ? '✓ ' + o.okTitle : '✕ ' + o.badTitle}`;
 }
 
+const TSD_GAME_NAME: Record<string, string> = { depth: 'Глубина', expiry: 'Срок', barcode: 'Штрихкод' };
+const OUTCOMES: [Outcome, string][] = [['perfect', 'Идеально'], ['withErrors', 'Неплохо'], ['failed', 'Провал']];
+
 const PRODUCT_ITEMS: [string, string][] = Object.values(PRODUCTS).map((p) => [p.id, p.name]);
 const PICKER_ITEMS: [string, string][] = STARTING_PICKERS.map((p) => [p.id, p.name]);
 
@@ -149,6 +153,11 @@ export default function VignettePreview() {
   const keysOfSituation = resultKeys.filter((k) => k.startsWith(situationId + '.'));
   const [pickedKey, setResultKey] = useState(keysOfSituation[0] ?? '');
   const resultKey = keysOfSituation.includes(pickedKey) ? pickedKey : keysOfSituation[0];
+
+  const tsdSituations = SITUATIONS.filter((x) => x.tsdGame);
+  const [tsdSid, setTsdSid] = useState(tsdSituations[0]?.id ?? '');
+  const [tsdOutcome, setTsdOutcome] = useState<Outcome>('perfect');
+  const tsdRecipe = TSD_VIGNETTES[tsdVignetteKey(tsdSid, tsdOutcome)];
 
   const look = STARTING_PICKERS.find((p) => p.id === pickerId)!.look;
   const product = PRODUCTS[productId]?.look ?? null;
@@ -193,6 +202,11 @@ export default function VignettePreview() {
           </figure>
         ))}
       </div>
+
+      <h2>Итоги игр на ТСД (V2f)</h2>
+      <Row title="Ситуация"><Buttons items={tsdSituations.map((x) => [x.id, `${TSD_GAME_NAME[x.tsdGame!]} · ${situationTitle(x.id)}`] as [string, string])} value={tsdSid} onPick={setTsdSid} /></Row>
+      <Row title="Исход"><Buttons items={OUTCOMES} value={tsdOutcome} onPick={setTsdOutcome} /></Row>
+      <div className="vg-result-box">{tsdRecipe && <ResultVignette recipe={tsdRecipe} look={look} product={product} />}</div>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 // Только отображение: правила это не читают. Сцена — «рецепт»: где стоит собака, какая у неё поза и эмоция,
 // какой реквизит вокруг и откуда смотрит камера. Порода берётся от сборщика, товар — от позиции задания,
 // поэтому одна строка рецепта годится для всех сборщиков и любого товара.
-// Сделано: портрет в окне развилки (V1); набор реквизита, поз и эмоций (V2a); сцены итога сборки (V2b), приёмки (V2c), выкладки (V2d) и списания (V2e) — config/vignetteScenes/.
+// Сделано: портрет в окне развилки (V1); набор реквизита, поз и эмоций (V2a); сцены итога сборки (V2b), приёмки (V2c), выкладки (V2d) и списания (V2e), итоги игр на ТСД (V2f) — config/vignetteScenes/.
 // Ключ сцены итога: «ситуация.вариант.ok|bad» (vignetteKey); нет рецепта — в окне остаётся заглушка.
 
 import { BULLDOG, type DogLook } from './pickers';
@@ -11,6 +11,8 @@ import { ORDER_SCENES } from './vignetteScenes/order';
 import { RECEIVING_SCENES } from './vignetteScenes/receiving';
 import { PUTAWAY_SCENES } from './vignetteScenes/putaway';
 import { WRITEOFF_SCENES } from './vignetteScenes/writeoff';
+import { TSD_SCENES } from './vignetteScenes/tsd';
+import type { Outcome } from '../model/task';
 
 type V3 = [number, number, number];
 
@@ -154,4 +156,14 @@ export const vignetteKey = (situationId: string, optionId: string, worked: boole
 /** Рецепт сцены итога или null, если её ещё нет (тогда в окне заглушка). */
 export function resultVignette(situationId: string, optionId: string, worked: boolean): VignetteRecipe | null {
   return RESULT_VIGNETTES[vignetteKey(situationId, optionId, worked)] ?? null;
+}
+
+/** Сцены итога игр на ТСД (V2f). Ключ — tsdVignetteKey(ситуация, исход игры). */
+export const TSD_VIGNETTES: Record<string, VignetteRecipe> = TSD_SCENES;
+
+export const tsdVignetteKey = (situationId: string, outcome: Outcome) => `${situationId}.tsd.${outcome}`;
+
+/** Рецепт сцены итога игры на ТСД или null (тогда в окне заглушка). */
+export function tsdVignette(situationId: string, outcome: Outcome): VignetteRecipe | null {
+  return TSD_VIGNETTES[tsdVignetteKey(situationId, outcome)] ?? null;
 }
