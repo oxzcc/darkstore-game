@@ -605,3 +605,11 @@ svg.i.sm { width: 18px; height: 18px; }
 .vg-col { display: flex; flex-direction: column; gap: 16px; }
 .vg-portrait-box { width: 224px; height: 250px; background: linear-gradient(180deg, #F8F1E0 0%, #EADFC4 100%); border: 3px solid var(--outline); }
 .vg-result-box { width: min(770px, calc(100vw - 64px)); height: 260px; border: 2px solid var(--outline); background: #E8E1CC; }
+/* Конструктор и витрина сценок (?scenes, V2a) */
+.vg-field { display: flex; align-items: flex-start; gap: 12px; margin: 6px 0; }
+.vg-field > span { flex: none; width: 120px; padding-top: 6px; font-weight: 700; font-size: 14px; }
+.vg-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.vg-btn { padding: 5px 10px; font: inherit; font-size: 13px; background: #fff; color: var(--text); border: 2px solid var(--outline); cursor: pointer; }
+.vg-btn.on { background: var(--text); color: #fff; border-color: var(--text); }
+.vg-pose-box { width: min(520px, calc(100vw - 64px)); height: 420px; margin-top: 10px; border: 2px solid var(--outline); background: #E8E1CC; }
+.vg-page .vg-result-box { margin-top: 10px; }

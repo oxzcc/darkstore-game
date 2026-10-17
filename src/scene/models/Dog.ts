@@ -10,8 +10,9 @@ import { PALETTE } from '../../config/palette';
 import type { DogLook } from '../../config/pickers';
 import type { VoxelPart } from './ProductItem';
 
-/** Форма: сборщик (фартук, белые рукава) или курьер (W8a, art/reference/character_courier_*.png: открытая зелёная куртка). */
-export type DogOutfit = 'picker' | 'courier';
+/** Форма: сборщик (фартук, белые рукава), курьер (W8a, art/reference/character_courier_*.png: открытая зелёная куртка)
+ *  или водитель поставки (V2a, только в сценках-иллюстрациях: оранжевая кепка, синяя рубашка, сигнальный жилет). */
+export type DogOutfit = 'picker' | 'courier' | 'driver';
 
 export type DogPartName = 'body' | 'head' | 'legL' | 'legR' | 'armL' | 'armR' | 'tail';
 export type DogRigPart = { pivot: [number, number, number]; parts: VoxelPart[] };
@@ -47,6 +48,12 @@ function builder() {
 
 function torso(outfit: DogOutfit): VoxelPart[] {
   const { parts, rb } = builder();
+  if (outfit === 'driver') {
+    rb(0.64, 0.56, 0.42, PALETTE.driverShirt, 0, 0, 0);       // рубашка
+    rb(0.66, 0.44, 0.44, PALETTE.driverVest, 0, 0.1, 0);       // жилет (чуть больше рубашки — грани не совпадают)
+    rb(0.67, 0.06, 0.45, PALETTE.driverStripe, 0, 0.2, 0);    // светоотражающая полоса
+    return parts;
+  }
   if (outfit === 'courier') {
     // как на character_courier_*.png: открытая зелёная куртка поверх белой футболки
     rb(0.62, 0.54, 0.4, WHITE, 0, 0.01, 0);     // футболка
@@ -63,7 +70,11 @@ function torso(outfit: DogOutfit): VoxelPart[] {
 
 function leg(outfit: DogOutfit): VoxelPart[] {
   const { parts, rb } = builder();
-  rb(0.22, 0.34, 0.24, PALETTE.pants, 0, -0.4, 0);   // штанина
+  rb(0.22, 0.34, 0.24, outfit === 'driver' ? PALETTE.driverJeans : PALETTE.pants, 0, -0.4, 0);   // штанина
+  if (outfit === 'driver') {
+    rb(0.26, 0.15, 0.36, PALETTE.boots, 0, -0.47, 0.05);   // рабочие ботинки
+    return parts;
+  }
   if (outfit === 'courier') {
     // у курьера наоборот: зелёный кроссовок с белой подошвой и белой полоской
     rb(0.26, 0.13, 0.36, GREEN, 0, -0.43, 0.05);
@@ -78,6 +89,11 @@ function leg(outfit: DogOutfit): VoxelPart[] {
 
 function arm(look: DogLook, outfit: DogOutfit): VoxelPart[] {
   const { parts, rb } = builder();
+  if (outfit === 'driver') {
+    rb(0.18, 0.42, 0.2, PALETTE.driverShirt, 0, -0.5, 0);  // рукав рубашки
+    rb(0.17, 0.15, 0.19, look.fur, 0, -0.66, 0);           // кисть
+    return parts;
+  }
   if (outfit === 'courier') {
     // короткий зелёный рукав куртки с белой полосой, дальше лапа
     rb(0.2, 0.3, 0.22, GREEN, 0, -0.32, 0);
@@ -91,7 +107,7 @@ function arm(look: DogLook, outfit: DogOutfit): VoxelPart[] {
   return parts;
 }
 
-function head(look: DogLook): VoxelPart[] {
+function head(look: DogLook, cap: string = GREEN): VoxelPart[] {
   const { parts, rb } = builder();
   rb(0.78, 0.66, 0.7, look.fur, 0, 0, 0);                    // голова
   rb(0.5, 0.34, 0.08, look.face, 0, 0.02, 0.33);             // светлая «маска»
@@ -112,8 +128,8 @@ function head(look: DogLook): VoxelPart[] {
       if (look.earInner) rb(0.16, 0.26, 0.04, look.earInner, s * 0.34, 0.63, -0.05, -s * 0.3);
     }
   }
-  rb(0.82, 0.24, 0.76, GREEN, 0, 0.6, -0.02);                // кепка (чуть глубже головы, чтобы лоб не просвечивал)
-  rb(0.66, 0.06, 0.34, GREEN, 0, 0.61, 0.48);                // козырёк
+  rb(0.82, 0.24, 0.76, cap, 0, 0.6, -0.02);                // кепка (чуть глубже головы, чтобы лоб не просвечивал)
+  rb(0.66, 0.06, 0.34, cap, 0, 0.61, 0.48);                // козырёк
   rb(0.12, 0.06, 0.12, PALETTE.uniformDark, 0, 0.84, 0);     // пуговка
   return parts;
 }
@@ -131,7 +147,7 @@ export function dogRig(look: DogLook, outfit: DogOutfit = 'picker'): DogRig {
   const at = (name: DogPartName, parts: VoxelPart[]) => ({ pivot: PIVOTS[name] as V3, parts });
   return {
     body: at('body', torso(outfit)),
-    head: at('head', head(look)),
+    head: at('head', head(look, outfit === 'driver' ? PALETTE.driverCap : GREEN)),
     legL: at('legL', leg(outfit)),
     legR: at('legR', leg(outfit)),
     armL: at('armL', arm(look, outfit)),
@@ -139,6 +155,9 @@ export function dogRig(look: DogLook, outfit: DogOutfit = 'picker'): DogRig {
     tail: at('tail', tail(look)),
   };
 }
+
+/** Плечо (точка поворота руки) и длина руки до середины кисти, м — для расчёта «куда дотянется кисть» (сценки, V2a). */
+export const DOG_ARM = { shoulderX: PIVOTS.armR[0], shoulderY: PIVOTS.armR[1], reach: 0.735 };
 
 /** Поза рук, когда собака катит тележку: руки вперёд к ручке (поворот вокруг x, радианы) — как в рендере. */
 export const ARMS_ON_CART = -1.25;
