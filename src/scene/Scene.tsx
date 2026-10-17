@@ -1,5 +1,5 @@
 // 3D-сцена: камера (CameraRig: изометрия и вид «глазами сборщика»), склад, грузовик и паллеты поставок, сборщики, курьеры и пакеты заказов, фон (машины, ветер, птицы, бабочки — Life),
-// выбор стеллажа в мини-игре (RackPicking) и клик по товару у стеллажа (RackCloseup), полка-пятнашки «Глубины» (DepthShelf).
+// пины новых заданий (TaskPins), выбор стеллажа в мини-игре (RackPicking) и клик по товару у стеллажа (RackCloseup), полка-пятнашки «Глубины» (DepthShelf).
 // Сцена только рисует карту, которую ей передали.
 import { useLayoutEffect, useRef } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
@@ -21,8 +21,10 @@ import Deliveries from './Deliveries';
 import World from './World';
 import Couriers from './Couriers';
 import Life from './Life';
+import TaskPins from './TaskPins';
 
-type Props = { map: WarehouseMap; stock: Stock };
+/** pinLayer — слой страницы под интерфейсом, куда рисуются пины заданий (его создаёт App). */
+type Props = { map: WarehouseMap; stock: Stock; pinLayer: HTMLElement | null };
 
 // Свет подобран так, чтобы верх объектов был ровно цвета палитры, а бока — темнее (числа — WAREHOUSE_VIEW.light).
 // Без обработки цветов (flat) Three.js делит свет на π, поэтому умножаем на π.
@@ -63,7 +65,7 @@ function Sun({ map }: { map: WarehouseMap }) {
   );
 }
 
-export default function Scene({ map, stock }: Props) {
+export default function Scene({ map, stock, pinLayer }: Props) {
   // flat — без «киношной» обработки цветов, чтобы они совпадали с палитрой из 08.
   return (
     // Камера перспективная, но дома смотрит издалека с узким углом — выглядит как изометрия (CameraRig).
@@ -76,8 +78,9 @@ export default function Scene({ map, stock }: Props) {
       <Life map={map} />
       <Warehouse map={map} stock={stock} />
       <Deliveries map={map} />
-      <Pickers />
+      <Pickers layer={pinLayer} />
       <Couriers map={map} />
+      <TaskPins map={map} layer={pinLayer} />
       <ShelfTargets map={map} />
       <RackPicking map={map} />
       <RackCloseup map={map} stock={stock} />

@@ -12,8 +12,8 @@ import { palletBoxes, palletTopY } from './models/Pallet';
 import { dogAction, phaseOffset } from './dogAnim';
 import { blocksCloseup } from './closeupView';
 import { closeupFocus } from '../store/selectors';
-import SceneHtml from './SceneHtml';
-import type { CSSProperties } from 'react';
+import { Html } from '@react-three/drei';
+import { useMemo, type CSSProperties, type RefObject } from 'react';
 
 const CALL_Y = 2.6; // «!» над головой собаки (рост ~1,9 м, W7a); покачивается, как метка на рендере
 // Тележка — у заданий, где сборщик возит товар: сборка и выкладка (W7, решение автора 16.10, вариант «а»).
@@ -51,14 +51,15 @@ function Route({ p, from }: { p: PickerData; from: [number, number, number] }) {
 }
 
 /** Красный «!» над сборщиком, которому нужна помощь: по контуру убывает таймер, клик открывает окно развилки. */
-function CallBang({ pickerId, pos }: { pickerId: string; pos: [number, number, number] }) {
+// Рисуется в слой пинов под интерфейсом (как пины заданий, T1): окна всегда поверх «!» (правка автора 18.10).
+function CallBang({ pickerId, pos, layer }: { pickerId: string; pos: [number, number, number]; layer: RefObject<HTMLElement> }) {
   const call = useGameStore((s) => s.game.calls.find((c) => c.pickerId === pickerId));
   const time = useGameStore((s) => s.game.clock.time);
   const openCall = useGameStore((s) => s.openCall);
   if (!call) return null;
   const left = call.expiresAt === null ? 1 : Math.max(0, call.expiresAt - time) / CALLS.answerSeconds;
   return (
-    <SceneHtml position={[pos[0], CALL_Y + Math.sin(time * WAREHOUSE_VIEW.pickerAnim.callBobSpeed) * WAREHOUSE_VIEW.pickerAnim.callBob, pos[2]]} center zIndexRange={[20, 0]}>
+    <Html position={[pos[0], CALL_Y + Math.sin(time * WAREHOUSE_VIEW.pickerAnim.callBobSpeed) * WAREHOUSE_VIEW.pickerAnim.callBob, pos[2]]} center portal={layer} zIndexRange={[20, 0]}>
       <button className="call-bang" title="Нужна помощь — нажмите" onClick={() => openCall(call.id)}>
         <svg viewBox="0 0 44 44" className="call-bang-timer" aria-hidden>
           <rect x="2" y="2" width="40" height="40" pathLength={100} className="track" />
@@ -66,7 +67,7 @@ function CallBang({ pickerId, pos }: { pickerId: string; pos: [number, number, n
         </svg>
         <span>!</span>
       </button>
-    </SceneHtml>
+    </Html>
   );
 }
 
@@ -74,8 +75,10 @@ function CallBang({ pickerId, pos }: { pickerId: string; pos: [number, number, n
 const lastAngle = new Map<string, number>();
 const DEFAULT_ANGLE = Math.PI / 4;
 
-export default function Pickers() {
+/** layer — слой пинов под интерфейсом (создаёт App); пока его нет, «!» не рисуется. */
+export default function Pickers({ layer }: { layer: HTMLElement | null }) {
   const pickers = useGameStore((s) => s.game.pickers);
+  const portal = useMemo(() => ({ current: layer }) as RefObject<HTMLElement>, [layer]);
   const tasks = useGameStore((s) => s.game.tasks);
   const deliveries = useGameStore((s) => s.game.deliveries);
   const pallets = useGameStore((s) => s.game.pallets);
@@ -127,7 +130,7 @@ export default function Pickers() {
               throwTarget={throwTarget}
             />
             {/* нужна помощь (развилка) — красный «!» над головой с таймером по контуру; клик — окно (решение автора 13.10) */}
-            {p.state === 'calling' && <CallBang pickerId={p.id} pos={pose.dog} />}
+            {p.state === 'calling' && layer && <CallBang pickerId={p.id} pos={pose.dog} layer={portal} />}
           </group>
         );
       })}

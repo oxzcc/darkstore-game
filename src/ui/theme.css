@@ -63,7 +63,7 @@ button { font-family: inherit; }
 .vx-body.window { background: var(--window); }
 
 /* ---------- раскладка поверх сцены ---------- */
-.hud { position: absolute; inset: 0; pointer-events: none; }
+.hud { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
 .hud > * { pointer-events: auto; }
 
 .panel-title {
@@ -625,3 +625,27 @@ svg.i.sm { width: 18px; height: 18px; }
 .vg-btn.on { background: var(--text); color: #fff; border-color: var(--text); }
 .vg-pose-box { width: min(520px, calc(100vw - 64px)); height: 420px; margin-top: 10px; border: 2px solid var(--outline); background: #E8E1CC; }
 .vg-page .vg-result-box { margin-top: 10px; }
+
+/* ---------- T1, 18.10: пины заданий на складе (вариант «а»: иконка с кольцом-таймером, хвостик — одно целое с кругом) ---------- */
+/* слой пинов (пины заданий и «!» развилок) — между сценой и интерфейсом (App): окна всегда поверх пинов; клики сквозь слой — в сцену, кроме самих пинов */
+.pin-layer { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.pin-layer .task-pin, .pin-layer .call-bang { pointer-events: auto; }
+/* Html из drei ставит левый верхний угол в точку — сдвигаем, чтобы в точке было остриё хвостика */
+.task-pin-anchor { transform: translate(-50%, -100%); }
+.task-pin { position: relative; display: block; width: 46px; height: 57px; padding: 0; border: 0; background: none; cursor: pointer;
+  animation: pop 0.25s ease-out; transition: transform 0.12s ease-out; }
+.task-pin:hover { transform: translateY(-3px); }
+.task-pin-body { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 4px 0 var(--shadow-c)); }
+.task-pin-body .shape { fill: var(--window); stroke: var(--edge-color); stroke-width: 3; stroke-linejoin: round; }
+.task-pin-body .track { fill: none; stroke: var(--track); stroke-width: 5; }
+.task-pin-body .left { fill: none; stroke: var(--pin); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 100 100; }
+.task-pin-body .tile { fill: var(--tint); }
+.task-pin-icon { position: absolute; left: 50%; top: 40.5%; width: 19px; height: 19px; transform: translate(-50%, -50%); color: var(--text); pointer-events: none; }
+/* последние секунды срока (DEADLINE.warnSeconds) — кольцо красное, пин подпрыгивает */
+.task-pin.warn .left { stroke: var(--failed); }
+.task-pin.warn { animation: pop 0.25s ease-out, pin-hop 0.9s ease-in-out infinite; }
+@keyframes pin-hop { 0%, 100% { transform: none; } 50% { transform: translateY(-4px); } }
+/* просрочено (выкладка, списание): срока больше нет, награды тоже — пин бледнее, кольцо пустое */
+.task-pin.overdue { opacity: 0.6; }
+/* открыто окно «Кого отправить?» для этого задания */
+.task-pin.selected .shape { stroke: var(--primary); stroke-width: 4; }
