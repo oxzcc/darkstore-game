@@ -43,3 +43,18 @@ export function nameForm(name: string): string {
   if (/[бвгджзйклмнпрстфхцчшщ]$/.test(name)) return `${name}а`; // Коржик → Коржика, Буран → Бурана
   return name; // Лаки — не склоняется
 }
+
+/** Характеристики сборщика собачьими словами (решение автора 18.10). Бодрость = 100% − усталость: у всех трёх «больше — лучше». */
+export const STAT_LOOK = {
+  speed: { name: 'Лапы', icon: 'paw', hint: 'как быстро ходит и работает' },
+  accuracy: { name: 'Нюх', icon: 'nose', hint: 'как редко ошибается' },
+  energy: { name: 'Бодрость', icon: 'energy', hint: 'падает после каждого задания, растёт на перерыве' },
+} as const satisfies Record<string, { name: string; icon: IconName; hint: string }>;
+
+/** «Опыт сборки» — опыт по типу задания в родительном падеже. */
+export const EXP_NAME: Record<TaskType, string> = {
+  order: 'Опыт сборки',
+  putaway: 'Опыт выкладки',
+  receiving: 'Опыт приёмки',
+  writeoff: 'Опыт списания',
+};
