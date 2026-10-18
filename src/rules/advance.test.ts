@@ -8,6 +8,7 @@ import { gameWithDelivery } from './testing';
 import { openOrders, openTasks } from './tasks/generator';
 import { dispatchTask } from './tasks/lifecycle';
 import { advanceWorld } from './advance';
+import { outcomeAt } from './outcome';
 import { pickerActivity, etaToTask } from './jobs';
 import { pickSeconds, secondsPerCell, worldDt } from './time';
 
@@ -82,6 +83,10 @@ describe('выполнение задания', () => {
     expect(['perfect', 'withErrors', 'failed'].includes(t.outcome!)).toBe(true);
     expect(events).toHaveLength(1);
     expect(events[0].kind === 'taskDone' && events[0].outcome).toBe(t.outcome);
+    // без развилки — событие несёт бросок для барабана (P3), и он указывает ровно на выпавший исход
+    const done = events[0];
+    expect(done.kind === 'taskDone' && done.roll).toBeTruthy();
+    if (done.kind === 'taskDone' && done.roll) expect(outcomeAt(done.roll.chances, done.roll.value)).toBe(t.outcome);
     // свободен и стоит в зоне фасовки — там, где закончил (07, раздел 2)
     const p = s3.pickers.lucky;
     expect(p.state).toBe('idle');

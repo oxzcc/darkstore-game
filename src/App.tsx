@@ -13,6 +13,7 @@ import TsdHint from './ui/TsdHint';
 import TsdPanel from './ui/TsdPanel';
 import CallWindow from './ui/CallWindow';
 import ResultWindow from './ui/ResultWindow';
+import RollWindow from './ui/RollWindow';
 import SpeedControls from './ui/SpeedControls';
 import CameraControls from './ui/CameraControls';
 import TopBar from './ui/TopBar';
@@ -56,6 +57,7 @@ export default function App() {
         <TsdPanel />
         <CallWindow renderPortrait={renderPortrait} />
         <ResultWindow renderArt={renderArt} />
+        <RollWindow />
         {!closeup && <TopBar />}
         <SpeedControls />
         {!closeup && <CameraControls />}
