@@ -37,13 +37,17 @@ export default function AssignDialog({ renderPortrait }: { renderPortrait?: (pic
   const game = useGameStore((s) => s.game);
   const taskId = useGameStore((s) => s.ui.assignTaskId);
   const { choosePicker, closeAssign, sendChosenPicker } = useGameStore.getState();
-  const [why, setWhy] = useState<Record<string, boolean>>({});
+  // «Почему такие шансы?» — всплывающее окно рядом с «?» поверх карточки (правка автора 18.10); одно на всё окно
+  const [why, setWhy] = useState<{ pickerId: string; rect: DOMRect } | null>(null);
 
   const task = taskId ? game.tasks[taskId] : null;
 
   useEffect(() => {
     if (!task) return;
-    const onKey = (e: KeyboardEvent) => { if (e.code === 'Escape') closeAssign(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== 'Escape') return;
+      setWhy((w) => { if (!w) closeAssign(); return null; }); // Esc сначала закрывает расчёт, потом окно
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [task, closeAssign]);
@@ -57,7 +61,7 @@ export default function AssignDialog({ renderPortrait }: { renderPortrait?: (pic
 
   return (
     <div className="ac-veil" onClick={closeAssign}>
-      <div className="ac-wrap" onClick={(e) => e.stopPropagation()}>
+      <div className="ac-wrap" onClick={(e) => { e.stopPropagation(); setWhy(null); }}>
       <Vx className="ac-window" bodyClass="window">
         <div className="ac-inner">
           <TaskHead task={task} />
@@ -73,8 +77,8 @@ export default function AssignDialog({ renderPortrait }: { renderPortrait?: (pic
                   task={task}
                   busy={busy}
                   portrait={renderPortrait?.(p)}
-                  open={!!why[p.id]}
-                  onWhy={() => setWhy((w) => ({ ...w, [p.id]: !w[p.id] }))}
+                  open={why?.pickerId === p.id}
+                  onWhy={(rect) => setWhy((w) => (w?.pickerId === p.id ? null : { pickerId: p.id, rect }))}
                   onSend={() => send(p.id)}
                 />
               );
@@ -83,6 +87,42 @@ export default function AssignDialog({ renderPortrait }: { renderPortrait?: (pic
         </div>
       </Vx>
       </div>
+      {why && game.pickers[why.pickerId] && (
+        <WhyPopover view={assignCardView(game, why.pickerId, task.id)} task={task} rect={why.rect} />
+      )}
+    </div>
+  );
+}
+
+const POP_W = 270;
+/** Расчёт шанса — поверх, справа от «?» (не влезает — слева), по высоте в пределах экрана. */
+function WhyPopover({ view, task, rect }: { view: AssignCardView | null; task: Task; rect: DOMRect }) {
+  if (!view) return null;
+  const { picker: p, breakdown, eta } = view;
+  const { chances, parts } = breakdown;
+  const right = rect.right + 10 + POP_W <= window.innerWidth - 8;
+  const left = right ? rect.right + 10 : Math.max(8, rect.left - 10 - POP_W);
+  const top = Math.min(Math.max(8, rect.top - 60), window.innerHeight - 300);
+  return (
+    <div
+      className={`ac-pop ${right ? 'to-right' : 'to-left'}`}
+      style={{ left, top, width: POP_W, '--pc': p.color, '--arrow-y': `${rect.top + rect.height / 2 - top}px` } as CSSProperties}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <b>{p.name}: шанс «{OUTCOME_LOOK.perfect.name}»</b>
+      {parts.map((x, i) => (
+        <span key={i} className="row">
+          <span>{partLabel(x, task.type)}</span>
+          <span className={x.kind === 'base' ? '' : x.value > 0.0005 ? 'plus' : x.value < -0.0005 ? 'minus' : 'zero'}>
+            {x.kind === 'base' ? `${pct(x.value)}%` : signed(x.value)}
+          </span>
+        </span>
+      ))}
+      <span className="row total"><span>Итого</span><span>{pct(chances.perfect)}%</span></span>
+      <span className="ac-mute">
+        {OUTCOME_LOOK.withErrors.name} {pct(chances.withErrors)}%, {OUTCOME_LOOK.failed.name.toLowerCase()} {pct(chances.failed)}%.
+        {' '}{STAT_LOOK.speed.name} {p.stats.speed}: {eta === null ? 'дорога —' : `до места ${clockText(eta)}`}.
+      </span>
     </div>
   );
 }
@@ -127,7 +167,7 @@ type CardProps = {
   busy: string | null;
   portrait: ReactNode;
   open: boolean;
-  onWhy: () => void;
+  onWhy: (rect: DOMRect) => void;
   onSend: () => void;
 };
 
@@ -137,7 +177,7 @@ type CardProps = {
  * Лапы, Нюх и опыт по всем типам — в расчёте шансов и в профиле; бодрость — плашкой, только когда устал.
  */
 function PickerCard({ view, task, busy, portrait, open, onWhy, onSend }: CardProps) {
-  const { picker: p, breakdown, eta, total } = view;
+  const { picker: p, breakdown, total } = view;
   const { chances, parts } = breakdown;
   const level = p.specialization[task.type]?.level ?? 1;
   const tired = p.stats.fatigue >= TIRED_BADGE_FROM ? parts.find((x) => x.kind === 'fatigue')?.value ?? 0 : null;
@@ -175,31 +215,12 @@ function PickerCard({ view, task, busy, portrait, open, onWhy, onSend }: CardPro
             </span>
             <button
               className={`ac-q${open ? ' on' : ''}`}
-              onClick={(e) => { e.stopPropagation(); onWhy(); }}
+              onClick={(e) => { e.stopPropagation(); onWhy(e.currentTarget.getBoundingClientRect()); }}
               aria-expanded={open}
               aria-label="Почему такие шансы?"
               title="Почему такие шансы?"
             >?</button>
           </div>
-          {open && (
-            <div className="ac-breakdown" onClick={(e) => e.stopPropagation()}>
-              <b>Шанс «{OUTCOME_LOOK.perfect.name}»</b>
-              {parts.map((x, i) => (
-                <span key={i} className="row">
-                  <span>{partLabel(x, task.type)}</span>
-                  <span className={x.kind === 'base' ? '' : x.value > 0.0005 ? 'plus' : x.value < -0.0005 ? 'minus' : 'zero'}>
-                    {x.kind === 'base' ? `${pct(x.value)}%` : signed(x.value)}
-                  </span>
-                </span>
-              ))}
-              <span className="row total"><span>Итого</span><span>{pct(chances.perfect)}%</span></span>
-              <span className="ac-mute">
-                {OUTCOME_LOOK.withErrors.name} {pct(chances.withErrors)}%, {OUTCOME_LOOK.failed.name.toLowerCase()} {pct(chances.failed)}%.
-                {' '}{STAT_LOOK.speed.name} {p.stats.speed}: {eta === null ? 'дорога —' : `до места ${clockText(eta)}`}.
-              </span>
-            </div>
-          )}
-
           <div className="ac-time">
             {busy ? <span>Сейчас занят</span> : total === null ? <span>Не дойти</span> : <span>Готово через <b>~{clockText(total)}</b></span>}
           </div>
