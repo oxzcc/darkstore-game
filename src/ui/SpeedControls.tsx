@@ -1,7 +1,8 @@
 // Пауза / ×1 / ×2 справа сверху (ui_01; 08, раздел 10.4: ×2 остаётся).
 // Пока открыто окно назначения, горит «пауза» — это автопауза (02, раздел 2).
 // Пока игрок с ТСД, мир на паузе: остальной мир замедлен (02, раздел 2; 08, раздел 10.4).
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
+import { isMuted, setMuted, subscribeMuted, unlockAudio } from '../audio/engine';
 import { TSD } from '../config/balance';
 import { useGameStore } from '../store/gameStore';
 import Vx from './Vx';
@@ -16,6 +17,8 @@ export default function SpeedControls() {
   const [confirming, setConfirming] = useState(false);
   const slowed = useGameStore((s) => s.game.minigame !== null);
   const paused = clock.paused || autopause;
+  // звук (M9e): «без звука» помнится в браузере
+  const muted = useSyncExternalStore(subscribeMuted, isMuted);
   const slowText = `×${String(TSD.worldSpeedDuringGame).replace('.', ',')}`;
 
   return (
@@ -42,6 +45,10 @@ export default function SpeedControls() {
           <Vx>×{v}</Vx>
         </button>
       ))}
+      <button className={`btn sq${muted ? '' : ' on'}`} title={muted ? 'Включить звук' : 'Выключить звук'}
+        onClick={() => { unlockAudio(); setMuted(!muted); }}>
+        <Vx><Icon name={muted ? 'mute' : 'sound'} /></Vx>
+      </button>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { useGameStore, type ResultCard } from '../store/gameStore';
 import { resultView } from '../store/selectors';
 import { OUTCOME_LOOK, TSD_GAME_NAME } from './labels';
 import ReelTsd, { type ReelSeg } from './ReelTsd';
+import { play } from '../audio/engine';
 import { FinalFrame, Join, StoryFrame } from './ResultFrames';
 import Icon from './icons';
 
@@ -43,6 +44,13 @@ function Result({ card, renderArt, renderPortrait }: Props & { card: ResultCard 
     const t = setTimeout(() => setDone(true), 500);
     return () => clearTimeout(t);
   }, [reel]);
+
+  // итог виден — звук (M9e): у барабана «Сработало / Осложнение», у игры на ТСД — исход задания
+  useEffect(() => {
+    if (!done) return;
+    if (reel) play(reel.complication ? 'complication' : 'worked', { delay: 0.12 });
+    else play(card.reveal.final);
+  }, [done]);
 
   const segs = useMemo<ReelSeg[]>(() => (reel ? [
     { key: 'ok', share: 1 - reel.chance, color: OUTCOME_LOOK.perfect.color, icon: 'check' },
