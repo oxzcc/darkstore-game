@@ -4,7 +4,11 @@
 
 export type HintId = 'start' | 'order' | 'receiving' | 'putaway' | 'writeoff' | 'call' | 'tsd';
 
-export const HINTS: { id: HintId; title: string; text: string }[] = [
+// focus — что подсветить, пока открыта подсказка (правка автора 18.10): элементы с таким data-tut
+// остаются светлыми, остальной экран затемняется. Без focus — затемнено всё.
+export type HintFocus = 'pin-order' | 'pin-receiving' | 'pin-putaway' | 'pin-writeoff' | 'call' | 'tsd';
+
+export const HINTS: { id: HintId; title: string; text: string; focus?: HintFocus }[] = [
   {
     id: 'start',
     title: 'Первая смена — обучающая',
@@ -14,30 +18,36 @@ export const HINTS: { id: HintId; title: string; text: string }[] = [
     id: 'order',
     title: 'Сборка заказа',
     text: 'Клиент ждёт заказ. Кликните на значок задания над столами фасовки и выберите сборщика — у каждого свои шансы на «идеально». Задание надо успеть взять, пока идёт таймер.',
+    focus: 'pin-order',
   },
   {
     id: 'receiving',
     title: 'Приёмка',
     text: 'У ворот грузовик с паллетами. Отправьте сборщика принять поставку — после неё появятся задания на выкладку.',
+    focus: 'pin-receiving',
   },
   {
     id: 'putaway',
     title: 'Выкладка',
     text: 'Принятые паллеты нужно разложить по полкам. Сборщик сам развезёт товар по адресам — после этого его можно продавать.',
+    focus: 'pin-putaway',
   },
   {
     id: 'writeoff',
     title: 'Списание',
     text: 'У товара истекает срок — продавать его нельзя. Отправьте сборщика снять партию с полки и отнести в зону брака.',
+    focus: 'pin-writeoff',
   },
   {
     id: 'call',
     title: 'Сборщик зовёт',
     text: 'Над сборщиком «!» — он упёрся в ситуацию. Кликните на «!» и выберите, что делать. Не успеете — решит сам, но рискованнее.',
+    focus: 'call',
   },
   {
     id: 'tsd',
     title: 'Взять ТСД',
     text: 'Тёмная карточка — можно решить ситуацию самому в короткой игре. Хорошо сыграете — позиция будет идеальной, что бы ни случилось.',
+    focus: 'tsd',
   },
 ];

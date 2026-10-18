@@ -812,7 +812,13 @@ svg.i.sm { width: 18px; height: 18px; }
 .summary-growth b { color: var(--primary); }
 
 /* ---------- подсказки обучающей смены (M8d) ---------- */
-.hint-back { position: absolute; inset: 0; background: rgba(40, 30, 10, 0.25); z-index: 45; pointer-events: auto; }
+.hint-back { position: absolute; inset: 0; z-index: 45; pointer-events: auto; }
+/* затемнение с «окнами» над тем, о чём подсказка (правка автора 18.10) */
+.hint-dim { position: absolute; inset: 0; pointer-events: none; }
+.hint-shade { fill: rgba(40, 30, 10, 0.5); }
+.hint-ring { fill: none; stroke: #FFF6DC; stroke-width: 3; animation: hint-ring 1.2s ease-in-out infinite; }
+@keyframes hint-ring { 0%, 100% { stroke-opacity: 1; } 50% { stroke-opacity: 0.35; } }
+.hint-place { transition: top 0.25s ease; }
 .hint { width: 460px; max-width: calc(100vw - 32px); }
 .hint > .vx-edge > .vx-body { display: flex; flex-direction: column; }
 .hint-body { padding: 16px 20px; font-size: 16px; line-height: 1.45; text-align: center; }

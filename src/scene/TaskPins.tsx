@@ -21,7 +21,7 @@ function Pin({ pin, selected, onOpen, layer }: { pin: TaskPin; selected: boolean
   return (
     <Html position={pin.pos} portal={layer} zIndexRange={[15, 0]}>
       <div className="task-pin-anchor">
-        <button className={cls} onClick={onOpen} aria-label={look.name}
+        <button className={cls} onClick={onOpen} aria-label={look.name} data-tut={`pin-${pin.type}`}
           style={{ '--pin': look.pin, '--tint': look.tint } as CSSProperties}>
           <svg className="task-pin-body" viewBox="0 0 60 74" aria-hidden>
             {/* круг и хвостик — одна фигура: аутлайн без шва (правка автора 18.10) */}
