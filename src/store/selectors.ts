@@ -11,7 +11,7 @@ import { etaToTask, jobSecondsEstimate, pickerActivity } from '../rules/jobs';
 import { tsdOfferSecondsLeft } from '../rules/tsd';
 import { shelfContents } from '../rules/stock';
 import { takenPerLine } from '../rules/minigames/picking';
-import { callText, fillText, lineContext } from '../rules/calls';
+import { callText, complicationChance, fillText, lineContext } from '../rules/calls';
 import { taskLines } from '../rules/taskLines';
 import { expiryDate } from '../rules/minigames/expiry';
 import { pickedQty, rewardFor } from '../rules/rewards';
@@ -248,14 +248,16 @@ export type PickingView = NonNullable<ReturnType<typeof pickingView>>;
 
 /** Вариант для окна (ui_11): доступен ли он этому сборщику, описание с подстановками.
  *  Закрытые показываются серыми с требованием — как в Dispatch (13.10). */
-export type CallOptionView = CallOption & { locked: boolean; number: number | null; text: string; tsd?: boolean };
+/** chance — шанс осложнения этого варианта у этого сборщика (риск × Нюх, P4): то же число, по которому потом крутится барабан. */
+export type CallOptionView = CallOption & { locked: boolean; number: number | null; text: string; tsd?: boolean; chance: number };
 
 function optionViews(game: GameState, call: Call): CallOptionView[] {
   const ctx = lineContext(game, call.taskId, call.lineIndex, call.pickerId);
   let n = 0;
   const views: CallOptionView[] = SITUATION_BY_ID[call.situationId].options.map((o) => {
     const locked = !call.optionIds.includes(o.id);
-    return { ...o, locked, number: locked ? null : ++n, text: fillText(o.description, { ...ctx, seconds: o.seconds }) };
+    const chance = complicationChance(o.risk, game.pickers[call.pickerId]?.stats.accuracy);
+    return { ...o, locked, number: locked ? null : ++n, text: fillText(o.description, { ...ctx, seconds: o.seconds }), chance };
   });
   // «Взять ТСД» — последней карточкой, если выпала (10, раздел 11.1). Пока идёт другая игра, второй не начать.
   if (call.tsd) {
@@ -264,7 +266,7 @@ function optionViews(game: GameState, call: Call): CallOptionView[] {
     views.push({
       id: TSD_OPTION_ID, label: t.label, description: t.description, seconds: 0, risk: 'low', busyLabel: '',
       okTitle: '', okText: '', badTitle: '', badText: '',
-      tsd: true, locked: busy, number: busy ? null : ++n,
+      tsd: true, chance: 0, locked: busy, number: busy ? null : ++n,
       text: busy ? 'ТСД сейчас занят другой игрой.' : fillText(t.description, ctx),
     });
   }
