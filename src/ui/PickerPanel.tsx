@@ -16,7 +16,8 @@ export default function PickerPanel() {
       {pickerList(game.pickers).map((p) => {
         const line = activityLine(activityOf(game, p.id));
         return (
-          <Vx key={p.id} className="picker-card" style={{ '--pc': p.color } as CSSProperties} onClick={() => openProfile(p.id)}>
+          <Vx key={p.id} className="picker-card" style={{ '--pc': p.color } as CSSProperties} onClick={() => openProfile(p.id)}
+            tut={game.calls.some((c) => c.pickerId === p.id) ? 'call' : undefined}>
             <Avatar picker={p} />
             <div className="grow">
               <div className="picker-name">

@@ -81,7 +81,7 @@ function ForkCard(p: CardProps) {
         {p.options.map((o) => {
           const state = decided ? (o.id === p.chosenId ? ' chosen' : ' dim') : o.locked ? ' locked' : '';
           return (
-            <button key={o.id} className={`fork-option${o.tsd ? ' tsd' : ''}${state}`} disabled={decided || o.locked} onClick={() => p.onAnswer?.(o.id)}>
+            <button key={o.id} className={`fork-option${o.tsd ? ' tsd' : ''}${state}`} data-tut={o.tsd ? 'tsd' : undefined} disabled={decided || o.locked} onClick={() => p.onAnswer?.(o.id)}>
               <div className="fork-option-head">
                 {o.number !== null && <span className="call-key">{o.number}</span>}
                 {o.tsd && <span className="fork-tsd-icon">ТСД</span>}

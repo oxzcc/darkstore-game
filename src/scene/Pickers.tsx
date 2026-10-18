@@ -61,7 +61,7 @@ function CallBang({ pickerId, pos, layer }: { pickerId: string; pos: [number, nu
   const left = call.expiresAt === null ? 1 : Math.max(0, call.expiresAt - time) / CALLS.answerSeconds;
   return (
     <Html position={[pos[0], CALL_Y + Math.sin(time * WAREHOUSE_VIEW.pickerAnim.callBobSpeed) * WAREHOUSE_VIEW.pickerAnim.callBob, pos[2]]} center portal={layer} zIndexRange={[20, 0]}>
-      <button className="call-bang" title="Нужна помощь — нажмите" onClick={() => openCall(call.id)}>
+      <button className="call-bang" data-tut="call" title="Нужна помощь — нажмите" onClick={() => openCall(call.id)}>
         <svg viewBox="0 0 44 44" className="call-bang-timer" aria-hidden>
           <rect x="2" y="2" width="40" height="40" pathLength={100} className="track" />
           <rect x="2" y="2" width="40" height="40" pathLength={100} className="left" style={{ strokeDashoffset: 100 * (1 - left) } as CSSProperties} />
