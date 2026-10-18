@@ -34,11 +34,12 @@ type CardProps = {
   portrait?: ReactNode;
 };
 
-function Risk({ risk }: { risk: CallOptionView['risk'] }) {
+/** Риск варианта — процентом этого сборщика и полоской (P4, решение автора 18.10): ровно этот шанс потом крутит барабан. */
+function Risk({ risk, chance }: { risk: CallOptionView['risk']; chance: number }) {
   return (
-    <span className={`fork-risk risk-${risk}`}>
-      <b>{RISK_LOOK[risk].name}</b>
-      <span>{[1, 2, 3].map((b) => <i key={b} className={b <= RISK_LOOK[risk].bars ? 'on' : ''} />)}</span>
+    <span className={`fork-risk risk-${risk}`} title={`Риск ${RISK_LOOK[risk].name}; с учётом Нюха сборщика`}>
+      <b>{Math.round(chance * 100)}%</b>
+      <span className="fork-risk-bar"><i style={{ width: `${Math.min(100, chance * 100)}%` }} /></span>
     </span>
   );
 }
@@ -100,7 +101,7 @@ function ForkCard(p: CardProps) {
               ) : (
                 <>
                   <div className="fork-option-row"><span>Время сборки</span><b className={o.seconds > 0 ? 'slow' : ''}>{secondsText(o.seconds)}</b></div>
-                  <div className="fork-option-row"><span>{p.riskLabel}</span><Risk risk={o.risk} /></div>
+                  <div className="fork-option-row"><span>{p.riskLabel}</span><Risk risk={o.risk} chance={o.chance} /></div>
                 </>
               )}
             </button>

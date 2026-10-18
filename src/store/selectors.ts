@@ -11,14 +11,16 @@ import { etaToTask, jobSecondsEstimate, pickerActivity } from '../rules/jobs';
 import { tsdOfferSecondsLeft } from '../rules/tsd';
 import { shelfContents } from '../rules/stock';
 import { takenPerLine } from '../rules/minigames/picking';
-import { callText, fillText, lineContext } from '../rules/calls';
+import { callText, complicationChance, fillText, lineContext } from '../rules/calls';
 import { taskLines } from '../rules/taskLines';
 import { expiryDate } from '../rules/minigames/expiry';
 import { pickedQty, rewardFor } from '../rules/rewards';
 import { CALLS, DEPTH, EXPIRY, RESULT_XP, SITUATION_BY_ID, TSD_OPTION_ID, tsdTextFor, type CallOption } from '../config/calls';
 import type { RackRef } from '../model/minigame';
 import type { Call } from '../model/call';
-import type { CallFlash, ResultCard } from './gameStore';
+import type { CallFlash, ResultCard, RollCard } from './gameStore';
+import { TASK_REPORT } from '../config/taskReport';
+import { TIRED_BADGE_FROM } from '../config/pickers';
 import type { Address } from '../model/address';
 import type { Stock } from '../model/stock';
 import type { Cell } from '../model/warehouse';
@@ -248,14 +250,16 @@ export type PickingView = NonNullable<ReturnType<typeof pickingView>>;
 
 /** Вариант для окна (ui_11): доступен ли он этому сборщику, описание с подстановками.
  *  Закрытые показываются серыми с требованием — как в Dispatch (13.10). */
-export type CallOptionView = CallOption & { locked: boolean; number: number | null; text: string; tsd?: boolean };
+/** chance — шанс осложнения этого варианта у этого сборщика (риск × Нюх, P4): то же число, по которому потом крутится барабан. */
+export type CallOptionView = CallOption & { locked: boolean; number: number | null; text: string; tsd?: boolean; chance: number };
 
 function optionViews(game: GameState, call: Call): CallOptionView[] {
   const ctx = lineContext(game, call.taskId, call.lineIndex, call.pickerId);
   let n = 0;
   const views: CallOptionView[] = SITUATION_BY_ID[call.situationId].options.map((o) => {
     const locked = !call.optionIds.includes(o.id);
-    return { ...o, locked, number: locked ? null : ++n, text: fillText(o.description, { ...ctx, seconds: o.seconds }) };
+    const chance = complicationChance(o.risk, game.pickers[call.pickerId]?.stats.accuracy);
+    return { ...o, locked, number: locked ? null : ++n, text: fillText(o.description, { ...ctx, seconds: o.seconds }), chance };
   });
   // «Взять ТСД» — последней карточкой, если выпала (10, раздел 11.1). Пока идёт другая игра, второй не начать.
   if (call.tsd) {
@@ -264,7 +268,7 @@ function optionViews(game: GameState, call: Call): CallOptionView[] {
     views.push({
       id: TSD_OPTION_ID, label: t.label, description: t.description, seconds: 0, risk: 'low', busyLabel: '',
       okTitle: '', okText: '', badTitle: '', badText: '',
-      tsd: true, locked: busy, number: busy ? null : ++n,
+      tsd: true, chance: 0, locked: busy, number: busy ? null : ++n,
       text: busy ? 'ТСД сейчас занят другой игрой.' : fillText(t.description, ctx),
     });
   }
@@ -298,6 +302,40 @@ export function callsView(game: GameState) {
 /** Окно после ответа (подсвечен выбор). */
 export function flashView(game: GameState, f: CallFlash) {
   return { id: f.id, ...callCardView(game, f.call, f.text), chosenId: f.optionId, auto: f.auto };
+}
+
+/**
+ * Окно итога задания без развилки (P3, прототип «Окно итога задания»): доклад сборщика, из чего сложились шансы, барабан из трёх исходов, итог.
+ * Шансы и их раскладка — по сборщику до задания (`RollCard.parts`), потому что после него растут опыт и усталость.
+ */
+export function rollView(game: GameState, card: RollCard) {
+  const picker = game.pickers[card.pickerId];
+  const task = game.tasks[card.taskId];
+  if (!picker || !task) return null;
+  const ctx: Record<string, string> = task.type === 'writeoff'
+    ? { product: game.products[task.payload.productId]?.name ?? task.payload.productId, address: formatAddress(task.payload.address) }
+    : {};
+  const fill = (t: string) => t.replace(/\{(\w+)\}/g, (m, k: string) => ctx[k] ?? m);
+  const report = TASK_REPORT[task.type];
+  let accuracy = picker.stats.accuracy;
+  let level = picker.specialization[task.type]?.level ?? 1;
+  let tired: number | null = null;
+  for (const part of card.parts) {
+    if (part.kind === 'accuracy') accuracy = part.points;
+    if (part.kind === 'spec') level = part.level;
+    if (part.kind === 'fatigue' && part.fatigue >= TIRED_BADGE_FROM) tired = part.value;
+  }
+  return {
+    picker,
+    taskType: task.type,
+    taskNumber: task.number,
+    speech: fill(report.speech),
+    title: fill(report.results[card.outcome].title),
+    text: fill(report.results[card.outcome].text),
+    /** Что повлияло на шансы: Нюх, опыт по этому типу, усталость (null — не устал). */
+    why: { accuracy, level, tired },
+    xp: level >= PICKER_GROWTH.spec.maxLevel ? 0 : PICKER_GROWTH.spec.xp[card.outcome],
+  };
 }
 
 /** Окно итога задания с развилкой (ui_12): что решили, что вышло, чек с позициями и наградой. */
@@ -335,7 +373,21 @@ export function resultView(game: GameState, card: ResultCard) {
     return { name: game.products[l.productId]?.name ?? l.productId, qty: l.qty, picked: picked[i], note };
   });
   const reward = rewardFor(task, reveal.final, isTutorial(game)); // ровно то, что начислено (rules/rewards.ts)
+  // окно итога в три колонки (P4, правка автора 18.10): слева сюжет — реплика и варианты с выбранным
+  const situation = c ? SITUATION_BY_ID[c.situationId] : undefined;
+  const lineCtx = c ? lineContext(game, task.id, c.lineIndex, picker.id) : {};
+  const options = situation ? situation.options.map((o) => ({ id: o.id, label: o.label, chosen: !c?.tsd && o.id === c?.optionId })) : [];
+  if (c?.tsd) options.push({ id: TSD_OPTION_ID, label: 'Взять ТСД', chosen: true });
   return {
+    speech: situation ? fillText(situation.speech, lineCtx) : '',
+    riskLabel: situation?.riskLabel ?? '',
+    options,
+    /** Ответ вариантом (не ТСД) — барабан «Сработало / Осложнение» по шансу варианта; null — играли на ТСД. */
+    reel: c && !c.tsd ? { chance: c.chance, roll: c.roll, complication: c.complication } : null,
+    /** Какую игру на ТСД играли (для подписи в окне итога); null — ответили вариантом. */
+    tsdGame: c?.tsd ? tsdKind ?? null : null,
+    /** Ограничение варианта сработало: исход не выше этого. */
+    capped: c?.capped && option?.cap ? option.cap : null,
     taskNumber: task.number,
     taskType: task.type,
     picker,

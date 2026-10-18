@@ -18,6 +18,7 @@ import type { Call, OutcomeReveal } from '../model/call';
 import type { Address } from '../model/address';
 import { advanceWorld } from '../rules/advance';
 import { rewardFor } from '../rules/rewards';
+import { outcomeBreakdown, type ChancePart } from '../rules/outcome';
 import { worldDt } from '../rules/time';
 import { finishCampaign, startNextShift } from '../rules/shift';
 import { endRest, sendToRest } from '../rules/rest';
@@ -38,11 +39,13 @@ export type Gain = { id: number; money: number; rating: number };
 export type CallFlash = { id: number; call: Call; text: string; optionId: string; auto: boolean; chain: boolean };
 
 /** Окно результата после заказа с развилкой: раскрытие исхода (13.10; 10, раздел 3). */
-export type ResultCard = { id: number; taskId: string; taskNumber: number; pickerId: string; reveal: OutcomeReveal };
+export type ResultCard = { id: number; taskId: string; taskNumber: number; pickerId: string; reveal: OutcomeReveal; gain?: Gain };
 /** Барабан исхода (P3): задание без развилки закрыто. Всплывашка у денег показывается, когда барабан закрыт — чтобы не выдать исход раньше. */
 export type RollCard = {
   id: number; taskId: string; taskType: TaskType; taskNumber: number; pickerId: string;
   outcome: Outcome; chances: Record<Outcome, number>; value: number; gain: Gain;
+  /** Из чего сложились шансы — по сборщику до задания (после него растут опыт и усталость). */
+  parts: ChancePart[];
 };
 
 /** Состояние интерфейса: что выделено и что открыто. Не игровое, не сохраняется. */
@@ -244,7 +247,8 @@ export const useGameStore = create<Store>()(persist((set) => ({
           if (ROLL_REEL.enabled && e.roll && !e.reveal) {
             const t = state.tasks[e.taskId];
             rolls.push({ id: nextToastId++, taskId: e.taskId, taskType: t.type, taskNumber: t.number, pickerId: e.pickerId,
-              outcome: e.outcome, chances: e.roll.chances, value: e.roll.value, gain });
+              outcome: e.outcome, chances: e.roll.chances, value: e.roll.value, gain,
+              parts: outcomeBreakdown(s.game.pickers[e.pickerId] ?? state.pickers[e.pickerId], t).parts });
             continue;
           }
           gains.push(gain);
@@ -253,7 +257,8 @@ export const useGameStore = create<Store>()(persist((set) => ({
           // таймер истёк — подсветить, что выбрал сборщик (текст — по прежнему состоянию, пока вызов был на экране)
           flashes.push({ id: nextToastId++, call: e.call, text: callText(s.game, e.call), optionId: e.optionId, auto: true, chain: false });
         } else if (e.reveal) {
-          results.push({ id: nextToastId++, taskId: e.taskId, taskNumber: state.tasks[e.taskId].number, pickerId: e.pickerId, reveal: e.reveal });
+          // окно итога развилки (P4): деньги всплывут, когда его закроют — чтобы барабан не выдал исход раньше
+          results.push({ id: nextToastId++, taskId: e.taskId, taskNumber: state.tasks[e.taskId].number, pickerId: e.pickerId, reveal: e.reveal, gain: gains.pop() });
         } else {
           toasts.push({
             id: nextToastId++,
@@ -315,7 +320,10 @@ export const useGameStore = create<Store>()(persist((set) => ({
       ? { ui: { ...s.ui, openCallId: callId } }
       : s)),
   closeCall: () => set((s) => ({ ui: { ...s.ui, openCallId: null } })),
-  dismissResult: (id) => set((s) => ({ ui: { ...s.ui, results: s.ui.results.filter((r) => r.id !== id) } })),
+  dismissResult: (id) => set((s) => {
+    const card = s.ui.results.find((r) => r.id === id);
+    return { ui: { ...s.ui, results: s.ui.results.filter((r) => r.id !== id), gains: card?.gain ? [...s.ui.gains, card.gain] : s.ui.gains } };
+  }),
   dismissRoll: (id) => set((s) => {
     const card = s.ui.rolls.find((r) => r.id === id);
     if (!card) return s;

@@ -1,98 +1,116 @@
-// Окно итога задания с развилкой — по макету автора ui_12 (13.10). С M7d1 — для сборки, приёмки и выкладки.
-// Сверху иллюстрация (пока заглушка), что решили и что вышло; ниже «чек» заказа: позиции, деньги, рейтинг, опыт и штамп исхода.
-// Деньги и рейтинг пока только показываются (начисление — M6), опыт — M8. Закрывается кнопкой или кликом по «Закрыть».
-import { useEffect, type CSSProperties, type ReactNode } from 'react';
+// Окно итога задания с развилкой — три кадра комикса (правка автора 18.10, P4; вид — прототип «Окно итога задания», одобрен автором):
+// 1. «Что случилось» — задание, реплика сборщика пузырём, его портрет; 2. «Вы решили» — выбранный вариант и ТСД с барабаном
+// «Сработало / Осложнение» по шансу варианта (а если брали ТСД — сценка итога игры); 3. «Итог» — сразу после остановки барабана:
+// лента исхода, что произошло, награды жетонами, «Дальше». Мир на паузе. Клик по окну, Enter или Esc во время барабана — сразу итог, потом — закрыть.
+// Задания без развилки показывает RollWindow — те же кадры (ResultFrames).
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Picker } from '../model/picker';
-import { useGameStore } from '../store/gameStore';
-import { money, resultView } from '../store/selectors';
-import { nameForm, OUTCOME_LOOK, TASK_TYPE_LOOK, taskTitle } from './labels';
-import { Avatar } from './PickerBits';
-import Vx from './Vx';
+import { useGameStore, type ResultCard } from '../store/gameStore';
+import { resultView } from '../store/selectors';
+import { OUTCOME_LOOK, TSD_GAME_NAME } from './labels';
+import ReelTsd, { type ReelSeg } from './ReelTsd';
+import { FinalFrame, Join, StoryFrame } from './ResultFrames';
 import Icon from './icons';
-
-const ratingText = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n).toFixed(2).replace('.', ',')}`;
 
 /** Что нужно сценке итога: развилка, вариант, сработал ли, итог ТСД, сборщик и товар позиции. */
 export type ResultArt = NonNullable<NonNullable<ReturnType<typeof resultView>>['art']> & { picker: Picker };
 
-/** `renderArt` — сценка-иллюстрация итога (её передаёт App: интерфейс сам 3D не импортирует); null — заглушка. */
-export default function ResultWindow({ renderArt }: { renderArt?: (art: ResultArt) => ReactNode | null }) {
+type Props = {
+  /** Сценка-иллюстрация итога игры на ТСД (её передаёт App: интерфейс сам 3D не импортирует); null — заглушка. */
+  renderArt?: (art: ResultArt) => ReactNode | null;
+  /** 3D-портрет сборщика для первого кадра. */
+  renderPortrait?: (picker: Picker) => ReactNode;
+};
+
+export default function ResultWindow(props: Props) {
   const card = useGameStore((s) => s.ui.results[0]);
+  const tsdPlaying = useGameStore((s) => s.game.tsdGame !== null); // итог прошлого заказа — только после игры на ТСД
+  const rollShown = useGameStore((s) => s.ui.rolls.length > 0);    // сначала итог другого задания без развилки (P3)
+  if (!card || tsdPlaying || rollShown) return null;
+  return <Result key={card.id} card={card} {...props} />;
+}
+
+function Result({ card, renderArt, renderPortrait }: Props & { card: ResultCard }) {
   const game = useGameStore((s) => s.game);
   const dismiss = useGameStore((s) => s.dismissResult);
-  const tsdPlaying = useGameStore((s) => s.game.tsdGame !== null); // итог прошлого заказа — только после игры на ТСД
-  const rollShown = useGameStore((s) => s.ui.rolls.length > 0);    // сначала барабан другого задания (P3)
-
+  // данные — на момент открытия окна: пока оно открыто, мир на паузе
+  const v = useMemo(() => resultView(game, card), [card]);
+  const reel = v?.reel ?? null;
+  // ответ вариантом — сначала барабан; играли на ТСД — итог после короткой паузы
+  const [done, setDone] = useState(false);
   useEffect(() => {
-    if (!card || tsdPlaying || rollShown) return;
-    const onKey = (e: KeyboardEvent) => { if (e.code === 'Escape' || e.code === 'Enter') dismiss(card.id); };
+    if (reel) return;
+    const t = setTimeout(() => setDone(true), 500);
+    return () => clearTimeout(t);
+  }, [reel]);
+
+  const segs = useMemo<ReelSeg[]>(() => (reel ? [
+    { key: 'ok', share: 1 - reel.chance, color: OUTCOME_LOOK.perfect.color, icon: 'check' },
+    { key: 'bad', share: reel.chance, color: OUTCOME_LOOK.failed.color, icon: 'fail' },
+  ] : []), [reel]);
+
+  const next = () => (done ? dismiss(card.id) : setDone(true));
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.code === 'Escape' || e.code === 'Enter') { e.preventDefault(); next(); } };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [card, dismiss, tsdPlaying, rollShown]);
+  });
 
-  if (!card || tsdPlaying || rollShown) return null;
-  const v = resultView(game, card);
   if (!v) return null;
+  const p = v.picker;
   const look = OUTCOME_LOOK[v.outcome];
-  const art = v.art && renderArt ? renderArt({ ...v.art, picker: v.picker }) : null;
+  const art = !reel && v.art && renderArt ? renderArt({ ...v.art, picker: p }) : null;
+  const notes = [
+    ...(v.capped ? [`У этого варианта исход не выше «${OUTCOME_LOOK[v.capped].name}»`] : []),
+    ...v.lines.filter((l) => l.note || l.picked < l.qty).map((l) => `${l.name}: ${l.note ?? `${l.picked} из ${l.qty}`}`),
+  ];
+  const chosen = v.options.find((o) => o.chosen);
+  const complication = reel?.complication ?? false;
 
   return (
-    <div className="call-center wide">
-      <Vx key={card.id} className="outcome" style={{ '--pc': v.picker.color, '--oc': look.color } as CSSProperties}>
-        <div className="call-head">
-          <Avatar picker={v.picker} small />
-          <div className="grow">
-            <div className="call-who">{taskTitle({ type: v.taskType, number: v.taskNumber })} · {v.picker.name}</div>
-            <div className="call-sub">Как всё прошло</div>
+    <div className="ac-veil">
+      <div className="rw" style={{ '--pc': p.color, '--oc': look.color } as CSSProperties} onClick={() => !done && setDone(true)}>
+        <StoryFrame tab="Что случилось" taskType={v.taskType} taskNumber={v.taskNumber} speech={v.speech} picker={p} portrait={renderPortrait?.(p)} />
+        <Join />
+
+        {/* 2. что решили: барабан по шансу варианта или сценка итога игры на ТСД */}
+        <section className={`rw-panel rw-p2${done && complication ? ' shake' : ''}`}>
+          <span className="rw-tab" style={{ '--tc': 'var(--text)' } as CSSProperties}>{v.auto ? `${p.name} решил сам` : 'Вы решили'}</span>
+          <div className="rw-sticker">
+            <span className="rw-check"><Icon name="check" small /></span>
+            <b>{chosen?.label ?? v.optionLabel}</b>
           </div>
-        </div>
-
-        {/* сценка итога (прототип 16.10) или заглушка 770 × 300 (решение автора 13.10 — картинка позже) */}
-        {art ? <div className="outcome-art has-art">{art}</div> : <div className="outcome-art">
-          <span className="outcome-art-pic">{v.picker.name[0]}</span>
-          <Icon name={v.worked ? 'check' : 'errors'} />
-        </div>}
-
-        <div className="outcome-chips">
-          <span className="call-sub">{v.auto ? `${v.picker.name} решил сам:` : 'Вы решили:'}</span>
-          <span className="chip pick">{v.optionLabel}</span>
-          <span className={`chip ${v.worked ? 'ok' : 'bad'}`}>{v.verdict in OUTCOME_LOOK ? OUTCOME_LOOK[v.verdict as keyof typeof OUTCOME_LOOK].name : v.verdict}</span>
-        </div>
-        <div className="outcome-title">{v.title}</div>
-        <div className="outcome-text">{v.text}</div>
-
-        <div className="receipt">
-          <div className="receipt-head">
-            <b>{TASK_TYPE_LOOK[v.taskType].receipt} №{v.taskNumber}</b>
-            <span>{TASK_TYPE_LOOK[v.taskType].doneBy} {v.picker.name}</span>
-          </div>
-          <div className="receipt-body">
-            <div className="receipt-lines">
-              {v.lines.map((l, i) => {
-                const ok = l.picked >= l.qty;
-                return (
-                  <div key={i} className="receipt-line">
-                    <span className={`mark ${ok ? 'ok' : 'bad'}`}>{ok ? '✓' : '✕'}</span>
-                    <span className="grow">{l.name}</span>
-                    <span className={ok ? '' : 'bad'}>{l.picked} / {l.qty}</span>
-                    {l.note && <div className="receipt-note">{l.note}</div>}
-                  </div>
-                );
-              })}
+          {reel ? <>
+            <span className="rw-odds"><i>!</i>{v.riskLabel} {Math.round(reel.chance * 100)}%</span>
+            <ReelTsd
+              segs={segs}
+              hit={complication ? 'bad' : 'ok'}
+              marker={1 - reel.roll /* правила: бросок < шанса — осложнение; «сработало» на полосе слева, поэтому зеркально */}
+              seed={card.id}
+              done={done}
+              onDone={() => setDone(true)}
+            />
+            <div className={`rw-shout${done ? ` go ${complication ? 'bad' : 'ok'}` : ' wait'}`}>
+              {done ? (complication ? 'Осложнение!' : 'Сработало!') : '…'}
             </div>
-            <div className="receipt-sum">
-              <div><span>Деньги</span><span><b>{v.money.got > 0 ? '+' : ''}{money(v.money.got)}</b> из {v.money.of}</span></div>
-              <div><span>Рейтинг</span><span><b>{ratingText(v.rating.got)}</b> из {ratingText(v.rating.of)}</span></div>
-              <div><span>Опыт {nameForm(v.picker.name)}</span><b>{TASK_TYPE_LOOK[v.taskType].name} +{v.xp}</b></div>
-            </div>
-          </div>
-          <div className="receipt-stamp">{look.name}</div>
-        </div>
+          </> : <>
+            {v.tsdGame && <span className="rw-odds plain">Игра «{TSD_GAME_NAME[v.tsdGame]}»</span>}
+            <div className="rw-art">{art ?? <span className="rw-art-stub">{p.name[0]}</span>}</div>
+          </>}
+        </section>
 
-        <div className="outcome-foot">
-          <button className="btn" onClick={() => dismiss(card.id)}><Vx>Закрыть</Vx></button>
-        </div>
-      </Vx>
+        <Join lit={done} />
+        <FinalFrame
+          done={done}
+          outcome={v.outcome}
+          title={v.title}
+          text={v.text}
+          notes={notes}
+          gain={{ money: v.money.got, rating: v.rating.got, xp: v.xp }}
+          seed={card.id}
+          onClose={() => dismiss(card.id)}
+        />
+      </div>
     </div>
   );
 }
