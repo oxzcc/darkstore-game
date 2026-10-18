@@ -1,13 +1,18 @@
 // Барабан на корпусе ТСД (P3/P4): лента символов в пропорции долей останавливается на выпавшем,
 // под ней (на корпусе) — полоса долей и стрелки-маркер в точке броска. Исход уже известен (его бросили правила) — барабан только показывает.
 // Общий для окна барабана (задание без развилки) и центра окна итога развилки.
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { ROLL_REEL } from '../config/balance';
+import { AUDIO } from '../config/audio';
+import { play, type SoundHandle } from '../audio/engine';
+import { reelTickTimes } from '../audio/reelTicks';
 import Icon, { type IconName } from './icons';
 
 export type ReelSeg = { key: string; share: number; color: string; icon: IconName };
 
 const SYM_H = 44; // высота одного символа на ленте, px (= .rr-sym в theme.css)
+/** Кривая, по которой едет лента: та же для CSS и для щелчков звука (M9e). */
+const EASE: [number, number, number, number] = [0.12, 0.75, 0.18, 1];
 
 /** Лента: символы в пропорции долей, перемешаны по seed; три круга, остановка — на выпавшем в третьем. */
 function buildStrip(segs: ReelSeg[], hit: string, seed0: number): { strip: ReelSeg[]; stop: number } {
@@ -40,6 +45,20 @@ export default function ReelTsd({ segs, hit, marker, seed, done, onDone }: Props
   const spinMs = reduce ? 0 : ROLL_REEL.spinMs;
   const [moving, setMoving] = useState(false);
 
+  // звук (M9e): щелчок на каждый символ, проходящий окно; остановка — «тук». Остановили кликом раньше — щелчки обрываются.
+  const ticks = useRef<SoundHandle[]>([]);
+  useEffect(() => {
+    if (!moving || done) return;
+    ticks.current = reelTickTimes(stop - 1, spinMs / 1000, EASE, AUDIO.reelMaxTicks).map((delay) => play('reelTick', { delay }));
+  }, [moving]);
+  useEffect(() => {
+    if (!done) return;
+    ticks.current.forEach((h) => h.stop());
+    ticks.current = [];
+    play('reelStop');
+  }, [done]);
+  useEffect(() => () => ticks.current.forEach((h) => h.stop()), []);
+
   // кадр на месте → запуск ленты; после spinMs — остановилась
   useEffect(() => {
     const raf = requestAnimationFrame(() => setMoving(true));
@@ -49,7 +68,7 @@ export default function ReelTsd({ segs, hit, marker, seed, done, onDone }: Props
   }, [spinMs]);
 
   const go = moving || done;
-  const ease = 'cubic-bezier(.12,.75,.18,1)';
+  const ease = `cubic-bezier(${EASE.join(',')})`;
   const stripStyle: CSSProperties = {
     transform: `translateY(${go ? -(stop * SYM_H - SYM_H) : 0}px)`,
     transition: done ? 'none' : moving ? `transform ${spinMs}ms ${ease}` : undefined,

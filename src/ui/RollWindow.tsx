@@ -11,6 +11,7 @@ import { SPEC_RANKS } from '../config/pickers';
 import { ROLL_SHOUT } from '../config/taskReport';
 import { EXP_NAME, OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK, TASK_TYPE_LOOK, nameForm } from './labels';
 import ReelTsd, { type ReelSeg } from './ReelTsd';
+import { play } from '../audio/engine';
 import { FinalFrame, Join, StoryFrame } from './ResultFrames';
 import Icon from './icons';
 
@@ -35,6 +36,8 @@ function Roll({ card, renderPortrait }: Props & { card: RollCard }) {
     [card],
   );
   const [done, setDone] = useState(false);
+  // барабан встал — «Чисто! / Почти! / Мимо!» голосом (M9e)
+  useEffect(() => { if (done) play(card.outcome, { delay: 0.12 }); }, [done]);
 
   const next = () => (done ? dismiss(card.id) : setDone(true));
   useEffect(() => {

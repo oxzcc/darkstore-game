@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import Scene from './scene/Scene';
 import { seenStock } from './rules/minigames/picking';
 import GameLoop from './app/GameLoop';
+import SoundDirector from './audio/SoundDirector';
 import { useGameStore, WAREHOUSE_MAP } from './store/gameStore';
 import PickerPanel from './ui/PickerPanel';
 import AssignDialog from './ui/AssignDialog';
@@ -45,6 +46,7 @@ export default function App() {
   return (
     <>
       <GameLoop />
+      <SoundDirector />
       <Scene map={WAREHOUSE_MAP} stock={seen} pinLayer={pinLayer} />
       <div className="pin-layer" ref={setPinLayer} />
       {/* панели заданий слева больше нет — задания видны пинами на складе (решение автора 18.10) */}

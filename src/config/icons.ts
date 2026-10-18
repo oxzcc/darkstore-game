@@ -21,6 +21,9 @@ export const ICON_PATHS = {
   paw: '<ellipse cx="12" cy="16" rx="5.5" ry="4.5" fill="var(--f,#FFE2B8)" stroke="currentColor" stroke-width="2.3"/><circle cx="4.5" cy="10" r="2.4" fill="var(--f,#FFE2B8)" stroke="currentColor" stroke-width="2.2"/><circle cx="9" cy="5" r="2.4" fill="var(--f,#FFE2B8)" stroke="currentColor" stroke-width="2.2"/><circle cx="15" cy="5" r="2.4" fill="var(--f,#FFE2B8)" stroke="currentColor" stroke-width="2.2"/><circle cx="19.5" cy="10" r="2.4" fill="var(--f,#FFE2B8)" stroke="currentColor" stroke-width="2.2"/>',
   nose: '<path d="M3 9.5C3 4.5 21 4.5 21 9.5c0 5.5-5 9-9 9s-9-3.5-9-9z" fill="var(--f,#5A4636)" stroke="currentColor" stroke-width="2.3"/><ellipse cx="8.5" cy="10.5" rx="2" ry="1.4" fill="#FFF9EC"/><ellipse cx="15.5" cy="10.5" rx="2" ry="1.4" fill="#FFF9EC"/>',
   energy: '<rect x="2" y="6" width="17" height="12" fill="#fff" stroke="currentColor" stroke-width="2.5"/><rect x="19" y="9.5" width="3" height="5" fill="currentColor"/><path d="M11.5 7.5l-4 5.5h3.5l-1.5 4 5-6h-3.5z" fill="var(--f,#FFC629)" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  // звук (M9e): динамик с волнами / перечёркнутый
+  sound: '<path d="M2 9h5l6-5v16l-6-5H2z" fill="var(--f,#fff)" stroke="currentColor" stroke-width="2.3" stroke-linejoin="miter"/><path d="M16 8.5c1.6 2 1.6 5 0 7M19 5.5c3.2 3.6 3.2 9.4 0 13" fill="none" stroke="currentColor" stroke-width="2.3"/>',
+  mute: '<path d="M2 9h5l6-5v16l-6-5H2z" fill="var(--f,#fff)" stroke="currentColor" stroke-width="2.3" stroke-linejoin="miter"/><path d="M16 9l6 6M22 9l-6 6" stroke="currentColor" stroke-width="2.6"/>',
 } as const;
 
 export type IconName = keyof typeof ICON_PATHS;
