@@ -348,6 +348,8 @@ export function resultView(game: GameState, card: ResultCard) {
     options,
     /** Ответ вариантом (не ТСД) — барабан «Сработало / Осложнение» по шансу варианта; null — играли на ТСД. */
     reel: c && !c.tsd ? { chance: c.chance, roll: c.roll, complication: c.complication } : null,
+    /** Какую игру на ТСД играли (для подписи в окне итога); null — ответили вариантом. */
+    tsdGame: c?.tsd ? tsdKind ?? null : null,
     /** Ограничение варианта сработало: исход не выше этого. */
     capped: c?.capped && option?.cap ? option.cap : null,
     taskNumber: task.number,

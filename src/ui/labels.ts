@@ -1,6 +1,7 @@
 // Подписи и цвета для экрана. Цвета исходов зарезервированы (08, раздел 3.2).
 import type { Outcome, TaskType } from '../model/task';
 import type { PickerState } from '../model/picker';
+import type { TsdGameKind } from '../model/tsdGame';
 import type { IconName } from './icons';
 
 /** Порядок исходов на экране: идеально → неплохо → провал (средний исход раньше назывался «С ошибками», переименован автором 14.10). */
@@ -15,6 +16,9 @@ export const OUTCOME_LOOK: Record<Outcome, { name: string; color: string; icon: 
 // Тип задания: название, значок, плитка и цвет пина — config/taskLook.ts (их читает и сцена).
 import { TASK_TYPE_LOOK } from '../config/taskLook';
 export { TASK_TYPE_LOOK };
+
+/** Названия игр на ТСД (10, раздел 11.3). */
+export const TSD_GAME_NAME: Record<TsdGameKind, string> = { depth: 'Глубина', expiry: 'Срок', barcode: 'Штрихкод' };
 
 /** «Сборка №12», «Приёмка №15». */
 export function taskTitle(task: { type: TaskType; number: number }): string {

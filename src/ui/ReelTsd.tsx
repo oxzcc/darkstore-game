@@ -1,5 +1,5 @@
 // Барабан на корпусе ТСД (P3/P4): лента символов в пропорции долей останавливается на выпавшем,
-// под ней — полоса долей и стрелки-маркер в точке броска. Исход уже известен (его бросили правила) — барабан только показывает.
+// под ней (на корпусе) — полоса долей и стрелки-маркер в точке броска. Исход уже известен (его бросили правила) — барабан только показывает.
 // Общий для окна барабана (задание без развилки) и центра окна итога развилки.
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { ROLL_REEL } from '../config/balance';
@@ -63,6 +63,7 @@ export default function ReelTsd({ segs, hit, marker, seed, done, onDone }: Props
   return (
     <div className="rr-reel" style={{ '--oc': hitColor } as CSSProperties}>
       <div className="rr-tsd">
+        <div className="rr-tsd-head"><i className="rr-led" /><span>ТСД</span><i className="rr-grill" /></div>
         <div className="rr-screen">
           <div className={`rr-window${done ? ' hit' : ''}`} />
           <div className="rr-strip" style={stripStyle}>
@@ -71,17 +72,18 @@ export default function ReelTsd({ segs, hit, marker, seed, done, onDone }: Props
             ))}
           </div>
         </div>
-      </div>
-      {/* та же полоса долей, что на карточке сборщика / в окне развилки; стрелки — куда выпал бросок */}
-      <div className="rr-barwrap">
-        <span className="ac-bar rr-bar">
-          {segs.map((sg) => (
-            <b key={sg.key} style={{ width: `${sg.share * 100}%`, background: sg.color }}>
-              {sg.share >= 0.14 ? `${Math.round(sg.share * 100)}%` : ''}
-            </b>
-          ))}
-        </span>
-        <i className="rr-marker" style={markerStyle} />
+        {/* та же полоса долей, что на карточке сборщика / в окне развилки; стрелки — куда выпал бросок */}
+        <div className="rr-barwrap">
+          <span className="ac-bar rr-bar">
+            {segs.map((sg) => (
+              <b key={sg.key} style={{ width: `${sg.share * 100}%`, background: sg.color }}>
+                {sg.share >= 0.14 ? `${Math.round(sg.share * 100)}%` : ''}
+              </b>
+            ))}
+          </span>
+          <i className="rr-marker" style={markerStyle} />
+        </div>
+        <div className="rr-keys"><i /><i className="g" /><i /></div>
       </div>
     </div>
   );
