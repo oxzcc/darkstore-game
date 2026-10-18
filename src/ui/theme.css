@@ -204,7 +204,7 @@ button { font-family: inherit; }
 }
 /* ---------- барабан исхода (P3): окно по центру ---------- */
 .rr-veil { cursor: pointer; }
-.rr { --cut: 12px; width: min(340px, 100%); animation: pop 0.2s ease-out; }
+.rr { --cut: 12px; width: min(380px, 100%); animation: pop 0.2s ease-out; }
 .rr > .vx-edge > .vx-body { background: var(--window); padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
 .rr-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .rr-who { font-weight: 700; font-size: 18px; text-transform: uppercase; letter-spacing: 0.03em; }
@@ -221,18 +221,22 @@ button { font-family: inherit; }
 .rr-sym { height: 44px; display: grid; place-items: center; }
 .rr-sym span { width: 64px; height: 34px; border-radius: 8px; display: grid; place-items: center; border: 2px solid rgba(0, 0, 0, 0.35); }
 .rr-sym svg.i { width: 22px; height: 22px; --f: transparent; color: #fff; }
-.rr-barwrap { position: relative; padding-top: 4px; }
+.rr-barwrap { position: relative; padding: 10px 0; }
 .rr-bar { display: flex; height: 26px; }
-.rr-marker { position: absolute; top: -4px; bottom: -6px; width: 4px; margin-left: -2px; background: var(--text); border-radius: 2px; box-shadow: 0 0 0 2px #fff; }
-.rr-verdict { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; font-size: 22px; opacity: 0.25; transition: opacity 0.2s; }
-.rr-verdict.on { opacity: 1; }
-.rr-verdict b { text-transform: uppercase; letter-spacing: 0.04em; }
+.rr-marker { position: absolute; top: 0; bottom: 0; width: 0; pointer-events: none; }
+.rr-marker::before, .rr-marker::after { content: ''; position: absolute; left: -8px; border-left: 8px solid transparent; border-right: 8px solid transparent; }
+.rr-marker::before { top: 0; border-top: 11px solid var(--text); }
+.rr-marker::after { bottom: 0; border-bottom: 11px solid var(--text); }
+.rr-verdict { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 84px; animation: none; }
+.rr-result { display: flex; align-items: center; gap: 8px; font-size: 26px; white-space: nowrap; animation: pop 0.25s ease-out; }
+.rr-result b { text-transform: uppercase; letter-spacing: 0.04em; }
+.rr-wait { font-size: 26px; color: var(--text-mute); letter-spacing: 0.2em; }
 .rr-choice { text-align: center; font-size: 15px; color: var(--text-mute); }
 .rr-choice b { color: var(--text); }
 .rr-note { display: block; font-size: 12px; color: var(--text-mute); }
 .rr-note.center { text-align: center; margin-top: -6px; }
-.rr-step { font-size: 15px; font-weight: 700; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.04em; }
-.rr-gain { font-weight: 700; font-size: 18px; color: var(--text-mute); font-variant-numeric: tabular-nums; }
+.rr-step { font-size: 13px; font-weight: 700; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
+.rr-gain { font-weight: 700; font-size: 16px; color: var(--text-mute); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ac-pop { position: fixed; z-index: 31; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: #fff; border: 3px solid var(--edge-color);
   border-radius: 12px; box-shadow: var(--shadow); font-size: 13px; animation: pop 0.15s ease-out; }
 .ac-pop::before { content: ''; position: absolute; top: calc(var(--arrow-y) - 8px); width: 12px; height: 12px; background: #fff;

@@ -133,6 +133,7 @@ function Reel({ card, pickerName, pickerColor, onClose }: { card: RollCard; pick
               </b>
             ))}
           </span>
+          {/* маркер — стрелки над и под полосой, чтобы не закрывать проценты (правка автора 18.10) */}
           <i className="rr-marker" style={markerStyle} />
         </div>
 
@@ -143,13 +144,15 @@ function Reel({ card, pickerName, pickerColor, onClose }: { card: RollCard; pick
           </div>
         )}
 
-        <div className={`rr-verdict${instant ? ' on' : ''}`}>
-          {card.fork && <span className="rr-step">{card.fork.complication ? 'Осложнение' : 'Сработало'} →</span>}
-          <Icon name={look.icon} />
-          <b>{look.name}</b>
-          {instant && (g.money !== 0 || g.rating !== 0) && (
-            <span className="rr-gain">{g.money >= 0 ? '+' : '−'}{money(Math.abs(g.money))}</span>
-          )}
+        {/* итог — только когда лента остановилась (правка автора 18.10: раньше бледный итог был виден заранее); место под него занято всегда */}
+        <div className="rr-verdict">
+          {instant ? <>
+            {card.fork && <span className="rr-step">{card.fork.complication ? 'Осложнение' : 'Сработало'}</span>}
+            <span className="rr-result"><Icon name={look.icon} /><b>{look.name}</b></span>
+            {(g.money !== 0 || g.rating !== 0) && (
+              <span className="rr-gain">{g.money >= 0 ? '+' : '−'}{money(Math.abs(g.money))}</span>
+            )}
+          </> : <span className="rr-wait">…</span>}
         </div>
         {card.fork?.cap && instant && card.fork.capped && (
           <div className="rr-note center">У этого варианта исход не выше «{OUTCOME_LOOK[card.fork.cap].name}»</div>
