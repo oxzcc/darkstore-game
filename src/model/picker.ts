@@ -49,6 +49,9 @@ export type PickerActivity =
   | { kind: 'packing'; progress: number }
   | { kind: 'resting'; fatigue: number };          // на перерыве в зоне отдыха (M8c)
 
+/** Сколько заданий сборщик закрыл и с каким исходом (P2, профиль сборщика). */
+export type PickerTally = { done: number; perfect: number; withErrors: number; failed: number };
+
 export type Picker = {
   id: string;
   name: string;
@@ -63,6 +66,8 @@ export type Picker = {
   pathProgress: number;          // сколько клеток пути пройдено (дробное — между клетками)
   workEndsAt: number | null;     // для перерыва (M8); работа над заданием считается по job
   job: PickerJob | null;
+  /** Итоги за кампанию (P2). Нет поля (сохранения до P2) — считаем с нуля; за смену считается по shiftLog. */
+  tally?: PickerTally;
   // на будущее (05, раздел 2): пока не используются
   description?: string;
   traits?: string[];

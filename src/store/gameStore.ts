@@ -42,6 +42,7 @@ export type ResultCard = { id: number; taskId: string; taskNumber: number; picke
 /** Состояние интерфейса: что выделено и что открыто. Не игровое, не сохраняется. */
 export type UiState = {
   assignTaskId: string | null;  // для какого задания открыто окно «Кого отправить?»
+  profilePickerId: string | null; // открыт профиль сборщика (P2): мир на паузе
   chosenPickerId: string | null;
   toasts: Toast[];
   gains: Gain[];
@@ -59,6 +60,9 @@ type Store = {
   game: GameState;
   ui: UiState;
   openAssign: (taskId: string) => void;
+  /** Профиль сборщика (P2): клик по нижней карточке или по собаке на складе; пока открыт — мир на паузе. */
+  openProfile: (pickerId: string) => void;
+  closeProfile: () => void;
   closeAssign: () => void;
   choosePicker: (pickerId: string) => void;
   sendChosenPicker: () => void;
@@ -113,7 +117,7 @@ type Store = {
 
 /** Окна и всплывашки, которые закрываются, когда кончилась смена или началась новая. */
 const clearWindows = (ui: UiState): UiState => ({
-  ...ui, assignTaskId: null, chosenPickerId: null, openCallId: null, callFlashes: [], results: [], toasts: [], gains: [],
+  ...ui, assignTaskId: null, chosenPickerId: null, profilePickerId: null, openCallId: null, callFlashes: [], results: [], toasts: [], gains: [],
   depthSelected: null, barcodeInput: [],
 });
 
@@ -127,9 +131,11 @@ const newSeed = () => Math.floor(Math.random() * 2 ** 32);
 // persist — сохранение игры в браузере (M8e, store/persist.ts)
 export const useGameStore = create<Store>()(persist((set) => ({
   game: createInitialGame(WAREHOUSE_MAP, newSeed()),
-  ui: { assignTaskId: null, chosenPickerId: null, toasts: [], gains: [], nextToastId: 1, callFlashes: [], openCallId: null, results: [], depthSelected: null, barcodeInput: [], camera: HOME_CAMERA },
+  ui: { assignTaskId: null, chosenPickerId: null, profilePickerId: null, toasts: [], gains: [], nextToastId: 1, callFlashes: [], openCallId: null, results: [], depthSelected: null, barcodeInput: [], camera: HOME_CAMERA },
 
-  openAssign: (taskId) => set((s) => ({ ui: { ...s.ui, assignTaskId: taskId, chosenPickerId: null } })),
+  openAssign: (taskId) => set((s) => ({ ui: { ...s.ui, assignTaskId: taskId, chosenPickerId: null, profilePickerId: null } })),
+  openProfile: (pickerId) => set((s) => ({ ui: { ...s.ui, profilePickerId: pickerId } })),
+  closeProfile: () => set((s) => ({ ui: { ...s.ui, profilePickerId: null } })),
   closeAssign: () => set((s) => ({ ui: { ...s.ui, assignTaskId: null, chosenPickerId: null } })),
   choosePicker: (pickerId) => set((s) => ({ ui: { ...s.ui, chosenPickerId: pickerId } })),
 
@@ -202,7 +208,7 @@ export const useGameStore = create<Store>()(persist((set) => ({
       const resultShown = s.ui.results.length > 0 && s.game.tsdGame === null;
       // подсказка обучающей смены по центру — тоже пауза (M8d)
       const hintShown = currentHint(s.game, s.ui.openCallId) !== null;
-      const dt = worldDt(s.game.clock, realDt, s.ui.assignTaskId !== null || s.ui.openCallId !== null || resultShown || hintShown);
+      const dt = worldDt(s.game.clock, realDt, s.ui.assignTaskId !== null || s.ui.profilePickerId !== null || s.ui.openCallId !== null || resultShown || hintShown);
       if (dt === 0) return s;
       const { state, events } = advanceWorld(s.game, WAREHOUSE_MAP, dt);
       // смена кончилась — открытые окна закрываются, поверх всего экран итогов (M8a)

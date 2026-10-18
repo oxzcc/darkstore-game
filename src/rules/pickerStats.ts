@@ -1,7 +1,7 @@
 // Характеристики сборщика в работе (M8c; docs/05, разделы 4–6; решения автора 15.10).
 // Рабочая точность и скорость = характеристика + бонус специализации по типу задания − штраф за усталость.
 // Отсюда считаются шансы исходов (outcome.ts) и время работы (time.ts) — в одном месте, чтобы карточка и бросок совпадали.
-import type { Picker } from '../model/picker';
+import type { Picker, PickerTally } from '../model/picker';
 import type { Outcome, TaskType } from '../model/task';
 import { PICKER_GROWTH } from '../config/balance';
 import { STAT_SCALE } from '../config/pickers';
@@ -54,6 +54,30 @@ export function growAfterTask(picker: Picker, type: TaskType, outcome: Outcome):
     specialization: { ...picker.specialization, [type]: { level, xp } },
     stats: { ...picker.stats, fatigue: Math.min(100, picker.stats.fatigue + PICKER_GROWTH.fatigue.perTask) },
   };
+}
+
+export const EMPTY_TALLY: PickerTally = { done: 0, perfect: 0, withErrors: 0, failed: 0 };
+
+/** Закрытое задание в итоги сборщика за кампанию (профиль, P2). */
+export function countOutcome(picker: Picker, outcome: Outcome): Picker {
+  const t = picker.tally ?? EMPTY_TALLY;
+  return { ...picker, tally: { ...t, done: t.done + 1, [outcome]: t[outcome] + 1 } };
+}
+
+/** Итоги за текущую смену — по журналу смены (события «задание закрыто» этого сборщика). */
+export function shiftTally(log: { kind: string; pickerId?: string; outcome?: Outcome }[], pickerId: string): PickerTally {
+  const t = { ...EMPTY_TALLY };
+  for (const e of log) {
+    if (e.kind !== 'taskDone' || e.pickerId !== pickerId || !e.outcome) continue;
+    t.done++;
+    t[e.outcome]++;
+  }
+  return t;
+}
+
+/** На сколько опыт по типу задания поднимает шанс «идеально» (то же слагаемое, что в outcomeBreakdown). */
+export function specPerfectBonus(level: number): number {
+  return (level - 1) * PICKER_GROWTH.spec.bonusPerLevel * PICKER_GROWTH.chances.perPoint;
 }
 
 /** Перерыв: усталость падает на restPerSecond % в секунду, не ниже 0. */

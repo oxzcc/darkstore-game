@@ -13,6 +13,7 @@ import { dogAction, phaseOffset } from './dogAnim';
 import { blocksCloseup } from './closeupView';
 import { closeupFocus } from '../store/selectors';
 import { Html } from '@react-three/drei';
+import type { ThreeEvent } from '@react-three/fiber';
 import { useMemo, type CSSProperties, type RefObject } from 'react';
 
 const CALL_Y = 2.6; // «!» над головой собаки (рост ~1,9 м, W7a); покачивается, как метка на рендере
@@ -75,6 +76,23 @@ function CallBang({ pickerId, pos, layer }: { pickerId: string; pos: [number, nu
 const lastAngle = new Map<string, number>();
 const DEFAULT_ANGLE = Math.PI / 4;
 
+/** Невидимая «коробка» вокруг собаки: клик — профиль сборщика (P2). Модель собрана из многих брусков, по ней целиться неудобно. */
+const HIT = { w: 0.9, h: 2, d: 0.9 };
+function DogHitbox({ pickerId, pos }: { pickerId: string; pos: [number, number, number] }) {
+  const openProfile = useGameStore((s) => s.openProfile);
+  return (
+    <mesh
+      position={[pos[0], HIT.h / 2, pos[2]]}
+      onClick={(e: ThreeEvent<MouseEvent>) => { e.stopPropagation(); openProfile(pickerId); }}
+      onPointerOver={(e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); document.body.style.cursor = 'pointer'; }}
+      onPointerOut={() => { document.body.style.cursor = ''; }}
+    >
+      <boxGeometry args={[HIT.w, HIT.h, HIT.d]} />
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+    </mesh>
+  );
+}
+
 /** layer — слой пинов под интерфейсом (создаёт App); пока его нет, «!» не рисуется. */
 export default function Pickers({ layer }: { layer: HTMLElement | null }) {
   const pickers = useGameStore((s) => s.game.pickers);
@@ -129,6 +147,8 @@ export default function Pickers({ layer }: { layer: HTMLElement | null }) {
               phase={phaseOffset(p.id)}
               throwTarget={throwTarget}
             />
+            {/* клик по собаке — профиль (P2); у стеллажа во время игры на ТСД — нет */}
+            {!focus && <DogHitbox pickerId={p.id} pos={pose.dog} />}
             {/* нужна помощь (развилка) — красный «!» над головой с таймером по контуру; клик — окно (решение автора 13.10) */}
             {p.state === 'calling' && layer && <CallBang pickerId={p.id} pos={pose.dog} layer={portal} />}
           </group>

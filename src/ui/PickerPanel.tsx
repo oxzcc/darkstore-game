@@ -1,4 +1,4 @@
-// Карточки сборщиков снизу (ui_01): имя, что делает сейчас, прогресс, усталость.
+// Карточки сборщиков снизу (ui_01): имя, что делает сейчас, прогресс, усталость. Клик по карточке — профиль (P2); перерыв — только здесь.
 import type { CSSProperties } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { activityOf, pickerList, restAllowed } from '../store/selectors';
@@ -9,14 +9,14 @@ import Icon from './icons';
 
 export default function PickerPanel() {
   const game = useGameStore((s) => s.game);
-  const { sendToRest, endRest } = useGameStore.getState();
+  const { sendToRest, endRest, openProfile } = useGameStore.getState();
 
   return (
     <div className="picker-bar">
       {pickerList(game.pickers).map((p) => {
         const line = activityLine(activityOf(game, p.id));
         return (
-          <Vx key={p.id} className="picker-card" style={{ '--pc': p.color } as CSSProperties}>
+          <Vx key={p.id} className="picker-card" style={{ '--pc': p.color } as CSSProperties} onClick={() => openProfile(p.id)}>
             <Avatar picker={p} />
             <div className="grow">
               <div className="picker-name">
@@ -33,8 +33,8 @@ export default function PickerPanel() {
             </div>
             {/* перерыв (M8c): свободного и уставшего — отдыхать, отдыхающего — вернуть */}
             {p.state === 'resting'
-              ? <button className="mini-btn" onClick={() => endRest(p.id)}>Вернуть</button>
-              : restAllowed(game, p.id) && <button className="mini-btn" onClick={() => sendToRest(p.id)}>На перерыв</button>}
+              ? <button className="mini-btn" onClick={(e) => { e.stopPropagation(); endRest(p.id); }}>Вернуть</button>
+              : restAllowed(game, p.id) && <button className="mini-btn" onClick={(e) => { e.stopPropagation(); sendToRest(p.id); }}>На перерыв</button>}
           </Vx>
         );
       })}
