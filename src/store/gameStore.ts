@@ -13,7 +13,7 @@ import { acceptTsd, declineTsd, sendPicker } from '../rules/tsd';
 import { chooseRack, leaveRack, scanShelf } from '../rules/minigames/picking';
 import { answerCall, callText } from '../rules/calls';
 import { submitBarcodeGuess, closeExpiryUnit, closeTsdGame, depthMovesFrom, moveDepthBox, openExpiryUnit, takeExpiryUnit, tapDepthBox } from '../rules/tsdGame';
-import { SITUATION_BY_ID, TSD_OPTION_ID } from '../config/calls';
+import { TSD_OPTION_ID } from '../config/calls';
 import type { Call, OutcomeReveal } from '../model/call';
 import type { Address } from '../model/address';
 import { advanceWorld } from '../rules/advance';
@@ -38,16 +38,11 @@ export type Gain = { id: number; money: number; rating: number };
 export type CallFlash = { id: number; call: Call; text: string; optionId: string; auto: boolean; chain: boolean };
 
 /** Окно результата после заказа с развилкой: раскрытие исхода (13.10; 10, раздел 3). */
-export type ResultCard = { id: number; taskId: string; taskNumber: number; pickerId: string; reveal: OutcomeReveal };
+export type ResultCard = { id: number; taskId: string; taskNumber: number; pickerId: string; reveal: OutcomeReveal; gain?: Gain };
 /** Барабан исхода (P3): задание без развилки закрыто. Всплывашка у денег показывается, когда барабан закрыт — чтобы не выдать исход раньше. */
 export type RollCard = {
   id: number; taskId: string; taskType: TaskType; taskNumber: number; pickerId: string;
   outcome: Outcome; chances: Record<Outcome, number>; value: number; gain: Gain;
-  /**
-   * Была развилка (P4, решение автора 18.10): барабан «Сработало / Осложнение» по шансу выбранного варианта — одно окно вместо окна итога.
-   * chance — шанс осложнения, roll — куда выпал бросок (меньше chance — осложнение), cap — исход не выше (у варианта), auto — решил сборщик.
-   */
-  fork?: { optionLabel: string; chance: number; roll: number; complication: boolean; capped: boolean; cap: Outcome | null; auto: boolean };
 };
 
 /** Состояние интерфейса: что выделено и что открыто. Не игровое, не сохраняется. */
@@ -257,18 +252,9 @@ export const useGameStore = create<Store>()(persist((set) => ({
         if (e.kind === 'callAnswered') {
           // таймер истёк — подсветить, что выбрал сборщик (текст — по прежнему состоянию, пока вызов был на экране)
           flashes.push({ id: nextToastId++, call: e.call, text: callText(s.game, e.call), optionId: e.optionId, auto: true, chain: false });
-        } else if (e.reveal && ROLL_REEL.enabled && e.reveal.calls.length === 1 && !e.reveal.calls[0].tsd) {
-          // развилка без игры на ТСД — один барабан по шансу выбранного варианта, без окна итога (P4)
-          const c = e.reveal.calls[0];
-          const t = state.tasks[e.taskId];
-          const option = SITUATION_BY_ID[c.situationId]?.options.find((o) => o.id === c.optionId);
-          rolls.push({
-            id: nextToastId++, taskId: e.taskId, taskType: t.type, taskNumber: t.number, pickerId: e.pickerId,
-            outcome: e.outcome, chances: e.reveal.chances, value: c.roll, gain: gains.pop()!,
-            fork: { optionLabel: option?.label ?? '', chance: c.chance, roll: c.roll, complication: c.complication, capped: c.capped, cap: option?.cap ?? null, auto: c.auto },
-          });
         } else if (e.reveal) {
-          results.push({ id: nextToastId++, taskId: e.taskId, taskNumber: state.tasks[e.taskId].number, pickerId: e.pickerId, reveal: e.reveal });
+          // окно итога развилки (P4): деньги всплывут, когда его закроют — чтобы барабан не выдал исход раньше
+          results.push({ id: nextToastId++, taskId: e.taskId, taskNumber: state.tasks[e.taskId].number, pickerId: e.pickerId, reveal: e.reveal, gain: gains.pop() });
         } else {
           toasts.push({
             id: nextToastId++,
@@ -330,7 +316,10 @@ export const useGameStore = create<Store>()(persist((set) => ({
       ? { ui: { ...s.ui, openCallId: callId } }
       : s)),
   closeCall: () => set((s) => ({ ui: { ...s.ui, openCallId: null } })),
-  dismissResult: (id) => set((s) => ({ ui: { ...s.ui, results: s.ui.results.filter((r) => r.id !== id) } })),
+  dismissResult: (id) => set((s) => {
+    const card = s.ui.results.find((r) => r.id === id);
+    return { ui: { ...s.ui, results: s.ui.results.filter((r) => r.id !== id), gains: card?.gain ? [...s.ui.gains, card.gain] : s.ui.gains } };
+  }),
   dismissRoll: (id) => set((s) => {
     const card = s.ui.rolls.find((r) => r.id === id);
     if (!card) return s;

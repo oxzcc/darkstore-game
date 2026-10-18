@@ -237,6 +237,42 @@ button { font-family: inherit; }
 .rr-note.center { text-align: center; margin-top: -6px; }
 .rr-step { font-size: 13px; font-weight: 700; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
 .rr-gain { font-weight: 700; font-size: 16px; color: var(--text-mute); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* ---------- окно итога развилки в три колонки (P4, правка автора 18.10) ---------- */
+.res3 { --cut: 12px; width: min(1120px, 100%); max-height: 100%; animation: pop 0.2s ease-out; }
+.res3 > .vx-edge { background: var(--pc); padding: 3px; }
+.res3-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px minmax(0, 1fr); gap: 20px; padding: 20px; max-height: calc(100vh - 48px); overflow-y: auto; }
+.res3-col { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.res3-who { display: flex; align-items: center; gap: 10px; }
+.res3-who .grow { display: flex; flex-direction: column; }
+.res3-who b { font-size: 18px; text-transform: uppercase; letter-spacing: 0.03em; }
+.res3-who span { font-size: 13px; color: var(--text-mute); }
+.res3-speech { padding: 12px 14px; background: #fff; border: 3px solid var(--text); border-radius: 14px; box-shadow: 0 4px 0 var(--text); font-size: 16px; font-weight: 700; line-height: 1.35; }
+.res3-label { margin-top: 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-mute); }
+.res3-options { display: flex; flex-direction: column; gap: 6px; }
+.res3-opt { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 2px solid var(--line-in); border-radius: 10px; background: #fff; font-size: 14px; color: var(--text-mute); }
+.res3-opt.chosen { border: 3px solid var(--pc); background: color-mix(in srgb, var(--pc) 10%, #fff); color: var(--text); font-weight: 700; }
+.res3-opt.chosen svg.i { color: var(--pc); }
+.res3-risk { font-size: 12px; font-weight: 400; color: var(--text-mute); white-space: nowrap; }
+.res3-center { justify-content: center; cursor: default; }
+.res3-art { height: 260px; border: 3px solid var(--edge-color); border-radius: 14px; overflow: hidden; background: #E8E1CC; display: grid; place-items: center; }
+.res3-art > div { width: 100% !important; height: 100% !important; }
+.res3-art-stub { font-size: 64px; font-weight: 700; color: var(--pc); }
+.res3-step { text-align: center; min-height: 26px; font-size: 18px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-mute); }
+.res3-result { justify-content: flex-start; }
+.res3-wait { margin: auto; font-size: 28px; color: var(--text-mute); letter-spacing: 0.2em; }
+.res3-stamp { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border: 3px solid var(--oc); border-radius: 10px;
+  color: var(--oc); font-size: 22px; text-transform: uppercase; letter-spacing: 0.05em; transform: rotate(-3deg); animation: pop 0.25s ease-out; background: #fff; }
+.res3-stamp b { color: var(--text); }
+.res3-title { font-weight: 700; font-size: 20px; line-height: 1.25; }
+.res3-text { font-size: 14px; line-height: 1.45; color: var(--text-mute); }
+.res3-note { font-size: 13px; color: var(--text-mute); }
+.res3-note.bad { color: var(--failed); }
+.res3-sum { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding-top: 10px; border-top: 2px dashed var(--divider); font-size: 14px; font-variant-numeric: tabular-nums; }
+.res3-sum span { color: var(--text-mute); }
+.res3-close { flex: none; height: 46px; margin-top: auto; }
+@media (max-width: 900px) {
+  .res3-grid { grid-template-columns: 1fr; }
+}
 .ac-pop { position: fixed; z-index: 31; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: #fff; border: 3px solid var(--edge-color);
   border-radius: 12px; box-shadow: var(--shadow); font-size: 13px; animation: pop 0.15s ease-out; }
 .ac-pop::before { content: ''; position: absolute; top: calc(var(--arrow-y) - 8px); width: 12px; height: 12px; background: #fff;

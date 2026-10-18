@@ -337,7 +337,19 @@ export function resultView(game: GameState, card: ResultCard) {
     return { name: game.products[l.productId]?.name ?? l.productId, qty: l.qty, picked: picked[i], note };
   });
   const reward = rewardFor(task, reveal.final, isTutorial(game)); // ровно то, что начислено (rules/rewards.ts)
+  // окно итога в три колонки (P4, правка автора 18.10): слева сюжет — реплика и варианты с выбранным
+  const situation = c ? SITUATION_BY_ID[c.situationId] : undefined;
+  const lineCtx = c ? lineContext(game, task.id, c.lineIndex, picker.id) : {};
+  const options = situation ? situation.options.map((o) => ({ id: o.id, label: o.label, chosen: !c?.tsd && o.id === c?.optionId })) : [];
+  if (c?.tsd) options.push({ id: TSD_OPTION_ID, label: 'Взять ТСД', chosen: true });
   return {
+    speech: situation ? fillText(situation.speech, lineCtx) : '',
+    riskLabel: situation?.riskLabel ?? '',
+    options,
+    /** Ответ вариантом (не ТСД) — барабан «Сработало / Осложнение» по шансу варианта; null — играли на ТСД. */
+    reel: c && !c.tsd ? { chance: c.chance, roll: c.roll, complication: c.complication } : null,
+    /** Ограничение варианта сработало: исход не выше этого. */
+    capped: c?.capped && option?.cap ? option.cap : null,
     taskNumber: task.number,
     taskType: task.type,
     picker,
