@@ -18,6 +18,7 @@ import type { Call, OutcomeReveal } from '../model/call';
 import type { Address } from '../model/address';
 import { advanceWorld } from '../rules/advance';
 import { rewardFor } from '../rules/rewards';
+import { outcomeBreakdown, type ChancePart } from '../rules/outcome';
 import { worldDt } from '../rules/time';
 import { finishCampaign, startNextShift } from '../rules/shift';
 import { endRest, sendToRest } from '../rules/rest';
@@ -43,6 +44,8 @@ export type ResultCard = { id: number; taskId: string; taskNumber: number; picke
 export type RollCard = {
   id: number; taskId: string; taskType: TaskType; taskNumber: number; pickerId: string;
   outcome: Outcome; chances: Record<Outcome, number>; value: number; gain: Gain;
+  /** Из чего сложились шансы — по сборщику до задания (после него растут опыт и усталость). */
+  parts: ChancePart[];
 };
 
 /** Состояние интерфейса: что выделено и что открыто. Не игровое, не сохраняется. */
@@ -244,7 +247,8 @@ export const useGameStore = create<Store>()(persist((set) => ({
           if (ROLL_REEL.enabled && e.roll && !e.reveal) {
             const t = state.tasks[e.taskId];
             rolls.push({ id: nextToastId++, taskId: e.taskId, taskType: t.type, taskNumber: t.number, pickerId: e.pickerId,
-              outcome: e.outcome, chances: e.roll.chances, value: e.roll.value, gain });
+              outcome: e.outcome, chances: e.roll.chances, value: e.roll.value, gain,
+              parts: outcomeBreakdown(s.game.pickers[e.pickerId] ?? state.pickers[e.pickerId], t).parts });
             continue;
           }
           gains.push(gain);

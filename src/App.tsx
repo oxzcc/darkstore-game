@@ -57,7 +57,7 @@ export default function App() {
         <TsdPanel />
         <CallWindow renderPortrait={renderPortrait} />
         <ResultWindow renderArt={renderArt} renderPortrait={renderPortrait} />
-        <RollWindow />
+        <RollWindow renderPortrait={renderPortrait} />
         {!closeup && <TopBar />}
         <SpeedControls />
         {!closeup && <CameraControls />}

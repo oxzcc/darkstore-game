@@ -18,7 +18,9 @@ import { pickedQty, rewardFor } from '../rules/rewards';
 import { CALLS, DEPTH, EXPIRY, RESULT_XP, SITUATION_BY_ID, TSD_OPTION_ID, tsdTextFor, type CallOption } from '../config/calls';
 import type { RackRef } from '../model/minigame';
 import type { Call } from '../model/call';
-import type { CallFlash, ResultCard } from './gameStore';
+import type { CallFlash, ResultCard, RollCard } from './gameStore';
+import { TASK_REPORT } from '../config/taskReport';
+import { TIRED_BADGE_FROM } from '../config/pickers';
 import type { Address } from '../model/address';
 import type { Stock } from '../model/stock';
 import type { Cell } from '../model/warehouse';
@@ -300,6 +302,40 @@ export function callsView(game: GameState) {
 /** Окно после ответа (подсвечен выбор). */
 export function flashView(game: GameState, f: CallFlash) {
   return { id: f.id, ...callCardView(game, f.call, f.text), chosenId: f.optionId, auto: f.auto };
+}
+
+/**
+ * Окно итога задания без развилки (P3, прототип «Окно итога задания»): доклад сборщика, из чего сложились шансы, барабан из трёх исходов, итог.
+ * Шансы и их раскладка — по сборщику до задания (`RollCard.parts`), потому что после него растут опыт и усталость.
+ */
+export function rollView(game: GameState, card: RollCard) {
+  const picker = game.pickers[card.pickerId];
+  const task = game.tasks[card.taskId];
+  if (!picker || !task) return null;
+  const ctx: Record<string, string> = task.type === 'writeoff'
+    ? { product: game.products[task.payload.productId]?.name ?? task.payload.productId, address: formatAddress(task.payload.address) }
+    : {};
+  const fill = (t: string) => t.replace(/\{(\w+)\}/g, (m, k: string) => ctx[k] ?? m);
+  const report = TASK_REPORT[task.type];
+  let accuracy = picker.stats.accuracy;
+  let level = picker.specialization[task.type]?.level ?? 1;
+  let tired: number | null = null;
+  for (const part of card.parts) {
+    if (part.kind === 'accuracy') accuracy = part.points;
+    if (part.kind === 'spec') level = part.level;
+    if (part.kind === 'fatigue' && part.fatigue >= TIRED_BADGE_FROM) tired = part.value;
+  }
+  return {
+    picker,
+    taskType: task.type,
+    taskNumber: task.number,
+    speech: fill(report.speech),
+    title: fill(report.results[card.outcome].title),
+    text: fill(report.results[card.outcome].text),
+    /** Что повлияло на шансы: Нюх, опыт по этому типу, усталость (null — не устал). */
+    why: { accuracy, level, tired },
+    xp: level >= PICKER_GROWTH.spec.maxLevel ? 0 : PICKER_GROWTH.spec.xp[card.outcome],
+  };
 }
 
 /** Окно итога задания с развилкой (ui_12): что решили, что вышло, чек с позициями и наградой. */
