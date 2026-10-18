@@ -11,7 +11,7 @@ import { advanceWorld } from './advance';
 import { canAssign, dispatchTask } from './tasks/lifecycle';
 import { outcomeChances } from './outcome';
 import { pickSeconds } from './time';
-import { effectiveAccuracy, growAfterTask, xpToNext } from './pickerStats';
+import { countOutcome, effectiveAccuracy, growAfterTask, shiftTally, specPerfectBonus, xpToNext } from './pickerStats';
 import { canRest, endRest, sendToRest } from './rest';
 import { endShift, startNextShift } from './shift';
 import { pickerActivity } from './jobs';
@@ -141,5 +141,29 @@ describe('между сменами и в итогах', () => {
     const n = startNextShift(s, map);
     expect(n.pickers.lucky.stats.fatigue).toBe(8);
     expect(n.campaign.startLevels.lucky.order).toBe(2);
+  });
+});
+
+describe('итоги сборщика для профиля (P2)', () => {
+  it('закрытое задание добавляется в итоги за кампанию; без поля — считаем с нуля', () => {
+    const p = createInitialGame(map, 1).pickers.lucky;
+    const a = countOutcome({ ...p, tally: undefined }, 'perfect');
+    const b = countOutcome(a, 'failed');
+    expect(b.tally).toEqual({ done: 2, perfect: 1, withErrors: 0, failed: 1 });
+  });
+
+  it('итоги за смену — только события «задание закрыто» этого сборщика', () => {
+    const log = [
+      { kind: 'taskDone', pickerId: 'lucky', outcome: 'perfect' as const },
+      { kind: 'taskDone', pickerId: 'korzh', outcome: 'failed' as const },
+      { kind: 'taskExpired', taskId: 't1' },
+      { kind: 'taskDone', pickerId: 'lucky', outcome: 'withErrors' as const },
+    ];
+    expect(shiftTally(log, 'lucky')).toEqual({ done: 2, perfect: 1, withErrors: 1, failed: 0 });
+  });
+
+  it('бонус опыта к «идеально»: на первом уровне ноль, дальше растёт', () => {
+    expect(specPerfectBonus(1)).toBe(0);
+    expect(specPerfectBonus(3)).toBeGreaterThan(specPerfectBonus(2));
   });
 });

@@ -26,10 +26,11 @@ import { WAREHOUSE_MAP } from './gameStore';
 import { isLastShift, shiftSecondsLeft } from '../rules/shift';
 import { secondsToTake } from '../rules/deadline';
 import { canRest } from '../rules/rest';
+import { EMPTY_TALLY, shiftTally, specPerfectBonus, xpToNext } from '../rules/pickerStats';
 import { isTutorial } from '../rules/shiftPlan';
 import { currentHint } from '../rules/tutorial';
 import { HINTS } from '../config/tutorial';
-import { DEADLINE, SHIFT } from '../config/balance';
+import { DEADLINE, PICKER_GROWTH, SHIFT } from '../config/balance';
 import { TASK_PINS } from '../config/warehouse';
 import { cellToWorld } from '../rules/warehouse';
 import type { WarehouseMap } from '../model/warehouse';
@@ -632,3 +633,33 @@ export function taskPins(game: GameState, map: WarehouseMap): TaskPin[] {
   }
   return out;
 }
+
+// ---------- Профиль сборщика (P2) ----------
+
+/** Всё для окна профиля: характеристики, опыт по типам (до следующего уровня, бонус к «идеально»), итоги за смену и кампанию. */
+export function pickerProfileView(game: GameState, pickerId: string) {
+  const picker = game.pickers[pickerId];
+  if (!picker) return null;
+  const maxLevel = PICKER_GROWTH.spec.maxLevel;
+  const exp = (['order', 'putaway', 'receiving', 'writeoff'] as const).map((type) => {
+    const { level, xp } = picker.specialization[type] ?? { level: 1, xp: 0 };
+    return {
+      type,
+      level,
+      xp,
+      need: level >= maxLevel ? null : xpToNext(level),
+      bonus: specPerfectBonus(level),
+    };
+  });
+  return {
+    picker,
+    activity: pickerActivity(game, pickerId),
+    energy: Math.round(100 - picker.stats.fatigue),
+    exp,
+    maxLevel,
+    xpPerOutcome: PICKER_GROWTH.spec.xp,
+    shift: shiftTally(game.shiftLog, pickerId),
+    campaign: picker.tally ?? EMPTY_TALLY,
+  };
+}
+export type PickerProfileView = NonNullable<ReturnType<typeof pickerProfileView>>;

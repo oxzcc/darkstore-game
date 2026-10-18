@@ -6,6 +6,7 @@ import GameLoop from './app/GameLoop';
 import { useGameStore, WAREHOUSE_MAP } from './store/gameStore';
 import PickerPanel from './ui/PickerPanel';
 import AssignDialog from './ui/AssignDialog';
+import PickerProfile from './ui/PickerProfile';
 import Toasts from './ui/Toasts';
 import TsdOffer from './ui/TsdOffer';
 import TsdHint from './ui/TsdHint';
@@ -49,6 +50,7 @@ export default function App() {
       <div className="hud">
         {!closeup && <PickerPanel />}
         <AssignDialog renderPortrait={renderPortrait} />
+        <PickerProfile renderPortrait={renderPortrait} />
         <TsdOffer />
         <TsdHint />
         <TsdPanel />
