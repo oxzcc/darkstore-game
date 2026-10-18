@@ -1,27 +1,24 @@
 // Окно «Кого отправить?» по центру (решение автора 18.10, прототип «Сборщики: назначение и барабан»):
-// задание в шапке, ниже вертикальные карточки сборщиков — портрет, флаг с именем, опыт под это задание, Лапы / Нюх / Бодрость,
-// полоса шансов (по нажатию — из чего она сложилась), время и своя кнопка «Назначить».
+// задание в шапке, ниже вертикальные карточки сборщиков — портрет, флаг с именем, опыт под это задание, полоса шансов
+// («?» — из чего она сложилась) и «Готово через». Нажатие на карточку — назначить (правка автора 18.10: меньше информации).
 // Все числа — из selectors (а те — из rules); окно само ничего не считает.
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Picker } from '../model/picker';
 import type { Task, TaskType } from '../model/task';
 import { useGameStore } from '../store/gameStore';
 import { activityOf, addressText, assignCardView, clockText, groupedLines, money, pickerList, taskSummary, type AssignCardView, type ChancePart } from '../store/selectors';
-import { SPEC_RANKS, STAT_SCALE } from '../config/pickers';
+import { SPEC_RANKS, TIRED_BADGE_FROM } from '../config/pickers';
 import { activityLine } from './activityText';
 import { EXP_NAME, OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK, TASK_TYPE_LOOK, taskTitle } from './labels';
 import { Avatar, Pips } from './PickerBits';
 import Vx from './Vx';
 import Icon from './icons';
 
-const TYPES: TaskType[] = ['order', 'putaway', 'receiving', 'writeoff'];
 const pct = (v: number) => Math.round(v * 100);
 const signed = (v: number) => {
   const n = pct(v);
   return n > 0 ? `+${n}%` : n < 0 ? `−${-n}%` : '0%';
 };
-/** Шкала 1–10 в пяти ромбах. */
-const pips10 = (v: number) => v * 5 / STAT_SCALE.max;
 
 /** Подпись строки раскладки шанса. */
 function partLabel(p: ChancePart, type: TaskType): string {
@@ -104,7 +101,6 @@ function TaskHead({ task }: { task: Task }) {
           <div className="task-sub">{taskSummary(game, task)}</div>
         </div>
         <div className="reward">{task.overdue ? 'без награды' : `+${money(task.reward.money)}`}</div>
-        <span className="ac-pause"><Icon name="pause" small /> пауза</span>
         <button className="call-close" onClick={closeAssign} aria-label="Закрыть">×</button>
       </div>
       <div className="ac-lines">
@@ -135,100 +131,80 @@ type CardProps = {
   onSend: () => void;
 };
 
+/**
+ * Карточка сборщика — вся карточка кнопка, как вариант в развилке (правка автора 18.10).
+ * На карточке только то, по чему выбирают: опыт под это задание, шансы и когда будет готово.
+ * Лапы, Нюх и опыт по всем типам — в расчёте шансов и в профиле; бодрость — плашкой, только когда устал.
+ */
 function PickerCard({ view, task, busy, portrait, open, onWhy, onSend }: CardProps) {
   const { picker: p, breakdown, eta, total } = view;
   const { chances, parts } = breakdown;
   const level = p.specialization[task.type]?.level ?? 1;
-  const look = TASK_TYPE_LOOK[task.type];
-  const energy = Math.round(100 - p.stats.fatigue);
+  const tired = p.stats.fatigue >= TIRED_BADGE_FROM ? parts.find((x) => x.kind === 'fatigue')?.value ?? 0 : null;
+  const pick = () => { if (!busy) onSend(); };
   return (
-    <Vx className={`ac-card${busy ? ' busy' : ''}`} style={{ '--pc': p.color } as CSSProperties}>
-      <div className="ac-portrait">
-        {portrait ?? <Avatar picker={p} />}
-        <span className="ac-flag">{p.name}</span>
-        <span className="ac-breed">{p.breed}</span>
-        {busy && <span className="ac-busy">{busy}</span>}
-      </div>
+    <div
+      className={`ac-pick${busy ? ' busy' : ''}`}
+      role="button"
+      tabIndex={busy ? -1 : 0}
+      aria-disabled={!!busy}
+      onClick={pick}
+      onKeyDown={(e) => { if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); pick(); } }}
+    >
+      <Vx className="ac-card" style={{ '--pc': p.color } as CSSProperties}>
+        <div className="ac-portrait">
+          {portrait ?? <Avatar picker={p} />}
+          <span className="ac-flag">{p.name}</span>
+          {busy && <span className="ac-busy">{busy}</span>}
+          {!busy && tired !== null && <span className="ac-tired">Устал {signed(tired)}</span>}
+        </div>
 
-      <div className="ac-body">
-        {/* опыт под это задание — крупно */}
-        <div className="ac-focus">
-          <Vx className="task-icon small" style={{ '--tint': look.tint } as CSSProperties}><Icon name={look.icon} small /></Vx>
-          <div className="grow">
-            <div className="ac-mute">{EXP_NAME[task.type]}</div>
-            <div className="ac-rank"><Pips value={level} /> {SPEC_RANKS[level] ?? level}</div>
+        <div className="ac-body">
+          <div className="ac-rank">
+            <span className="grow">{TASK_TYPE_LOOK[task.type].name}: <b>{SPEC_RANKS[level] ?? level}</b></span>
+            <Pips value={level} />
           </div>
-        </div>
 
-        <div className="ac-stats">
-          <Icon name={STAT_LOOK.speed.icon} small /><span title={STAT_LOOK.speed.hint}>{STAT_LOOK.speed.name}</span>
-          <Pips value={pips10(p.stats.speed)} title={`${p.stats.speed} из ${STAT_SCALE.max}`} />
-          <Icon name={STAT_LOOK.accuracy.icon} small /><span title={STAT_LOOK.accuracy.hint}>{STAT_LOOK.accuracy.name}</span>
-          <Pips value={pips10(p.stats.accuracy)} title={`${p.stats.accuracy} из ${STAT_SCALE.max}`} />
-          <Icon name={STAT_LOOK.energy.icon} small /><span title={STAT_LOOK.energy.hint}>{STAT_LOOK.energy.name}</span>
-          <span className="ac-energy">
-            <span className="ac-energy-bar"><b className={energy < 40 ? 'low' : energy < 65 ? 'mid' : ''} style={{ width: `${energy}%` }} /></span>
-            {energy}%
-          </span>
-        </div>
-
-        {/* опыт по всем типам: этот подсвечен */}
-        <div className="ac-exps">
-          {TYPES.map((t) => {
-            const l = p.specialization[t]?.level ?? 1;
-            return (
-              <span key={t} className={`ac-exp${t === task.type ? ' on' : ''}`} title={`${EXP_NAME[t]}: ${SPEC_RANKS[l] ?? l}`}>
-                <Icon name={TASK_TYPE_LOOK[t].icon} small />
-                <b>{l}</b>
-              </span>
-            );
-          })}
-        </div>
-
-        {/* шансы; нажатие — раскладка */}
-        <button className="ac-chance" onClick={onWhy} aria-expanded={open}>
-          <span className="ac-bar">
-            {OUTCOMES_ORDER.map((o) => (
-              <b key={o} style={{ width: `${chances[o] * 100}%`, background: OUTCOME_LOOK[o].color }}>
-                {chances[o] >= 0.14 ? `${pct(chances[o])}%` : ''}
-              </b>
-            ))}
-          </span>
-          <span className="ac-legend">
-            {OUTCOMES_ORDER.map((o) => (
-              <span key={o}><Icon name={OUTCOME_LOOK[o].icon} small />{OUTCOME_LOOK[o].name} {pct(chances[o])}%</span>
-            ))}
-          </span>
-          <span className="ac-why">{open ? 'Скрыть расчёт' : 'Почему такие шансы?'}</span>
-        </button>
-        {open && (
-          <div className="ac-breakdown">
-            <b className="wide">Шанс «{OUTCOME_LOOK.perfect.name}»</b>
-            {parts.map((x, i) => (
-              <span key={i} className="row">
-                <span>{partLabel(x, task.type)}</span>
-                <span className={x.kind === 'base' ? '' : x.value > 0.0005 ? 'plus' : x.value < -0.0005 ? 'minus' : 'zero'}>
-                  {x.kind === 'base' ? `${pct(x.value)}%` : signed(x.value)}
-                </span>
-              </span>
-            ))}
-            <span className="row total"><span>Итого</span><span>{pct(chances.perfect)}%</span></span>
-            <span className="wide ac-mute">
-              {OUTCOME_LOOK.failed.name} {pct(chances.failed)}%: Нюх и опыт его снижают, усталость и сложность повышают.
+          <div className="ac-chance">
+            <span className="ac-bar">
+              {OUTCOMES_ORDER.map((o) => (
+                <b key={o} style={{ width: `${chances[o] * 100}%`, background: OUTCOME_LOOK[o].color }} title={`${OUTCOME_LOOK[o].name} ${pct(chances[o])}%`}>
+                  {chances[o] >= 0.14 ? `${pct(chances[o])}%` : chances[o] >= 0.04 ? <Icon name={OUTCOME_LOOK[o].icon} small /> : null}
+                </b>
+              ))}
             </span>
+            <button
+              className={`ac-q${open ? ' on' : ''}`}
+              onClick={(e) => { e.stopPropagation(); onWhy(); }}
+              aria-expanded={open}
+              aria-label="Почему такие шансы?"
+              title="Почему такие шансы?"
+            >?</button>
           </div>
-        )}
+          {open && (
+            <div className="ac-breakdown" onClick={(e) => e.stopPropagation()}>
+              <b>Шанс «{OUTCOME_LOOK.perfect.name}»</b>
+              {parts.map((x, i) => (
+                <span key={i} className="row">
+                  <span>{partLabel(x, task.type)}</span>
+                  <span className={x.kind === 'base' ? '' : x.value > 0.0005 ? 'plus' : x.value < -0.0005 ? 'minus' : 'zero'}>
+                    {x.kind === 'base' ? `${pct(x.value)}%` : signed(x.value)}
+                  </span>
+                </span>
+              ))}
+              <span className="row total"><span>Итого</span><span>{pct(chances.perfect)}%</span></span>
+              <span className="ac-mute">
+                {OUTCOME_LOOK.withErrors.name} {pct(chances.withErrors)}%, {OUTCOME_LOOK.failed.name.toLowerCase()} {pct(chances.failed)}%.
+                {' '}{STAT_LOOK.speed.name} {p.stats.speed}: {eta === null ? 'дорога —' : `до места ${clockText(eta)}`}.
+              </span>
+            </div>
+          )}
 
-        <div className="ac-times">
-          <Icon name="walk" small />
-          {eta === null ? <span>—</span> : <span>Дойдёт за <b>{clockText(eta)}</b></span>}
-          {total !== null && <span>Закончит через <b>~{clockText(total)}</b></span>}
+          <div className="ac-time">
+            {busy ? <span>Сейчас занят</span> : total === null ? <span>Не дойти</span> : <span>Готово через <b>~{clockText(total)}</b></span>}
+          </div>
         </div>
-
-        <button className="btn primary ac-send" disabled={!!busy} onClick={onSend}>
-          <Vx>{busy ? 'Занят' : `Назначить`}</Vx>
-        </button>
-      </div>
-    </Vx>
+      </Vx>
+    </div>
   );
 }
