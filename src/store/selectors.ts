@@ -3,10 +3,11 @@
 import type { GameState } from '../model/game';
 import type { OutcomeChances, Task } from '../model/task';
 import type { Picker, PickerActivity } from '../model/picker';
-import { outcomeChances } from '../rules/outcome';
+import { outcomeBreakdown, outcomeChances, type OutcomeBreakdown } from '../rules/outcome';
+export type { ChancePart } from '../rules/outcome';
 import { canAssign } from '../rules/tasks/lifecycle';
 import { formatAddress } from '../rules/address';
-import { etaToTask, pickerActivity } from '../rules/jobs';
+import { etaToTask, jobSecondsEstimate, pickerActivity } from '../rules/jobs';
 import { tsdOfferSecondsLeft } from '../rules/tsd';
 import { shelfContents } from '../rules/stock';
 import { takenPerLine } from '../rules/minigames/picking';
@@ -47,6 +48,28 @@ export function pickerList(pickers: GameState['pickers']): Picker[] {
 /** Шансы исходов для карточки сборщика — та же функция, по которой бросается исход. */
 export function chancesFor(game: GameState, pickerId: string, taskId: string): OutcomeChances {
   return outcomeChances(game.pickers[pickerId], game.tasks[taskId]);
+}
+
+/** Всё для карточки сборщика в окне назначения: можно ли отправить, шансы с раскладкой, время до места и до конца задания. */
+export type AssignCardView = {
+  picker: Picker;
+  check: { ok: boolean; reason?: string };
+  breakdown: OutcomeBreakdown;
+  eta: number | null;
+  total: number | null;
+};
+export function assignCardView(game: GameState, pickerId: string, taskId: string): AssignCardView | null {
+  const picker = game.pickers[pickerId];
+  const task = game.tasks[taskId];
+  if (!picker || !task) return null;
+  const check = canAssign(game, taskId, pickerId);
+  return {
+    picker,
+    check,
+    breakdown: outcomeBreakdown(picker, task),
+    eta: check.ok ? etaToTask(WAREHOUSE_MAP, picker, task) : null,
+    total: check.ok ? jobSecondsEstimate(WAREHOUSE_MAP, picker, task) : null,
+  };
 }
 
 /** Можно ли отправить сборщика; если нет — причина. */

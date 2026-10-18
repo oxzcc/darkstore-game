@@ -26,6 +26,10 @@ export type PickerTemplate = {
 
 export const STAT_SCALE = { min: 1, max: 10 };
 export const START_SPECIALIZATION_LEVEL = 1;
+/** Уровни опыта по типу задания словами вместо «ур. N» (решение автора 18.10). Индекс — уровень; шкала 1–5 (PICKER_GROWTH.spec.maxLevel). */
+export const SPEC_RANKS = ['', 'Новичок', 'Ученик', 'Знаток', 'Профи', 'Мастер'];
+/** С какой усталости (%) на карточке в окне назначения появляется плашка «Устал» (решение автора 18.10: бодрость — только когда устал). */
+export const TIRED_BADGE_FROM = 40;
 
 const LABRADOR: DogLook = { fur: '#F2E2C2', face: '#FAF1DE', ear: '#E5CFA4', ears: 'floppy' };
 const CORGI: DogLook = {

@@ -106,6 +106,29 @@ export function etaToTask(map: WarehouseMap, picker: Picker, task: Task): number
   return cells.length ? travelSeconds(picker, Math.min(...cells)) : null;
 }
 
+/**
+ * Примерно через сколько секунд сборщик закончит задание, если отправить его сейчас: вся дорога + вся работа.
+ * Для строки «закончит через» в окне назначения. Развилки не учитываются (их заранее не знать); null — не дойти.
+ */
+export function jobSecondsEstimate(map: WarehouseMap, picker: Picker, task: Task): number | null {
+  if (!canBuildJob(task)) return null;
+  let pos = picker.position;
+  let total = 0;
+  for (const step of buildJob(map, picker, task).steps) {
+    if (step.kind !== 'walk') { total += step.seconds; continue; }
+    const dist = distancesFrom(map, pos);
+    let best: { cell: typeof pos; cells: number } | null = null;
+    for (const c of step.spots) {
+      const d = dist.get(`${c.x},${c.z}`);
+      if (d !== undefined && (!best || d < best.cells)) best = { cell: c, cells: d };
+    }
+    if (!best) return null;
+    total += travelSeconds(picker, best.cells);
+    pos = best.cell;
+  }
+  return total;
+}
+
 /** Что сборщик делает сейчас — для карточки в интерфейсе. Без текстов: подписи собирает UI. */
 export function pickerActivity(game: GameState, pickerId: string): PickerActivity {
   const p = game.pickers[pickerId];

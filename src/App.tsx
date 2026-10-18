@@ -48,7 +48,7 @@ export default function App() {
       {/* панели заданий слева больше нет — задания видны пинами на складе (решение автора 18.10) */}
       <div className="hud">
         {!closeup && <PickerPanel />}
-        <AssignDialog />
+        <AssignDialog renderPortrait={renderPortrait} />
         <TsdOffer />
         <TsdHint />
         <TsdPanel />

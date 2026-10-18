@@ -1,9 +1,7 @@
-// Мелкие общие части карточек сборщика: аватар, полоска усталости, полосы характеристик.
+// Мелкие общие части карточек сборщика: аватар, полоска усталости, ромбы уровня.
 import type { CSSProperties } from 'react';
 import type { Picker } from '../model/picker';
-import { STAT_SCALE } from '../config/pickers';
 import Vx from './Vx';
-import Icon from './icons';
 
 /** Аватар: рамка в цвете сборщика. Пока буква — морды из макетов подключим, когда решим их роль. */
 export function Avatar({ picker, small }: { picker: Picker; small?: boolean }) {
@@ -24,19 +22,14 @@ export function FatigueBar({ value }: { value: number }) {
   );
 }
 
-/** Скорость, точность, усталость — короткими полосками, как на ui_03. */
-export function StatBars({ picker }: { picker: Picker }) {
-  const pct = (v: number) => `${((v - STAT_SCALE.min + 1) / (STAT_SCALE.max - STAT_SCALE.min + 1)) * 100}%`;
+/** Ромбы уровня: `value` из `max` (половинки — для шкалы 1–10 в пяти ромбах). Цвет — сборщика (`--pc`). */
+export function Pips({ value, max = 5, title }: { value: number; max?: number; title?: string }) {
   return (
-    <div className="stats">
-      <Icon name="speedStat" small />
-      <div className="stat-bar" title={`Скорость ${picker.stats.speed}`}><b style={{ width: pct(picker.stats.speed) }} /></div>
-      <Icon name="acc" small />
-      <div className="stat-bar" title={`Точность ${picker.stats.accuracy}`}><b style={{ width: pct(picker.stats.accuracy) }} /></div>
-      <Icon name="fatigue" small />
-      <div className="stat-bar" title={`Усталость ${Math.round(picker.stats.fatigue)}%`}>
-        <b style={{ width: `${picker.stats.fatigue}%`, background: 'var(--failed)' }} />
-      </div>
-    </div>
+    <span className="pips" title={title}>
+      {Array.from({ length: max }, (_, i) => {
+        const cls = value >= i + 1 ? 'on' : value >= i + 0.5 ? 'half' : '';
+        return <i key={i} className={cls} />;
+      })}
+    </span>
   );
 }

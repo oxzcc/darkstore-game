@@ -115,36 +115,74 @@ button { font-family: inherit; }
 .seg i { width: 12px; height: 8px; border-radius: 2px; background: var(--track); }
 .seg i.on { background: var(--seg-color, var(--failed)); }
 
-/* ---------- окно назначения (справа, ui_03) ---------- */
-.assign { position: absolute; right: 16px; top: 96px; width: 440px; max-height: calc(100% - 112px); display: flex; flex-direction: column; }
-/* окно не выше экрана: середина прокручивается, заголовок и кнопки всегда видны (правка автора 14.10) */
-.assign > .vx-edge { height: auto; min-height: 0; flex: 0 1 auto; display: flex; flex-direction: column; }
-.assign > .vx-edge > .vx-body { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; height: auto; } /* только само окно */
-.assign > .vx-edge > .vx-body > .panel-title, .assign .buttons { flex-shrink: 0; }
-.assign-scroll { padding: 14px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
-.assign-scroll > * { flex-shrink: 0; } /* карточки не сжимаются — середина прокручивается */
-.order-lines { display: flex; flex-direction: column; gap: 6px; padding: 4px 4px 0; flex-shrink: 0; max-height: 156px; overflow-y: auto; }
-.order-line .places { margin-left: auto; color: var(--text-mute); font-size: 13px; font-variant-numeric: tabular-nums; }
-.order-line { display: flex; align-items: center; gap: 8px; font-size: 15px; }
-.order-line .qty { color: var(--text-mute); }
+/* ---------- окно назначения по центру (решение автора 18.10, прототип «Сборщики: назначение и барабан») ---------- */
+.ac-veil { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(40, 34, 24, 0.35); }
+.ac-wrap { width: min(980px, 100%); max-height: 100%; display: flex; flex-direction: column; animation: pop 0.2s ease-out; }
+.ac-window { --cut: 12px; min-height: 0; display: flex; flex-direction: column; }
+.ac-window > .vx-edge { height: auto; min-height: 0; display: flex; flex-direction: column; }
+.ac-window > .vx-edge > .vx-body { height: auto; min-height: 0; display: flex; flex-direction: column; }
+.ac-inner { min-height: 0; overflow-y: auto; padding: 16px 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+.ac-head { display: flex; flex-direction: column; gap: 8px; }
+.ac-head-row { display: flex; align-items: center; gap: 12px; }
+.ac-title { font-weight: 700; font-size: 22px; text-transform: uppercase; letter-spacing: 0.03em; }
+.ac-lines { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; max-height: 64px; overflow-y: auto; }
+.ac-line { display: inline-flex; align-items: center; gap: 6px; }
+.ac-line .places { color: var(--text-mute); font-size: 13px; font-variant-numeric: tabular-nums; }
+.ac-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding-bottom: 6px; }
+.ac-card { --cut: 10px; min-width: 0; }
+.ac-card > .vx-edge { background: var(--edge-color); box-shadow: var(--shadow); }
+.ac-card > .vx-edge > .vx-body { background: var(--card); display: flex; flex-direction: column; }
+.ac-portrait { position: relative; height: 160px; background: color-mix(in srgb, var(--pc) 22%, var(--card)); border-bottom: 3px solid var(--edge-color);
+  display: grid; place-items: center; overflow: hidden; }
+.ac-portrait > canvas, .ac-portrait > div:not(.avatar) { width: 100% !important; height: 100% !important; }
+.ac-flag { position: absolute; left: 0; top: 10px; padding: 4px 22px 4px 12px; background: var(--pc); color: #fff; font-weight: 700; font-size: 18px;
+  text-transform: uppercase; letter-spacing: 0.03em; clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 0 100%);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25); }
+.ac-busy { position: absolute; right: 8px; bottom: 8px; max-width: calc(100% - 16px); padding: 3px 8px; background: var(--tag); color: #fff;
+  font-size: 12px; border-radius: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ac-body { padding: 12px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+.ac-mute { font-size: 12px; color: var(--text-mute); }
+.pips { display: inline-flex; gap: 3px; }
+.pips i { width: 11px; height: 11px; transform: rotate(45deg); border: 2px solid var(--text); border-radius: 2px; background: #fff; }
+.pips i.on { background: var(--pc, var(--primary)); }
+.pips i.half { background: linear-gradient(90deg, var(--pc, var(--primary)) 50%, #fff 50%); }
+.ac-pick { min-width: 0; cursor: pointer; border-radius: 16px; outline: none; transition: transform 0.12s; }
+.ac-pick:hover:not(.busy), .ac-pick:focus-visible { transform: translateY(-3px); }
+.ac-pick:hover:not(.busy) .ac-card > .vx-edge, .ac-pick:focus-visible .ac-card > .vx-edge { background: var(--pc); }
+.ac-pick.busy { cursor: not-allowed; filter: grayscale(0.8); opacity: 0.75; }
+.ac-tired { position: absolute; right: 8px; bottom: 8px; padding: 3px 8px; background: var(--failed); color: #fff; font-size: 13px; font-weight: 700; border-radius: 6px; }
+.ac-rank { display: flex; align-items: center; gap: 8px; font-size: 16px; }
+.ac-chance { display: flex; align-items: center; gap: 8px; }
+.ac-bar { flex: 1; min-width: 0; display: flex; height: 28px; border: 3px solid var(--edge-color); border-radius: 8px; overflow: hidden; background: #fff; }
+.ac-bar > b { display: grid; place-items: center; height: 100%; color: #fff; font-size: 14px; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3); overflow: hidden; white-space: nowrap; }
+.ac-bar > b + b { border-left: 2px solid var(--edge-color); }
+.ac-bar svg.i.sm { width: 14px; height: 14px; }
+.ac-q { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line-in); background: #fff; color: var(--text-mute);
+  font-family: inherit; font-weight: 700; font-size: 15px; cursor: pointer; }
+.ac-q:hover, .ac-q.on { border-color: var(--text); color: var(--text); }
+.ac-time { font-size: 15px; color: var(--text-mute); }
+.ac-time b { color: var(--text); font-variant-numeric: tabular-nums; }
+.ac-pop { position: fixed; z-index: 31; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: #fff; border: 3px solid var(--edge-color);
+  border-radius: 12px; box-shadow: var(--shadow); font-size: 13px; animation: pop 0.15s ease-out; }
+.ac-pop::before { content: ''; position: absolute; top: calc(var(--arrow-y) - 8px); width: 12px; height: 12px; background: #fff;
+  border: 3px solid var(--edge-color); transform: rotate(45deg); }
+.ac-pop.to-right::before { left: -9px; border-top: 0; border-right: 0; }
+.ac-pop.to-left::before { right: -9px; border-bottom: 0; border-left: 0; }
+.ac-pop .row { display: flex; justify-content: space-between; gap: 8px; font-variant-numeric: tabular-nums; }
+.ac-pop .row.total { border-top: 2px dashed var(--divider); padding-top: 4px; margin-top: 2px; font-weight: 700; }
+.ac-pop .plus { color: var(--primary); font-weight: 700; }
+.ac-pop .minus { color: var(--failed); font-weight: 700; }
+.ac-pop .zero { color: var(--text-mute); }
+@media (max-width: 760px) {
+  .ac-cards { grid-template-columns: repeat(3, 78%); overflow-x: auto; scroll-snap-type: x mandatory; }
+  .ac-pick { scroll-snap-align: center; }
+}
 .tag { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: 6px; background: var(--tag); color: #fff;
   font-size: 14px; font-weight: 700; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
 
-.choice { cursor: pointer; --cut: 8px; }
-.choice > .vx-edge > .vx-body { padding: 12px; }
-.choice.chosen > .vx-edge { background: var(--pc); padding: 4px; }
-.choice.disabled { cursor: not-allowed; opacity: 0.55; }
-.choice-head { display: flex; gap: 12px; align-items: center; }
-.choice-head .grow { flex: 1; }
-.stats { display: grid; grid-template-columns: 20px 90px; gap: 4px 6px; align-items: center; }
-.stat-bar { height: 10px; background: var(--track); position: relative; }
-.stat-bar > b { position: absolute; inset: 0 auto 0 0; background: var(--primary-hi); }
 .note { font-size: 13px; color: var(--text-mute); margin-top: 6px; text-align: center; }
 
 /* полоса шансов трёх исходов (ui_03): цвет + значок + проценты */
-.chances { margin-top: 10px; }
-.chance-bar { display: flex; height: 16px; }
-.chance-bar > b { display: block; height: 100%; }
 .chance-legend { display: flex; justify-content: space-between; margin-top: 6px; font-weight: 700; font-size: 16px; }
 .chance-legend span { display: inline-flex; align-items: center; gap: 4px; }
 
