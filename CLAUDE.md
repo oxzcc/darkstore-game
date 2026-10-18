@@ -510,7 +510,11 @@
 - P2 «Профиль сборщика» (написано, ждёт проверки): `ui/PickerProfile.tsx`, данные — `selectors.pickerProfileView`; открыть — клик по нижней карточке (`PickerPanel`)
   или по собаке на складе (невидимая коробка-цель `DogHitbox` в `scene/Pickers.tsx`; у стеллажа во время игры на ТСД её нет); `ui.profilePickerId`, `openProfile` / `closeProfile`, автопауза.
   Итоги за кампанию — новое необязательное поле `Picker.tally` (`countOutcome` в `advanceWorld`; старые сохранения не сбрасываются — считаем с нуля),
-  за смену — `shiftTally` по `shiftLog`; бонус опыта к «идеально» — `specPerfectBonus`. Тесты — `rules/pickerStats.test.ts`. Перерыв — только на нижней карточке.
+  за смену — `shiftTally` по `shiftLog`; бонус опыта к «идеально» — `specPerfectBonus`. Тесты — `rules/pickerStats.test.ts`. Перерыв — только на нижней карточке. Проверено автором и влито 18.10, PR 70.
+- P3 «Барабан исхода» (написано, ждёт проверки): `ui/RollWindow.tsx` — окно по центру, мир на паузе (как окно итога); только у заданий **без развилки** (с развилкой — окно итога, до P4).
+  Правила не менялись: `advanceWorld` кладёт в событие `taskDone.roll` шансы и число броска (`outcomeAt(chances, value)` = исход, тест — `rules/advance.test.ts`).
+  Store: очередь `ui.rolls` (`RollCard`), `dismissRoll`; всплывашка исхода для таких заданий не нужна — её заменяет барабан, деньги у плашки — после него.
+  Лента — символы исходов в пропорции шансов (`ROLL_REEL.symbols`), остановка на выпавшем; маркер на полосе шансов — в точке броска. Числа — `ROLL_REEL` в `config/balance.ts`.
 
 План этапов:
 

@@ -21,15 +21,16 @@ export default function ResultWindow({ renderArt }: { renderArt?: (art: ResultAr
   const game = useGameStore((s) => s.game);
   const dismiss = useGameStore((s) => s.dismissResult);
   const tsdPlaying = useGameStore((s) => s.game.tsdGame !== null); // итог прошлого заказа — только после игры на ТСД
+  const rollShown = useGameStore((s) => s.ui.rolls.length > 0);    // сначала барабан другого задания (P3)
 
   useEffect(() => {
-    if (!card || tsdPlaying) return;
+    if (!card || tsdPlaying || rollShown) return;
     const onKey = (e: KeyboardEvent) => { if (e.code === 'Escape' || e.code === 'Enter') dismiss(card.id); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [card, dismiss, tsdPlaying]);
+  }, [card, dismiss, tsdPlaying, rollShown]);
 
-  if (!card || tsdPlaying) return null;
+  if (!card || tsdPlaying || rollShown) return null;
   const v = resultView(game, card);
   if (!v) return null;
   const look = OUTCOME_LOOK[v.outcome];

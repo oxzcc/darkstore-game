@@ -6,6 +6,7 @@ import { persistOptions } from './persist';
 import type { GameState } from '../model/game';
 import type { Outcome, TaskType } from '../model/task';
 import { WAREHOUSE_LAYOUT, WAREHOUSE_VIEW } from '../config/warehouse';
+import { ROLL_REEL } from '../config/balance';
 import { buildWarehouseMap } from '../rules/warehouse';
 import { createInitialGame } from '../rules/game';
 import { acceptTsd, declineTsd, sendPicker } from '../rules/tsd';
@@ -38,6 +39,11 @@ export type CallFlash = { id: number; call: Call; text: string; optionId: string
 
 /** Окно результата после заказа с развилкой: раскрытие исхода (13.10; 10, раздел 3). */
 export type ResultCard = { id: number; taskId: string; taskNumber: number; pickerId: string; reveal: OutcomeReveal };
+/** Барабан исхода (P3): задание без развилки закрыто. Всплывашка у денег показывается, когда барабан закрыт — чтобы не выдать исход раньше. */
+export type RollCard = {
+  id: number; taskId: string; taskType: TaskType; taskNumber: number; pickerId: string;
+  outcome: Outcome; chances: Record<Outcome, number>; value: number; gain: Gain;
+};
 
 /** Состояние интерфейса: что выделено и что открыто. Не игровое, не сохраняется. */
 export type UiState = {
@@ -50,6 +56,7 @@ export type UiState = {
   callFlashes: CallFlash[];
   openCallId: string | null;    // открыто окно развилки (по клику на «!»): мир на паузе
   results: ResultCard[];        // очередь окон результата: показывается первое (не во время игры на ТСД)
+  rolls: RollCard[];            // очередь барабанов исхода (P3): показывается первый, мир на паузе
   depthSelected: number | null; // «Глубина»: выбранная коробка (клетка) — сцена подсвечивает, куда её можно сдвинуть
   barcodeInput: number[];       // «Штрихкод»: цифры текущей попытки, которые игрок уже набрал
   /** Камера общего вида (W1): куда игрок её повернул (радианы, 0 — исходный угол) и зум. Не игровое состояние, не сохраняется. */
@@ -95,6 +102,8 @@ type Store = {
   openCall: (callId: string) => void;
   closeCall: () => void;
   dismissResult: (id: number) => void;
+  /** Барабан исхода закрыт (сам или кликом): всплывашка у денег (P3). */
+  dismissRoll: (id: number) => void;
   /** Вызывается каждый кадр из GameLoop: двигает игровое время. */
   tick: (realDt: number) => void;
   togglePause: () => void;
@@ -117,7 +126,7 @@ type Store = {
 
 /** Окна и всплывашки, которые закрываются, когда кончилась смена или началась новая. */
 const clearWindows = (ui: UiState): UiState => ({
-  ...ui, assignTaskId: null, chosenPickerId: null, profilePickerId: null, openCallId: null, callFlashes: [], results: [], toasts: [], gains: [],
+  ...ui, assignTaskId: null, chosenPickerId: null, profilePickerId: null, openCallId: null, callFlashes: [], results: [], rolls: [], toasts: [], gains: [],
   depthSelected: null, barcodeInput: [],
 });
 
@@ -131,7 +140,7 @@ const newSeed = () => Math.floor(Math.random() * 2 ** 32);
 // persist — сохранение игры в браузере (M8e, store/persist.ts)
 export const useGameStore = create<Store>()(persist((set) => ({
   game: createInitialGame(WAREHOUSE_MAP, newSeed()),
-  ui: { assignTaskId: null, chosenPickerId: null, profilePickerId: null, toasts: [], gains: [], nextToastId: 1, callFlashes: [], openCallId: null, results: [], depthSelected: null, barcodeInput: [], camera: HOME_CAMERA },
+  ui: { assignTaskId: null, chosenPickerId: null, profilePickerId: null, toasts: [], gains: [], nextToastId: 1, callFlashes: [], openCallId: null, results: [], rolls: [], depthSelected: null, barcodeInput: [], camera: HOME_CAMERA },
 
   openAssign: (taskId) => set((s) => ({ ui: { ...s.ui, assignTaskId: taskId, chosenPickerId: null, profilePickerId: null } })),
   openProfile: (pickerId) => set((s) => ({ ui: { ...s.ui, profilePickerId: pickerId } })),
@@ -205,7 +214,7 @@ export const useGameStore = create<Store>()(persist((set) => ({
       // автопауза, пока открыто окно «Кого отправить?» (02, раздел 2)
       // окна по центру (развилка и итог заказа) тоже ставят мир на паузу
       // во время игры на ТСД окно итога ждёт её конца и мир не держит (решение автора 14.10)
-      const resultShown = s.ui.results.length > 0 && s.game.tsdGame === null;
+      const resultShown = (s.ui.results.length > 0 || s.ui.rolls.length > 0) && s.game.tsdGame === null; // и барабан исхода (P3)
       // подсказка обучающей смены по центру — тоже пауза (M8d)
       const hintShown = currentHint(s.game, s.ui.openCallId) !== null;
       const dt = worldDt(s.game.clock, realDt, s.ui.assignTaskId !== null || s.ui.profilePickerId !== null || s.ui.openCallId !== null || resultShown || hintShown);
@@ -218,6 +227,7 @@ export const useGameStore = create<Store>()(persist((set) => ({
       const toasts: Toast[] = [];
       const flashes: CallFlash[] = [];
       const results: ResultCard[] = [];
+      const rolls: RollCard[] = [];
       const gains: Gain[] = [];
       for (const e of events) {
         if (e.kind === 'taskExpired') {
@@ -228,7 +238,17 @@ export const useGameStore = create<Store>()(persist((set) => ({
           continue;
         }
         // начисленное за задание — всплывашка у денег и рейтинга (те же числа, что прибавил applyTaskResult)
-        if (e.kind === 'taskDone') gains.push({ id: nextToastId++, ...rewardFor(state.tasks[e.taskId], e.outcome, isTutorial(state)) });
+        if (e.kind === 'taskDone') {
+          const gain = { id: nextToastId++, ...rewardFor(state.tasks[e.taskId], e.outcome, isTutorial(state)) };
+          // без развилки — барабан по центру; деньги всплывут, когда он закроется (P3)
+          if (ROLL_REEL.enabled && e.roll && !e.reveal) {
+            const t = state.tasks[e.taskId];
+            rolls.push({ id: nextToastId++, taskId: e.taskId, taskType: t.type, taskNumber: t.number, pickerId: e.pickerId,
+              outcome: e.outcome, chances: e.roll.chances, value: e.roll.value, gain });
+            continue;
+          }
+          gains.push(gain);
+        }
         if (e.kind === 'callAnswered') {
           // таймер истёк — подсветить, что выбрал сборщик (текст — по прежнему состоянию, пока вызов был на экране)
           flashes.push({ id: nextToastId++, call: e.call, text: callText(s.game, e.call), optionId: e.optionId, auto: true, chain: false });
@@ -252,6 +272,7 @@ export const useGameStore = create<Store>()(persist((set) => ({
           gains: [...s.ui.gains, ...gains],
           callFlashes: [...s.ui.callFlashes, ...flashes],
           results: [...s.ui.results, ...results],
+          rolls: [...s.ui.rolls, ...rolls],
           nextToastId,
         },
       };
@@ -295,4 +316,9 @@ export const useGameStore = create<Store>()(persist((set) => ({
       : s)),
   closeCall: () => set((s) => ({ ui: { ...s.ui, openCallId: null } })),
   dismissResult: (id) => set((s) => ({ ui: { ...s.ui, results: s.ui.results.filter((r) => r.id !== id) } })),
+  dismissRoll: (id) => set((s) => {
+    const card = s.ui.rolls.find((r) => r.id === id);
+    if (!card) return s;
+    return { ui: { ...s.ui, rolls: s.ui.rolls.filter((r) => r.id !== id), gains: [...s.ui.gains, card.gain] } };
+  }),
 }), persistOptions<Store>()));
