@@ -44,6 +44,11 @@ function Risk({ risk, chance }: { risk: CallOptionView['risk']; chance: number }
   );
 }
 
+/** Подпись строки времени на карточке варианта — по типу задания (у приёмки не «сборка»). */
+const WORK_TIME_LABEL: Record<TaskType, string> = {
+  order: 'Время сборки', receiving: 'Время приёмки', putaway: 'Время выкладки', writeoff: 'Время списания',
+};
+
 function secondsText(s: number): string {
   return s > 0 ? `+${s} ${plural(s, 'секунда', 'секунды', 'секунд')}` : 'не меняется';
 }
@@ -95,12 +100,12 @@ function ForkCard(p: CardProps) {
               <div className="fork-option-line" />
               {o.tsd ? (
                 <>
-                  <div className="fork-option-row"><span>Время сборки</span><b>пока играете</b></div>
+                  <div className="fork-option-row"><span>{WORK_TIME_LABEL[p.taskType]}</span><b>пока играете</b></div>
                   <div className="fork-option-row"><span>Исход</span><b className="tsd-yours">зависит от вас</b></div>
                 </>
               ) : (
                 <>
-                  <div className="fork-option-row"><span>Время сборки</span><b className={o.seconds > 0 ? 'slow' : ''}>{secondsText(o.seconds)}</b></div>
+                  <div className="fork-option-row"><span>{WORK_TIME_LABEL[p.taskType]}</span><b className={o.seconds > 0 ? 'slow' : ''}>{secondsText(o.seconds)}</b></div>
                   <div className="fork-option-row"><span>{p.riskLabel}</span><Risk risk={o.risk} chance={o.chance} /></div>
                 </>
               )}

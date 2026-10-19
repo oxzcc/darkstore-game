@@ -66,6 +66,12 @@ export type UiState = {
   camera: { yaw: number; zoom: number };
 };
 
+/** Подсказка обучения ждёт, пока закрыты окна назначения, профиля и итогов: иначе она ложится поверх них (прогон 18.10).
+ *  Окно развилки не мешает — подсказка «Взять ТСД» как раз про него. */
+export function hintWaits(ui: Pick<UiState, 'assignTaskId' | 'profilePickerId' | 'results' | 'rolls'>): boolean {
+  return ui.assignTaskId !== null || ui.profilePickerId !== null || ui.results.length > 0 || ui.rolls.length > 0;
+}
+
 type Store = {
   game: GameState;
   ui: UiState;
@@ -219,7 +225,7 @@ export const useGameStore = create<Store>()(persist((set) => ({
       // во время игры на ТСД окно итога ждёт её конца и мир не держит (решение автора 14.10)
       const resultShown = (s.ui.results.length > 0 || s.ui.rolls.length > 0) && s.game.tsdGame === null; // и барабан исхода (P3)
       // подсказка обучающей смены по центру — тоже пауза (M8d)
-      const hintShown = currentHint(s.game, s.ui.openCallId) !== null;
+      const hintShown = !hintWaits(s.ui) && currentHint(s.game, s.ui.openCallId) !== null;
       const dt = worldDt(s.game.clock, realDt, s.ui.assignTaskId !== null || s.ui.profilePickerId !== null || s.ui.openCallId !== null || resultShown || hintShown);
       if (dt === 0) return s;
       const { state, events } = advanceWorld(s.game, WAREHOUSE_MAP, dt);

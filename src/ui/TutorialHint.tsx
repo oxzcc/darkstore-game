@@ -44,9 +44,9 @@ const overlaps = (a: Hole, top: number, h: number, left: number, w: number) =>
 
 export default function TutorialHint() {
   const game = useGameStore((s) => s.game);
-  const openCallId = useGameStore((s) => s.ui.openCallId);
+  const ui = useGameStore((s) => s.ui);
   const dismiss = useGameStore((s) => s.dismissHint);
-  const hint = hintView(game, openCallId);
+  const hint = hintView(game, ui);
   const holes = useHoles(hint?.focus);
   const cardRef = useRef<HTMLDivElement>(null);
   const [cardSize, setCardSize] = useState({ w: 460, h: 260 });
