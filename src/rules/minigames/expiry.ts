@@ -50,8 +50,9 @@ export function scoreExpiry(days: number, need: number, elapsed: number, timedOu
   return elapsed <= cfg.perfectSeconds ? 'perfect' : 'withErrors';
 }
 
-/** Дата на этикетке: «16.10». Пока в игре нет календаря, «сегодня» — из config (EXPIRY.today). */
-export function expiryDate(days: number, cfg = EXPIRY): string {
-  const d = new Date(2026, cfg.today.month - 1, cfg.today.day + days);
+/** Дата на этикетке: «16.10». «Сегодня» — дата первой смены (EXPIRY.firstShiftDate) + (смена − 1) дней; days — сколько дней от сегодня. */
+export function expiryDate(days: number, shift = 1, cfg = EXPIRY): string {
+  const f = cfg.firstShiftDate;
+  const d = new Date(f.year, f.month - 1, f.day + (shift - 1) + days);
   return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
 }

@@ -455,15 +455,16 @@ export function expiryView(game: GameState) {
   const g = game.tsdGame;
   if (!g || g.kind !== 'expiry') return null;
   const product = game.products[g.productId];
-  const unit = (i: number | null) => (i === null ? null : { index: i, ...g.units[i], date: expiryDate(g.units[i].days) });
+  const shift = game.campaign.shift;
+  const unit = (i: number | null) => (i === null ? null : { index: i, ...g.units[i], date: expiryDate(g.units[i].days, shift) });
   return {
     product: { name: product?.name ?? g.productId, look: product?.look ?? null },
-    need: expiryDate(g.need),
-    today: expiryDate(0),
+    need: expiryDate(g.need, shift),
+    today: expiryDate(0, shift),
     // списание (M7e2): ищем просроченную — другие подписи
     expired: g.mode === 'expired',
     goal: g.mode === 'expired' ? 'Найдите просроченный' : 'Найдите',
-    rule: g.mode === 'expired' ? { label: 'Срок истёк', value: `до ${expiryDate(0)}` } : { label: 'Годен не ранее', value: expiryDate(g.need) },
+    rule: g.mode === 'expired' ? { label: 'Срок истёк', value: `до ${expiryDate(0, shift)}` } : { label: 'Годен не ранее', value: expiryDate(g.need, shift) },
     secondsLeft: Math.max(0, g.timeLimit - g.elapsed),
     elapsed: g.elapsed,
     timeLimit: g.timeLimit,
