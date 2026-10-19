@@ -22,6 +22,7 @@ const smooth = (t: number) => t * t * (3 - 2 * t);
 export default function ExpiryShelf({ map }: { map: WarehouseMap }) {
   const game = useGameStore((s) => (s.game.tsdGame?.kind === 'expiry' ? s.game.tsdGame : null));
   const products = useGameStore((s) => s.game.products);
+  const shift = useGameStore((s) => s.game.campaign.shift); // «сегодня» на этикетке — по смене
   const paused = useGameStore((s) => s.game.clock.paused);
   const openUnit = useGameStore((s) => s.openExpiryUnit);
   const closeUnit = useGameStore((s) => s.closeExpiryUnit);
@@ -199,7 +200,7 @@ export default function ExpiryShelf({ map }: { map: WarehouseMap }) {
         {heldUnit && (
           <group ref={heldRef}>
             <group>
-              <ProductLowPoly look={look} name={name} side={heldUnit.side} sticker={{ kind: 'expiry', date: expiryDate(heldUnit.days) }} />
+              <ProductLowPoly look={look} name={name} side={heldUnit.side} sticker={{ kind: 'expiry', date: expiryDate(heldUnit.days, shift) }} />
             </group>
           </group>
         )}

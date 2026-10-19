@@ -220,9 +220,15 @@ describe('«Срок»', () => {
     expect(done.tasks[taskId].callLog).toEqual([{ situationId: 'expiring', lineIndex: 0, optionId: TSD_OPTION_ID, risk: 'low', auto: false, tsd: 'perfect' }]);
   });
 
-  it('дата на этикетке: сегодня из config плюс дни', () => {
-    expect(expiryDate(0)).toBe(`${String(EXPIRY.today.day).padStart(2, '0')}.${String(EXPIRY.today.month).padStart(2, '0')}`);
-    expect(expiryDate(2, { ...EXPIRY, today: { day: 30, month: 10 } })).toBe('01.11');
+  it('дата на этикетке: первая смена из config, каждая следующая смена — на день позже', () => {
+    const f = EXPIRY.firstShiftDate;
+    expect(expiryDate(0)).toBe(`${String(f.day).padStart(2, '0')}.${String(f.month).padStart(2, '0')}`);
+    expect(expiryDate(0, 1, { ...EXPIRY, firstShiftDate: { day: 14, month: 10, year: 2026 } })).toBe('14.10');
+    expect(expiryDate(0, 2, { ...EXPIRY, firstShiftDate: { day: 14, month: 10, year: 2026 } })).toBe('15.10');
+    expect(expiryDate(2, 3, { ...EXPIRY, firstShiftDate: { day: 14, month: 10, year: 2026 } })).toBe('18.10');
+    // через конец месяца
+    expect(expiryDate(2, 1, { ...EXPIRY, firstShiftDate: { day: 30, month: 10, year: 2026 } })).toBe('01.11');
+    expect(expiryDate(0, 3, { ...EXPIRY, firstShiftDate: { day: 30, month: 10, year: 2026 } })).toBe('01.11');
   });
 });
 
