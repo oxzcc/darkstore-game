@@ -10,6 +10,7 @@ import { callsView, flashView, plural, type CallOptionView } from '../store/sele
 import { RISK_LOOK, taskTitle } from './labels';
 import type { TaskType } from '../model/task';
 import Vx from './Vx';
+import { usePhone } from '../app/usePhone';
 
 const FLASH_MS = 1500;
 const STAT_NAME = { accuracy: 'точность', speed: 'скорость' } as const;
@@ -56,16 +57,19 @@ function secondsText(s: number): string {
 function ForkCard(p: CardProps) {
   const decided = p.chosenId !== undefined;
   const chosen = p.options.find((o) => o.id === p.chosenId);
+  const phone = usePhone();
+  // телефон (R2): портрет не висит над окном, а стоит в ряду рядом с репликой
+  const portrait = p.portrait
+    ? <div className="fork-portrait has-art">{p.portrait}</div>
+    : <div className="fork-portrait"><span>{p.picker.name[0]}</span><em>{p.picker.name}</em></div>;
   return (
     <div className={`fork-wrap${decided ? ' decided' : ''}`} style={{ '--pc': p.picker.color } as CSSProperties}>
     {/* заглушка портрета 224 × 257: сборщик по пояс с ТСД (решение автора 13.10 — картинка позже).
         Стоит поверх окна и выходит за его верх, как на макете (сама подложка окна обрезает всё, что выходит за край). */}
-    {p.portrait
-      ? <div className="fork-portrait has-art">{p.portrait}</div>
-      : <div className="fork-portrait"><span>{p.picker.name[0]}</span><em>{p.picker.name}</em></div>}
+    {!phone && portrait}
     <Vx className="fork">
       <div className="fork-top">
-        <div className="fork-portrait-space" />
+        {phone ? portrait : <div className="fork-portrait-space" />}
         <div className="fork-talk">
           <div className="fork-tab-row">
             <div className="fork-tab"><b>{p.picker.name}</b> · {taskTitle({ type: p.taskType, number: p.taskNumber })}</div>
@@ -78,7 +82,7 @@ function ForkCard(p: CardProps) {
       <div className="fork-hint">
         {decided
           ? (p.auto ? `${p.picker.name} решил сам: ${chosen?.label ?? ''}` : `Ваше решение: ${chosen?.label ?? ''}`)
-          : 'Выберите вариант — кликом или клавишами 1–' + p.options.filter((o) => !o.locked).length}
+          : phone ? 'Выберите вариант' : 'Выберите вариант — кликом или клавишами 1–' + p.options.filter((o) => !o.locked).length}
       </div>
 
       {/* варианты в один ряд, «Взять ТСД» — последним, тёмной карточкой (решение автора 14.10); описаний на карточках нет */}
@@ -159,14 +163,14 @@ export default function CallWindow({ renderPortrait }: { renderPortrait?: (picke
   return (
     <>
       {fv?.picker && (
-        <div className="call-center">
+        <div className="call-center call-sheet">
           <Flash key={`f${fv.id}`} id={fv.id}>
             <ForkCard {...fv} portrait={renderPortrait?.(fv.picker)} />
           </Flash>
         </div>
       )}
       {!fv && open && open.picker && (
-        <div className="call-center">
+        <div className="call-center call-sheet">
           <ForkCard
             key={open.id}
             {...open}
