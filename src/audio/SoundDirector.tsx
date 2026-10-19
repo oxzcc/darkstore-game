@@ -21,7 +21,7 @@ function openWindow(s: Snap): string | null {
   if (s.ui.openCallId) return `call:${s.ui.openCallId}`;
   if (s.game.tsdGame === null && s.ui.results[0]) return `result:${s.ui.results[0].id}`;
   if (s.game.tsdGame === null && s.ui.rolls[0]) return `roll:${s.ui.rolls[0].id}`;
-  const hint = hintView(s.game, s.ui.openCallId);
+  const hint = hintView(s.game, s.ui);
   if (hint) return `hint:${hint.id}`;
   return null;
 }

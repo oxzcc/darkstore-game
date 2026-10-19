@@ -150,7 +150,8 @@ function TaskHead({ task }: { task: Task }) {
             {game.products[l.productId]?.name ?? l.productId} ×{l.qty}
           </span>
         ))}
-        {task.type !== 'order' && groupedLines(game, task).map((g) => (
+        {/* у списания одна позиция, и она уже написана строкой выше — не повторяем (прогон 18.10) */}
+        {task.type !== 'order' && task.type !== 'writeoff' && groupedLines(game, task).map((g) => (
           <span key={g.productId} className="ac-line">
             {g.name} ×{g.qty}
             {g.places.length > 0 && <span className="places">{g.places.join(', ')}</span>}

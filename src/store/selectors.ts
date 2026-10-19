@@ -24,7 +24,7 @@ import { TIRED_BADGE_FROM } from '../config/pickers';
 import type { Address } from '../model/address';
 import type { Stock } from '../model/stock';
 import type { Cell } from '../model/warehouse';
-import { WAREHOUSE_MAP } from './gameStore';
+import { WAREHOUSE_MAP, hintWaits, type UiState } from './gameStore';
 import { isLastShift, shiftSecondsLeft } from '../rules/shift';
 import { secondsToTake } from '../rules/deadline';
 import { canRest } from '../rules/rest';
@@ -565,8 +565,9 @@ export function specLevel(game: GameState, pickerId: string, taskId: string): nu
 // ---------- Обучающая смена (M8d) ----------
 
 /** Подсказка для окна по центру; null — показывать нечего. */
-export function hintView(game: GameState, openCallId: string | null) {
-  const id = currentHint(game, openCallId);
+export function hintView(game: GameState, ui: Pick<UiState, 'openCallId' | 'assignTaskId' | 'profilePickerId' | 'results' | 'rolls'>) {
+  if (hintWaits(ui)) return null;
+  const id = currentHint(game, ui.openCallId);
   return id ? HINTS.find((h) => h.id === id) ?? null : null;
 }
 
