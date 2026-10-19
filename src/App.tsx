@@ -20,6 +20,7 @@ import CameraControls from './ui/CameraControls';
 import TopBar from './ui/TopBar';
 import ShiftSummary from './ui/ShiftSummary';
 import TutorialHint from './ui/TutorialHint';
+import FpsMeter, { fpsMeterOn } from './ui/FpsMeter';
 import type { Picker } from './model/picker';
 import type { ResultArt } from './ui/ResultWindow';
 import { lookOf } from './config/pickers';
@@ -33,6 +34,8 @@ const renderArt = (a: ResultArt) => {
   const recipe = a.tsd ? tsdVignette(a.situationId, a.tsd) : resultVignette(a.situationId, a.optionId, a.worked);
   return recipe ? <ResultVignette recipe={recipe} look={lookOf(a.picker.id)} product={a.product} /> : null;
 };
+
+const showFps = fpsMeterOn();
 
 export default function App() {
   const stock = useGameStore((s) => s.game.stock);
@@ -67,6 +70,8 @@ export default function App() {
         <ShiftSummary />
         <TutorialHint />
       </div>
+      {/* «?fps» в адресе — счётчик кадров для замера на телефоне (F0) */}
+      {showFps && <FpsMeter />}
     </>
   );
 }

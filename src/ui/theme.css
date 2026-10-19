@@ -872,3 +872,13 @@ svg.i.sm { width: 18px; height: 18px; }
 .task-pin.overdue { opacity: 0.6; }
 /* открыто окно «Кого отправить?» для этого задания */
 .task-pin.selected .shape { stroke: var(--primary); stroke-width: 4; }
+
+/* F0: счётчик кадров (?fps) — поверх всего, клики проходят насквозь */
+.fps-meter { position: fixed; left: 8px; bottom: 8px; z-index: 1000; pointer-events: none;
+  padding: 4px 8px; border-radius: 6px; background: rgba(20, 18, 14, 0.78); color: #fff;
+  font: 600 12px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; display: flex; flex-direction: column; }
+.fps-meter b { font-size: 16px; }
+.fps-meter.ok b { color: #8EE04A; }
+.fps-meter.mid b { color: #FFC629; }
+.fps-meter.bad b { color: #FF6B5E; }
+.fps-meter span { font-weight: 400; opacity: 0.8; }
