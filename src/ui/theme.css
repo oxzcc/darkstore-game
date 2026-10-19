@@ -882,3 +882,40 @@ svg.i.sm { width: 18px; height: 18px; }
 .fps-meter.mid b { color: #FFC629; }
 .fps-meter.bad b { color: #FF6B5E; }
 .fps-meter span { font-weight: 400; opacity: 0.8; }
+
+/* ---------- R1: вертикальный телефон (класс .phone на <html> — app/usePhone; макет R0) ---------- */
+.phone canvas { touch-action: none; } /* пальцы двигают камеру, а не страницу */
+/* сверху: смена, деньги, рейтинг одной строкой; справа пауза и «⋯» */
+.phone .topbar { left: 12px; right: 116px; top: 12px; transform: none; gap: 6px; }
+.phone .topbar-slot { flex: 1 1 0; min-width: 0; }
+.phone .stat-tile > .vx-edge > .vx-body { min-width: 0; padding: 4px 8px; gap: 6px; }
+.phone .stat-tile svg.i { display: none; }
+.phone .stat-tile small { font-size: 10px; }
+.phone .stat-tile b { font-size: 17px; }
+.phone .gain { font-size: 14px; }
+.phone .speed { right: 12px; top: 12px; gap: 8px; }
+.phone .speed .btn.sq { width: 46px; height: 46px; }
+.phone-menu { position: absolute; top: 58px; right: 0; width: 240px; --cut: 8px; }
+.phone-menu > .vx-edge > .vx-body { display: flex; flex-direction: column; gap: 10px; padding: 12px; }
+.phone-menu-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.phone-menu-row > span { flex: 1 1 auto; }
+.phone-menu .mini-btn { min-height: 40px; min-width: 52px; font-size: 14px; }
+.mini-btn.on { background: var(--primary); color: #fff; border-color: var(--primary-lo); }
+/* снизу: три узкие карточки сборщиков в ряд — цвет, имя, что делает, полоска */
+.phone .picker-bar { left: 12px; right: 12px; bottom: 16px; transform: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.phone .picker-card { width: auto; min-width: 0; }
+.phone .picker-card > .vx-edge > .vx-body { flex-direction: column; align-items: stretch; gap: 4px; padding: 8px; }
+.phone .picker-card .avatar { display: none; }
+.phone .picker-card .grow { min-width: 0; }
+.phone .picker-name { font-size: 14px; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
+.phone .picker-name::before { content: ''; width: 10px; height: 10px; flex: none; border-radius: 3px; background: var(--pc); }
+.phone .picker-name .tsd-tag { display: none; }
+.phone .picker-state { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 2px 0 4px; gap: 4px; }
+.phone .picker-state svg.i { width: 14px; height: 14px; }
+.phone .picker-card .progress { width: 100%; height: 6px; }
+.phone .picker-card .seg { width: 100%; }
+/* кнопка камеры — одна «⌂», над карточками справа */
+.phone .cam-controls { right: 12px; bottom: 132px; }
+.phone .toasts { top: 74px; width: calc(100vw - 24px); }
+.pf-rest { margin: 0 12px 12px; min-height: 44px; }
+.phone .picker-card .seg i { flex: 1 1 0; width: auto; height: 6px; }

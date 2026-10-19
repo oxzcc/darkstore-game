@@ -1,5 +1,6 @@
 // Собирает экран игры: 3D-сцена и интерфейс поверх неё.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { usePhone } from './app/usePhone';
 import Scene from './scene/Scene';
 import { seenStock } from './rules/minigames/picking';
 import GameLoop from './app/GameLoop';
@@ -46,6 +47,9 @@ export default function App() {
   const closeup = useGameStore((s) => (s.game.minigame?.atFocus ?? false) || s.game.tsdGame !== null);
   // Слой для пинов заданий (T1): лежит между сценой и интерфейсом, поэтому окна всегда поверх пинов (правка автора 18.10).
   const [pinLayer, setPinLayer] = useState<HTMLDivElement | null>(null);
+  // телефон (R1): класс на <html> — по нему theme.css включает вертикальную раскладку
+  const phone = usePhone();
+  useEffect(() => { document.documentElement.classList.toggle('phone', phone); }, [phone]);
   return (
     <>
       <GameLoop />

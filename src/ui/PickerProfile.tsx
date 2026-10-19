@@ -5,13 +5,14 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Picker, PickerTally } from '../model/picker';
 import { useGameStore } from '../store/gameStore';
-import { pickerProfileView } from '../store/selectors';
+import { pickerProfileView, restAllowed } from '../store/selectors';
 import { SPEC_RANKS, STAT_SCALE } from '../config/pickers';
 import { activityLine } from './activityText';
 import { EXP_NAME, OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK, TASK_TYPE_LOOK } from './labels';
 import { Avatar, Pips } from './PickerBits';
 import Vx from './Vx';
 import Icon from './icons';
+import { usePhone } from '../app/usePhone';
 
 const pct = (v: number) => Math.round(v * 100);
 
@@ -21,6 +22,8 @@ export default function PickerProfile({ renderPortrait }: { renderPortrait?: (pi
   const pickerId = useGameStore((s) => s.ui.profilePickerId);
   const closeProfile = useGameStore((s) => s.closeProfile);
   const [tab, setTab] = useState<'shift' | 'campaign'>('shift');
+  const phone = usePhone();
+  const { sendToRest, endRest } = useGameStore.getState();
 
   useEffect(() => {
     if (!pickerId) return;
@@ -49,6 +52,10 @@ export default function PickerProfile({ renderPortrait }: { renderPortrait?: (pi
                   <span className="pf-breed">{p.breed}</span>
                 </div>
                 <div className="pf-now"><Icon name={line.icon} small /> {line.text}</div>
+                {/* телефон (R1): перерыв здесь — на узкой нижней карточке для кнопки нет места (макет R0) */}
+                {phone && (p.state === 'resting'
+                  ? <button className="mini-btn pf-rest" onClick={() => endRest(p.id)}>Вернуть</button>
+                  : restAllowed(game, p.id) && <button className="mini-btn pf-rest" onClick={() => { sendToRest(p.id); closeProfile(); }}>На перерыв</button>)}
               </Vx>
             </div>
 

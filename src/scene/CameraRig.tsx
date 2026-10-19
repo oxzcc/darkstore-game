@@ -16,6 +16,8 @@ import { PALETTE } from '../config/palette';
 import { useGameStore } from '../store/gameStore';
 import { closeupEye, closeupLook } from './closeupView';
 import { closeupFocus } from '../store/selectors';
+import { PHONE } from '../config/phone';
+import { usePhone } from '../app/usePhone';
 
 const SCREEN_FILL = 0.95;                         // доля свободного места, которую занимает склад в общем виде
 const DEPTH = 60;                                 // сколько метров сцены вокруг цели помещается между near и far
@@ -37,9 +39,10 @@ type Pose = { target: Vector3; dir: Vector3; dist: number; fovDeg: number; inset
 const rad = (deg: number) => (deg * Math.PI) / 180;
 
 /** Общий вид: весь склад «в изометрии» (узкий угол издалека). */
-function homePose(map: WarehouseMap, size: Size, panel: number, yaw: number, zoom: number): Pose {
+function homePose(map: WarehouseMap, size: Size, panel: number, yaw: number, zoom: number, phone: boolean): Pose {
   // panel — 0…1: насколько выдвинута панель ТСД справа (склад сдвигается влево, чтобы она его не закрывала)
-  const base = WAREHOUSE_VIEW.screenInsets;
+  // телефон (R1): свои поля интерфейса, склад шире экрана — края видно поворотом
+  const base = phone ? PHONE.screenInsets : WAREHOUSE_VIEW.screenInsets;
   const ins = { ...base, right: lerp(base.right, WAREHOUSE_VIEW.tsdPanelInset, panel) };
   const freeW = Math.max(100, size.width - ins.left - ins.right);
   const freeH = Math.max(100, size.height - ins.top - ins.bottom);
@@ -49,7 +52,7 @@ function homePose(map: WarehouseMap, size: Size, panel: number, yaw: number, zoo
   const diag = (map.width + map.depth) / Math.SQRT2;
   const spanY = diag * Math.sin(elev) + WAREHOUSE_VIEW.wallHeight * Math.cos(elev);
   // сколько пикселей на метр (как zoom ортографической камеры в M1) → какая высота мира видна на экране
-  const pxPerM = Math.min(freeW / diag, freeH / spanY) * SCREEN_FILL * zoom;
+  const pxPerM = Math.min((freeW / diag) * (phone ? PHONE.widthFill : 1), freeH / spanY) * SCREEN_FILL * zoom;
   const visibleH = size.height / pxPerM;
   const fovDeg = WAREHOUSE_VIEW.homeFovDeg;
   return {
@@ -141,6 +144,7 @@ export default function CameraRig({ map }: { map: WarehouseMap }) {
   const yaw = useRef(0);   // поворот и зум, которые сейчас на экране: плавно догоняют store.ui.camera
   const zoom = useRef(WAREHOUSE_VIEW.homeCamera.zoom);
   const gl = useThree((s) => s.gl);
+  const phone = usePhone();
 
   // Мышь над сценой: перетаскивание — поворот, колесо — зум, двойной клик — исходный вид.
   // Пока камера у стеллажа (игра на ТСД), вращать нельзя.
@@ -149,17 +153,38 @@ export default function CameraRig({ map }: { map: WarehouseMap }) {
     const { dragRadPerPx, dragThresholdPx } = WAREHOUSE_VIEW.homeCamera;
     const busy = () => { const g = useGameStore.getState().game; return closeupFocus(g) !== null || g.tsdGame !== null; };
     let down: { x: number; lastX: number; dragging: boolean } | null = null;
+    // два пальца — зум (R4 по плану, но без него на телефоне не приблизить): шаг на каждые PHONE.pinchStep изменения расстояния
+    const touches = new Map<number, { x: number; y: number }>();
+    let pinchFrom = 0;
+    const spread = () => { const [a, b] = [...touches.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
     // после перетаскивания браузер всё равно пришлёт «клик» — гасим его, чтобы не выбрать что-то случайно
     const eatClick = (e: MouseEvent) => { e.stopPropagation(); e.preventDefault(); };
-    const onDown = (e: PointerEvent) => { if (e.button === 0 && !busy()) down = { x: e.clientX, lastX: e.clientX, dragging: false }; };
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') {
+        touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (touches.size === 2) { pinchFrom = spread(); down = null; return; } // второй палец — уже не поворот
+      }
+      if (e.button === 0 && !busy() && touches.size < 2) down = { x: e.clientX, lastX: e.clientX, dragging: false };
+    };
     const onMove = (e: PointerEvent) => {
+      if (touches.has(e.pointerId)) {
+        touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (touches.size === 2 && pinchFrom > 0 && !busy()) {
+          const now = spread();
+          const ratio = now / pinchFrom;
+          if (Math.abs(ratio - 1) >= PHONE.pinchStep) { useGameStore.getState().zoomCamera(ratio > 1 ? 1 : -1); pinchFrom = now; }
+          return;
+        }
+      }
       if (!down) return;
       if (!down.dragging && Math.abs(e.clientX - down.x) < dragThresholdPx) return;
       if (!down.dragging) { down.dragging = true; el.style.cursor = 'grabbing'; }
       useGameStore.getState().dragCamera(-(e.clientX - down.lastX) * dragRadPerPx);
       down.lastX = e.clientX;
     };
-    const onUp = () => {
+    const onUp = (e: PointerEvent) => {
+      touches.delete(e.pointerId);
+      if (touches.size < 2) pinchFrom = 0;
       if (down?.dragging) {
         window.addEventListener('click', eatClick, { capture: true, once: true });
         setTimeout(() => window.removeEventListener('click', eatClick, { capture: true }), 0);
@@ -176,12 +201,14 @@ export default function CameraRig({ map }: { map: WarehouseMap }) {
     el.addEventListener('pointerdown', onDown);
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
     el.addEventListener('wheel', onWheel, { passive: false });
     el.addEventListener('dblclick', onDouble);
     return () => {
       el.removeEventListener('pointerdown', onDown);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
       el.removeEventListener('wheel', onWheel);
       el.removeEventListener('dblclick', onDouble);
     };
@@ -202,7 +229,7 @@ export default function CameraRig({ map }: { map: WarehouseMap }) {
     const k = 1 - Math.exp(-Math.min(delta, 0.1) * WAREHOUSE_VIEW.homeCamera.follow);
     yaw.current += (want.yaw - yaw.current) * k;
     zoom.current += (want.zoom - zoom.current) * k;
-    const home = homePose(map, size, smooth(panel.current), yaw.current, zoom.current);
+    const home = homePose(map, size, smooth(panel.current), yaw.current, zoom.current, phone);
     const close = lastRack.current ? closePose(lastRack.current, lastInsets.current) : null;
     const pose = close && progress.current > 0 ? mix(home, close, t) : home;
     apply(camera, pose, size);
