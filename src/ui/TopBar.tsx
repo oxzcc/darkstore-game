@@ -6,6 +6,7 @@ import { useGameStore, type Gain } from '../store/gameStore';
 import { clockText, money, ratingText, shiftClock, signedRating, tutorialShift } from '../store/selectors';
 import Vx from './Vx';
 import Icon from './icons';
+import { usePhone } from '../app/usePhone';
 
 const GAIN_MS = 1800;
 
@@ -29,12 +30,13 @@ export default function TopBar() {
   const gains = useGameStore((s) => s.ui.gains);
   const game = useGameStore((s) => s.game);
   const sc = shiftClock(game);
+  const phone = usePhone();
   return (
     <div className="topbar">
       <div className="topbar-slot">
         <Vx className={`stat-tile${sc.secondsLeft <= 60 ? ' hurry' : ''}`}>
           <Icon name="clock" />
-          <div><small>Смена {sc.shift} из {sc.total}{tutorialShift(game) ? ' · обучение' : ''}</small><b>{clockText(sc.secondsLeft)}</b></div>
+          <div><small>{phone ? `Смена ${sc.shift}/${sc.total}` : `Смена ${sc.shift} из ${sc.total}${tutorialShift(game) ? ' · обучение' : ''}`}</small><b>{clockText(sc.secondsLeft)}</b></div>
         </Vx>
       </div>
       <div className="topbar-slot">

@@ -7,6 +7,7 @@ import { TSD } from '../config/balance';
 import { useGameStore } from '../store/gameStore';
 import Vx from './Vx';
 import Icon from './icons';
+import { usePhone } from '../app/usePhone';
 
 export default function SpeedControls() {
   const clock = useGameStore((s) => s.game.clock);
@@ -19,7 +20,45 @@ export default function SpeedControls() {
   const paused = clock.paused || autopause;
   // звук (M9e): «без звука» помнится в браузере
   const muted = useSyncExternalStore(subscribeMuted, isMuted);
+  const phone = usePhone();
+  const [menu, setMenu] = useState(false); // телефон: меню «⋯» — скорость, звук, новая игра (макет R0)
   const slowText = `×${String(TSD.worldSpeedDuringGame).replace('.', ',')}`;
+
+  if (phone) {
+    return (
+      <div className="speed">
+        <button className={`btn sq${paused ? ' on' : ''}`} title="Пауза" aria-label="Пауза" onClick={togglePause} disabled={autopause}>
+          <Vx><Icon name="pause" /></Vx>
+        </button>
+        <button className={`btn sq${menu ? ' on' : ''}`} aria-label="Меню" aria-expanded={menu} onClick={() => { setMenu(!menu); setConfirming(false); }}>
+          <Vx>⋯</Vx>
+        </button>
+        {menu && (
+          <Vx className="phone-menu">
+            <div className="phone-menu-row">
+              <span>Скорость</span>
+              {([1, 2] as const).map((v) => (
+                <button key={v} className={`mini-btn${!paused && !slowed && clock.playerSpeed === v ? ' on' : ''}`} onClick={() => setPlayerSpeed(v)} disabled={autopause}>×{v}</button>
+              ))}
+            </div>
+            <div className="phone-menu-row">
+              <span>Звук</span>
+              <button className={`mini-btn${muted ? '' : ' on'}`} onClick={() => { unlockAudio(); setMuted(!muted); }}>{muted ? 'Выключен' : 'Включён'}</button>
+            </div>
+            <div className="phone-menu-row">
+              {confirming
+                ? <>
+                    <span>Прогресс пропадёт</span>
+                    <button className="mini-btn danger" onClick={() => { setConfirming(false); setMenu(false); restartCampaign(); }}>Да</button>
+                    <button className="mini-btn" onClick={() => setConfirming(false)}>Нет</button>
+                  </>
+                : <button className="mini-btn" onClick={() => setConfirming(true)}>Новая игра</button>}
+            </div>
+          </Vx>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="speed">

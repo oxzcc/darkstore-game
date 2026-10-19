@@ -6,10 +6,12 @@ import { activityLine } from './activityText';
 import { Avatar, FatigueBar } from './PickerBits';
 import Vx from './Vx';
 import Icon from './icons';
+import { usePhone } from '../app/usePhone';
 
 export default function PickerPanel() {
   const game = useGameStore((s) => s.game);
   const { sendToRest, endRest, openProfile } = useGameStore.getState();
+  const phone = usePhone();
 
   return (
     <div className="picker-bar">
@@ -32,8 +34,8 @@ export default function PickerPanel() {
                 ? <div className="progress"><b style={{ width: `${line.progress * 100}%` }} /></div>
                 : <FatigueBar value={p.stats.fatigue} />}
             </div>
-            {/* перерыв (M8c): свободного и уставшего — отдыхать, отдыхающего — вернуть */}
-            {p.state === 'resting'
+            {/* перерыв (M8c): свободного и уставшего — отдыхать, отдыхающего — вернуть. На телефоне — в профиле (макет R0) */}
+            {phone ? null : p.state === 'resting'
               ? <button className="mini-btn" onClick={(e) => { e.stopPropagation(); endRest(p.id); }}>Вернуть</button>
               : restAllowed(game, p.id) && <button className="mini-btn" onClick={(e) => { e.stopPropagation(); sendToRest(p.id); }}>На перерыв</button>}
           </Vx>
