@@ -8,10 +8,10 @@ import type { Picker } from '../model/picker';
 import { useGameStore, type ResultCard } from '../store/gameStore';
 import { resultView } from '../store/selectors';
 import { OUTCOME_LOOK, TSD_GAME_NAME } from './labels';
-import ReelTsd, { type ReelSeg } from './ReelTsd';
+import type { ReelSeg } from './ReelTsd';
+import ChanceBar from './ChanceBar';
 import { play } from '../audio/engine';
 import { FinalFrame, Join, StoryFrame } from './ResultFrames';
-import Icon from './icons';
 
 /** Что нужно сценке итога: развилка, вариант, сработал ли, итог ТСД, сборщик и товар позиции. */
 export type ResultArt = NonNullable<NonNullable<ReturnType<typeof resultView>>['art']> & { picker: Picker };
@@ -81,39 +81,28 @@ function Result({ card, renderArt, renderPortrait }: Props & { card: ResultCard 
         <StoryFrame tab="Что случилось" taskType={v.taskType} taskNumber={v.taskNumber} speech={v.speech} picker={p} portrait={renderPortrait?.(p)} />
         <Join />
 
-        {/* 2. что решили: барабан по шансу варианта или сценка итога игры на ТСД */}
+        {/* 2. что решили (упрощение по макету «Итог · В», 20.10): вариант жирной строкой; ответ вариантом — тонкая полоса шанса
+            с маркером и «Сработало! / Осложнение!»; играли на ТСД — одна строка цифр игры (сценка — только на компьютере) */}
         <section className={`rw-panel rw-p2${done && complication ? ' shake' : ''}`}>
           <span className="rw-tab" style={{ '--tc': 'var(--text)' } as CSSProperties}>{v.auto ? `${p.name} решил сам` : 'Вы решили'}</span>
-          <div className="rw-sticker">
-            <span className="rw-check"><Icon name="check" small /></span>
-            <b>{chosen?.label ?? v.optionLabel}</b>
-          </div>
+          <b className="rw-choice">{chosen?.label ?? v.optionLabel}</b>
           {reel ? <>
-            <span className="rw-odds"><i>!</i>{v.riskLabel} {Math.round(reel.chance * 100)}%</span>
-            <ReelTsd
-              segs={segs}
-              hit={complication ? 'bad' : 'ok'}
-              marker={1 - reel.roll /* правила: бросок < шанса — осложнение; «сработало» на полосе слева, поэтому зеркально */}
-              seed={card.id}
-              done={done}
-              onDone={() => setDone(true)}
-            />
-            <div className={`rw-shout${done ? ` go ${complication ? 'bad' : 'ok'}` : ' wait'}`}>
-              {done ? (complication ? 'Осложнение!' : 'Сработало!') : '…'}
-            </div>
-          </> : <>
-            {/* играли на ТСД (вариант А, 20.10): экран ТСД с оценкой игры и её цифрами — «как я сыграл»; сценка ниже — только на компьютере */}
-            {v.tsdResult && v.tsdGame ? (
-              <div className="rw-tsdres" style={{ '--gc': OUTCOME_LOOK[v.tsdResult.outcome].color } as CSSProperties}>
-                <div className="rw-tsdres-head"><i />ТСД · {TSD_GAME_NAME[v.tsdGame]}</div>
-                {/* оценку словом не пишем — она в кадре «Итог» (правка автора 20.10: повторялась); здесь только цифры, цвет — по оценке */}
-                <div className="rw-tsdres-screen">
-                  {v.tsdResult.facts.length
-                    ? v.tsdResult.facts.map((f, i) => i === 0 ? <b key={i}>{f}</b> : <span key={i}>{f}</span>)
-                    : <b>Игра пройдена</b>}
-                </div>
+            <div className="rw-chance">
+              <ChanceBar
+                segs={segs}
+                marker={1 - reel.roll /* правила: бросок < шанса — осложнение; «сработало» на полосе слева, поэтому зеркально */}
+                done={done}
+                onDone={() => setDone(true)}
+              />
+              <div className={`rw-shout${done ? ` go ${complication ? 'bad' : 'ok'}` : ' wait'}`}>
+                {done ? (complication ? 'Осложнение!' : 'Сработало!') : '…'}
               </div>
-            ) : v.tsdGame && <span className="rw-odds plain">Игра «{TSD_GAME_NAME[v.tsdGame]}»</span>}
+            </div>
+            <span className="rw-sub">{v.riskLabel}: {Math.round(reel.chance * 100)}%</span>
+          </> : <>
+            {v.tsdResult?.facts.length
+              ? <span className="rw-sub">{v.tsdResult.facts.join(' · ')}</span>
+              : v.tsdGame && <span className="rw-sub">Игра «{TSD_GAME_NAME[v.tsdGame]}»</span>}
             <div className={`rw-art${v.tsdResult ? ' rw-art-extra' : ''}`}>{art ?? <span className="rw-art-stub">{p.name[0]}</span>}</div>
           </>}
         </section>

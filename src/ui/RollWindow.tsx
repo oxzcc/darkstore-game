@@ -9,11 +9,11 @@ import { useGameStore, type RollCard } from '../store/gameStore';
 import { rollView } from '../store/selectors';
 import { SPEC_RANKS } from '../config/pickers';
 import { ROLL_SHOUT } from '../config/taskReport';
-import { EXP_NAME, OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK, TASK_TYPE_LOOK, nameForm } from './labels';
-import ReelTsd, { type ReelSeg } from './ReelTsd';
+import { EXP_NAME, OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK, nameForm } from './labels';
+import type { ReelSeg } from './ReelTsd';
+import ChanceBar from './ChanceBar';
 import { play } from '../audio/engine';
 import { FinalFrame, Join, StoryFrame } from './ResultFrames';
-import Icon from './icons';
 
 const signedPct = (v: number) => `${v < 0 ? '−' : '+'}${Math.abs(Math.round(v * 100))}%`;
 
@@ -57,17 +57,18 @@ function Roll({ card, renderPortrait }: Props & { card: RollCard }) {
         <StoryFrame tab="Задание сделано" taskType={v.taskType} taskNumber={v.taskNumber} speech={v.speech} picker={p} portrait={renderPortrait?.(p)} />
         <Join />
 
-        {/* 2. как вышло: из чего сложились шансы и барабан */}
+        {/* 2. как вышло (упрощение по макету «Итог · В», 20.10): из чего сложились шансы — одной строкой; тонкая полоса трёх исходов с маркером */}
         <section className={`rw-panel rw-p2${done && card.outcome === 'failed' ? ' shake' : ''}`}>
           <span className="rw-tab" style={{ '--tc': 'var(--text)' } as CSSProperties}>Как вышло</span>
-          <div className="rw-why">
-            <span className="rw-whyc"><Icon name={STAT_LOOK.accuracy.icon} small />{STAT_LOOK.accuracy.name} {v.why.accuracy}</span>
-            <span className="rw-whyc"><Icon name={TASK_TYPE_LOOK[v.taskType].icon} small />{EXP_NAME[v.taskType]}: {SPEC_RANKS[v.why.level] ?? v.why.level}</span>
-            {v.why.tired !== null && <span className="rw-whyc warn"><Icon name={STAT_LOOK.energy.icon} small />Устал {signedPct(v.why.tired)}</span>}
+          <b className="rw-choice">Шансы {nameForm(p.name)}</b>
+          <div className="rw-chance">
+            <ChanceBar segs={segs} marker={card.value} done={done} onDone={() => setDone(true)} />
+            <div className={`rw-shout${done ? ` go ${shoutClass}` : ' wait'}`}>{done ? ROLL_SHOUT[card.outcome] : '…'}</div>
           </div>
-          <span className="rw-odds plain">Шансы {nameForm(p.name)}</span>
-          <ReelTsd segs={segs} hit={card.outcome} marker={card.value} seed={card.id} done={done} onDone={() => setDone(true)} />
-          <div className={`rw-shout${done ? ` go ${shoutClass}` : ' wait'}`}>{done ? ROLL_SHOUT[card.outcome] : '…'}</div>
+          <span className="rw-sub">
+            {STAT_LOOK.accuracy.name} {v.why.accuracy} · {EXP_NAME[v.taskType]}: {SPEC_RANKS[v.why.level] ?? v.why.level}
+            {v.why.tired !== null && <> · <span className="rw-sub-warn">Устал {signedPct(v.why.tired)}</span></>}
+          </span>
         </section>
 
         <Join lit={done} />
