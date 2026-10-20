@@ -3,7 +3,7 @@
 // Игра закончилась — итог записывается в задание как ответ на развилку, и сборщик доделывает задание сам (сборку или выкладку).
 import type { GameState } from '../model/game';
 import type { BarcodeGame, DepthGame, ExpiryGame, TsdGame } from '../model/tsdGame';
-import type { CallAnswer } from '../model/call';
+import type { CallAnswer, TsdStats } from '../model/call';
 import { BARCODE, DEPTH, EXPIRY, TSD_OPTION_ID } from '../config/calls';
 import { createRng } from './random';
 import { taskLines } from './taskLines';
@@ -175,6 +175,7 @@ export function closeTsdGame(state: GameState): GameState {
     risk: 'low', // у игры риска нет — исход решает итог (10, раздел 11.4)
     auto: false,
     tsd: g.result,
+    tsdStats: tsdStatsOf(g),
   };
   const step = picker?.job?.steps[picker.job.stepIndex];
   return {
@@ -185,6 +186,19 @@ export function closeTsdGame(state: GameState): GameState {
       ? { ...state.pickers, [picker.id]: { ...picker, state: step?.kind === 'walk' ? 'walking' : 'working' } }
       : state.pickers,
   };
+}
+
+/** Цифры законченной игры для окна итога: время в игре (без вступления «Штрихкода») и что сделано. */
+export function tsdStatsOf(g: TsdGame): TsdStats {
+  if (g.kind === 'depth') {
+    return { kind: 'depth', seconds: g.elapsed, moves: g.moves, best: g.best, timeout: g.note === 'timeout', tooMany: g.note === 'tooMany' };
+  }
+  if (g.kind === 'expiry') {
+    return { kind: 'expiry', seconds: g.elapsed, timeout: g.note === 'timeout',
+      takenDays: g.taken !== null ? g.units[g.taken]?.days ?? null : null, mode: g.mode };
+  }
+  return { kind: 'barcode', seconds: Math.max(0, g.elapsed - g.startDelay), timeout: g.note === 'timeout',
+    tries: g.guesses.length, attempts: g.attempts, solved: g.note === 'solved' };
 }
 
 /** Для экрана: в каком ряду нужная коробка (0 — передний). */

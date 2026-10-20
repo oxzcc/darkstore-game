@@ -4,29 +4,28 @@ import { useMemo, type CSSProperties, type ReactNode } from 'react';
 import type { Picker } from '../model/picker';
 import type { Outcome, TaskType } from '../model/task';
 import { money } from '../store/selectors';
-import { OUTCOME_LOOK, TASK_TYPE_LOOK, taskTitle } from './labels';
+import { OUTCOME_LOOK, taskTitle } from './labels';
 import { Avatar } from './PickerBits';
 import Icon from './icons';
 
 const ratingText = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n).toFixed(2).replace('.', ',')}`;
 const CONFETTI = ['#FFC629', '#7FC743', '#2280FF', '#E0409B', '#FFFFFF'];
 
-/** Первый кадр: вкладка, задание, реплика пузырём, портрет с флажком имени. */
+/** Первый кадр: вкладка, портрет, мелко «Сборка №1 · Коржик» и реплика обычным текстом
+ *  (упрощение по макету «Итог · В», одобрен автором 20.10: без тёмной плашки задания и пузыря). */
 export function StoryFrame({ tab, taskType, taskNumber, speech, picker, portrait }: {
   tab: string; taskType: TaskType; taskNumber: number; speech: string; picker: Picker; portrait?: ReactNode;
 }) {
   return (
     <section className="rw-panel rw-p1">
       <span className="rw-tab" style={{ '--tc': picker.color } as CSSProperties}>{tab}</span>
-      <span className="rw-plate">
-        <span className="rw-plate-icon"><Icon name={TASK_TYPE_LOOK[taskType].icon} small /></span>
-        {taskTitle({ type: taskType, number: taskNumber })}
-      </span>
-      <div className="rw-bubble">{speech}</div>
-      <span className="rw-face">
-        <span className="rw-face-in">{portrait ?? <Avatar picker={picker} />}</span>
-        <span className="rw-name">{picker.name}</span>
-      </span>
+      <div className="rw-story">
+        <span className="rw-pic"><span className="rw-face-in">{portrait ?? <Avatar picker={picker} />}</span></span>
+        <div className="rw-story-text">
+          <span className="rw-who">{taskTitle({ type: taskType, number: taskNumber })} · {picker.name}</span>
+          <b className="rw-say">{speech}</b>
+        </div>
+      </div>
     </section>
   );
 }
@@ -68,8 +67,8 @@ export function FinalFrame({ done, outcome, title, text, notes, gain, seed, onCl
       <span className="rw-tab" style={{ '--tc': done ? look.color : '#C9BFA8' } as CSSProperties}>Итог</span>
       {done ? <>
         <div className="rw-ribbon"><Icon name={look.icon} /><span>{look.name}</span></div>
-        <div className="rw-title">{title}</div>
-        <div className="rw-text">{text}</div>
+        {/* одна фраза под лентой (макет «Итог · В», 20.10): заголовок итога не показываем */}
+        <div className="rw-text">{text || title}</div>
         {notes.map((n, i) => <span key={i} className="rw-oops">{n}</span>)}
         <div className="rw-loot">
           <span className="rw-tok coin"><i>₽</i>{gain.money > 0 ? '+' : gain.money < 0 ? '−' : ''}{money(Math.abs(gain.money))}</span>

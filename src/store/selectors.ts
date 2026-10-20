@@ -17,7 +17,7 @@ import { expiryDate } from '../rules/minigames/expiry';
 import { pickedQty, rewardFor } from '../rules/rewards';
 import { CALLS, DEPTH, EXPIRY, RESULT_XP, SITUATION_BY_ID, TSD_OPTION_ID, tsdTextFor, type CallOption } from '../config/calls';
 import type { RackRef } from '../model/minigame';
-import type { Call } from '../model/call';
+import type { Call, TsdStats } from '../model/call';
 import type { CallFlash, ResultCard, RollCard } from './gameStore';
 import { TASK_REPORT } from '../config/taskReport';
 import { TIRED_BADGE_FROM } from '../config/pickers';
@@ -338,6 +338,23 @@ export function rollView(game: GameState, card: RollCard) {
   };
 }
 
+/** Цифры игры на ТСД словами для окна итога: что сделано и за сколько. Нет цифр (старое сохранение) — пусто. */
+export function tsdFacts(st: TsdStats | undefined, shift: number): string[] {
+  if (!st) return [];
+  const time = st.timeout ? 'Время вышло' : `За ${clockText(st.seconds)}`;
+  if (st.kind === 'depth') {
+    const limit = st.best + DEPTH.withErrorsExtra; // больше — сразу провал
+    if (st.tooMany) return [`Больше ${limit} ${plural(limit, 'хода', 'ходов', 'ходов')} · лучший путь — ${st.best}`];
+    return [`${st.moves} ${plural(st.moves, 'ход', 'хода', 'ходов')} · лучший путь — ${st.best}`, time];
+  }
+  if (st.kind === 'expiry') {
+    if (st.takenDays === null) return [time];
+    return [`Взяли со сроком до ${expiryDate(st.takenDays, shift)}`, time];
+  }
+  if (st.solved) return [`Код угадан с ${st.tries}-й попытки из ${st.attempts}`, time];
+  return [st.timeout ? 'Время вышло' : `Попытки кончились: ${st.tries} из ${st.attempts}`];
+}
+
 /** Окно итога задания с развилкой (ui_12): что решили, что вышло, чек с позициями и наградой. */
 export function resultView(game: GameState, card: ResultCard) {
   const task = game.tasks[card.taskId];
@@ -386,6 +403,8 @@ export function resultView(game: GameState, card: ResultCard) {
     reel: c && !c.tsd ? { chance: c.chance, roll: c.roll, complication: c.complication } : null,
     /** Какую игру на ТСД играли (для подписи в окне итога); null — ответили вариантом. */
     tsdGame: c?.tsd ? tsdKind ?? null : null,
+    /** Как сыграли на ТСД — кадр «Вы решили» (решение автора 20.10, вариант А): оценка игры и её цифры. */
+    tsdResult: c?.tsd ? { outcome: c.tsd, facts: tsdFacts(c.tsdStats, game.campaign.shift) } : null,
     /** Ограничение варианта сработало: исход не выше этого. */
     capped: c?.capped && option?.cap ? option.cap : null,
     taskNumber: task.number,

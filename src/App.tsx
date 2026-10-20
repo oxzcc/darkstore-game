@@ -68,7 +68,8 @@ export default function App() {
         <ResultWindow renderArt={renderArt} renderPortrait={renderPortrait} />
         <RollWindow renderPortrait={renderPortrait} />
         {!closeup && <TopBar />}
-        <SpeedControls />
+        {/* на телефоне у стеллажа (R3) пауза и «⋯» не нужны: во время игры на ТСД мир и так на паузе, а место сверху занято */}
+        {!(closeup && phone) && <SpeedControls />}
         {!closeup && <CameraControls />}
         <Toasts />
         <ShiftSummary />

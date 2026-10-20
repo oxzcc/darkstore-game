@@ -67,8 +67,17 @@ function homePose(map: WarehouseMap, size: Size, panel: number, yaw: number, zoo
   };
 }
 
+/** Угол обзора у стеллажа. На телефоне (R3) — шире, чтобы по горизонтали было видно не меньше PHONE.closeup.minHFovDeg. */
+function closeFov(size: Size, phone: boolean): number {
+  const base = WAREHOUSE_VIEW.closeup.fovDeg;
+  if (!phone) return base;
+  const aspect = size.width / Math.max(1, size.height);
+  const need = (2 * Math.atan(Math.tan(rad(PHONE.closeup.minHFovDeg) / 2) / aspect) * 180) / Math.PI;
+  return Math.max(base, need);
+}
+
 /** Вид стеллажа «глазами сборщика». insets — сколько места занимает интерфейс (у «Глубины» он свой). */
-function closePose(rack: Rack, insets: Insets): Pose {
+function closePose(rack: Rack, insets: Insets, fovDeg: number): Pose {
   const eye = closeupEye(rack);
   const look = closeupLook(rack);
   const toEye = eye.clone().sub(look);
@@ -76,7 +85,7 @@ function closePose(rack: Rack, insets: Insets): Pose {
     target: look,
     dir: toEye.clone().normalize(),
     dist: toEye.length(),
-    fovDeg: WAREHOUSE_VIEW.closeup.fovDeg,
+    fovDeg,
     insets,
     clipNear: WAREHOUSE_VIEW.closeup.clipNear,
     nearShare: 0,
@@ -230,7 +239,7 @@ export default function CameraRig({ map }: { map: WarehouseMap }) {
     yaw.current += (want.yaw - yaw.current) * k;
     zoom.current += (want.zoom - zoom.current) * k;
     const home = homePose(map, size, smooth(panel.current), yaw.current, zoom.current, phone);
-    const close = lastRack.current ? closePose(lastRack.current, lastInsets.current) : null;
+    const close = lastRack.current ? closePose(lastRack.current, lastInsets.current, closeFov(size, phone)) : null;
     const pose = close && progress.current > 0 ? mix(home, close, t) : home;
     apply(camera, pose, size);
 

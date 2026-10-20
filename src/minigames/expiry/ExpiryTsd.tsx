@@ -75,8 +75,8 @@ export default function ExpiryTsd({ view, onBack, onTake, onClose }: Props) {
 
       {holding && (
         <div className="expiry-hold">
-          <div className="expiry-hold-hint">тяните, чтобы покрутить · клик мимо — на полку</div>
-          <button className="btn primary" onClick={onTake}><Vx>Взять · Enter</Vx></button>
+          <div className="expiry-hold-hint">тяните, чтобы покрутить · <span className="desk-only">клик мимо</span><span className="phone-only">нажмите мимо</span> — на полку</div>
+          <button className="btn primary" onClick={onTake}><Vx>Взять<span className="kbd"> · Enter</span></Vx></button>
         </div>
       )}
 
@@ -85,7 +85,7 @@ export default function ExpiryTsd({ view, onBack, onTake, onClose }: Props) {
           <Vx className="depth-result" style={{ '--oc': result.color } as CSSProperties}>
             <div className="depth-result-name">{result.name}</div>
             <div className="depth-result-sub">{resultText}</div>
-            <button className="btn primary" onClick={onClose}><Vx>К складу · Enter</Vx></button>
+            <button className="btn primary" onClick={onClose}><Vx>К складу<span className="kbd"> · Enter</span></Vx></button>
           </Vx>
         </div>
       )}

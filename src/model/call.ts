@@ -28,7 +28,15 @@ export type CallAnswer = {
   auto: boolean;   // true — игрок не ответил, решил сборщик
   /** Игрок взял ТСД (optionId = TSD_OPTION_ID): итог его игры. Броска осложнения тогда нет (10, раздел 11.4). */
   tsd?: Outcome;
+  /** Как прошла игра на ТСД — для кадра «Вы решили» в окне итога (решение автора 20.10, вариант А). */
+  tsdStats?: TsdStats;
 };
+
+/** Цифры игры на ТСД: время в игре и что сделано. В старых сохранениях их нет — окно тогда показывает только оценку. */
+export type TsdStats =
+  | { kind: 'depth'; seconds: number; moves: number; best: number; timeout: boolean; tooMany: boolean }
+  | { kind: 'expiry'; seconds: number; timeout: boolean; takenDays: number | null; mode: 'fresh' | 'expired' }
+  | { kind: 'barcode'; seconds: number; timeout: boolean; tries: number; attempts: number; solved: boolean };
 
 /** Раскрытие одной развилки в конце заказа: выпало ли осложнение и каким стал исход. */
 export type CallReveal = CallAnswer & {
