@@ -219,7 +219,8 @@ describe('«Срок»', () => {
     const { g, taskId } = start();
     const done = closeTsdGame(takeExpiryUnit(openExpiryUnit(g, goodIndex(g))));
     expect(done.tsdGame).toBe(null);
-    expect(done.tasks[taskId].callLog).toEqual([{ situationId: 'expiring', lineIndex: 0, optionId: TSD_OPTION_ID, risk: 'low', auto: false, tsd: 'perfect' }]);
+    expect(done.tasks[taskId].callLog).toEqual([{ situationId: 'expiring', lineIndex: 0, optionId: TSD_OPTION_ID, risk: 'low', auto: false, tsd: 'perfect',
+      tsdStats: { kind: 'expiry', seconds: 0, timeout: false, takenDays: expect.any(Number), mode: 'fresh' } }]);
   });
 
   it('дата на этикетке: первая смена из config, каждая следующая смена — на день позже', () => {
