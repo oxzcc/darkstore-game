@@ -35,11 +35,11 @@ export const PICKER_STATE_NAME: Record<PickerState, string> = {
   resting: 'Отдыхает',
 };
 
-/** Риск варианта в развилке — только словом и числом делений (решение автора 12.10, 10, раздел 3). */
-export const RISK_LOOK: Record<'low' | 'medium' | 'high', { name: string; bars: number }> = {
-  low: { name: 'низкий', bars: 1 },
-  medium: { name: 'средний', bars: 2 },
-  high: { name: 'высокий', bars: 3 },
+/** Сложность варианта развилки (X2, docs/10 раздел 14.6). */
+export const LEVEL_NAME: Record<'safe' | 'normal' | 'risky', string> = {
+  safe: 'надёжно',
+  normal: 'обычно',
+  risky: 'рискованно',
 };
 
 /** Имя в родительном падеже: «глазами Коржика», «работа Бурана». Имена сборщиков известны заранее (config/pickers.ts). */

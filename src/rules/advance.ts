@@ -172,21 +172,19 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
     }
 
     if (isJobDone(p) && task) {
-      // была развилка — исход зависит только от неё (решение автора 14.10): броска по характеристикам нет,
-      // а риск ответа считается по точности сборщика. Развилки не было — бросок по характеристикам (10, раздел 3).
-      const hadCall = (task.callLog?.length ?? 0) > 0;
+      // была развилка — исход решает один бросок по шансам выбранного варианта (X2, docs/10 раздел 14.6) или итог игры на ТСД;
+      // не было — бросок по покрытию требований задания. Оба — со скрытыми подпорками (14.7); value — куда встал маркер на полосе
       const chances = outcomeChances(p, task);
-      // бросок по характеристикам — со скрытыми подпорками (docs/10, раздел 14.7); value — куда встал маркер на полосе
-      const guarded = hadCall ? null : guardedRoll(chances, rng.next(), guardStreak, guardMode(state));
-      if (guarded) guardStreak = guarded.streak;
-      const roll = guarded?.value ?? 0;
-      const base = guarded?.outcome ?? 'perfect';
-      const { calls, final: outcome } = revealCalls(base, task.callLog, rng, p.stats.accuracy);
+      const fork = revealCalls(task.callLog, rng, guardStreak, guardMode(state));
+      const guarded = fork ? null : guardedRoll(chances, rng.next(), guardStreak, guardMode(state));
+      guardStreak = fork ? fork.streak : guarded!.streak;
+      const outcome = fork ? fork.final : guarded!.outcome;
+      const roll = fork ? fork.roll : guarded!.value;
       setTask(task.id, { status: 'done', outcome });
       // была развилка — окно результата с раскрытием исхода; иначе обычная всплывашка.
       // Ошибки «сам ошибся с количеством» у заказа с развилкой больше нет — исход только от развилки (14.10).
-      const reveal = calls.length > 0 ? { chances, roll, base, calls, final: outcome } : undefined;
-      const shown = hadCall ? {} : { roll: { chances, value: roll } }; // бросок по характеристикам — для барабана (P3)
+      const reveal = fork ? { chances: fork.chances, roll, base: outcome, calls: fork.calls, final: outcome } : undefined;
+      const shown = fork ? {} : { roll: { chances, value: roll } }; // бросок по характеристикам — для барабана (P3)
       events.push({ kind: 'taskDone', taskId: task.id, pickerId: p.id, outcome, at: time, cell: p.position, ...(reveal ? { reveal } : {}), ...shown });
       // опыт сборщику (зависит от исхода) и усталость; новый уровень даёт очко (docs/10, раздел 14.8)
       const grown = growAfterTask(p, outcome);

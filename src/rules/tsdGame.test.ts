@@ -102,7 +102,7 @@ describe('«Взять ТСД» в развилке', () => {
     expect(moveDepthBox(g, 1, 3)).toBe(g);
     const back = closeTsdGame(g);
     expect(back.tsdGame).toBe(null);
-    expect(back.tasks[taskId].callLog).toEqual([{ situationId: 'deep', lineIndex: 0, optionId: TSD_OPTION_ID, risk: 'low', auto: false, tsd: 'perfect',
+    expect(back.tasks[taskId].callLog).toEqual([{ situationId: 'deep', lineIndex: 0, optionId: TSD_OPTION_ID, auto: false, tsd: 'perfect',
       // цифры игры — для кадра «Вы решили» в окне итога (вариант А, 20.10)
       tsdStats: { kind: 'depth', seconds: dg(g).elapsed, moves: 1, best: dg(g).best, timeout: false, tooMany: false } }]);
     expect(back.pickers.lucky.state).toBe('working');
@@ -145,14 +145,13 @@ describe('исход с игрой на ТСД', () => {
     let i = 0;
     return { next: () => xs[i++ % xs.length], seed: () => 0 } as unknown as Rng;
   };
-  const tsd = (result: CallAnswer['tsd']): CallAnswer => ({ situationId: 'deep', lineIndex: 0, optionId: TSD_OPTION_ID, risk: 'low', auto: false, tsd: result });
+  const tsd = (result: CallAnswer['tsd']): CallAnswer => ({ situationId: 'deep', lineIndex: 0, optionId: TSD_OPTION_ID, auto: false, tsd: result });
 
-  it('броска нет: идеально — без изменений, с ошибками — ступень, провал — две', () => {
-    expect(revealCalls('perfect', [tsd('perfect')], fixed(0)).final).toBe('perfect'); // даже при «невезучем» броске
-    expect(revealCalls('perfect', [tsd('withErrors')], fixed(0.99)).final).toBe('withErrors');
-    expect(revealCalls('perfect', [tsd('failed')], fixed(0.99)).final).toBe('failed');
-    expect(revealCalls('withErrors', [tsd('perfect')], fixed(0)).final).toBe('withErrors'); // игра не исправляет исход по характеристикам
-    expect(revealCalls('perfect', [tsd('withErrors')], fixed(0)).calls[0]).toMatchObject({ complication: true, tsd: 'withErrors' });
+  it('броска нет: итог игры и есть исход задания (X2)', () => {
+    expect(revealCalls([tsd('perfect')], fixed(0.99))!.final).toBe('perfect'); // даже при «невезучем» броске
+    expect(revealCalls([tsd('withErrors')], fixed(0))!.final).toBe('withErrors');
+    expect(revealCalls([tsd('failed')], fixed(0))!.final).toBe('failed');
+    expect(revealCalls([tsd('withErrors')], fixed(0))!.calls[0]).toMatchObject({ after: 'withErrors', tsd: 'withErrors' });
   });
 
   it('у ситуации «глубина» есть игра, у «пробки» нет', () => {
@@ -219,7 +218,7 @@ describe('«Срок»', () => {
     const { g, taskId } = start();
     const done = closeTsdGame(takeExpiryUnit(openExpiryUnit(g, goodIndex(g))));
     expect(done.tsdGame).toBe(null);
-    expect(done.tasks[taskId].callLog).toEqual([{ situationId: 'expiring', lineIndex: 0, optionId: TSD_OPTION_ID, risk: 'low', auto: false, tsd: 'perfect',
+    expect(done.tasks[taskId].callLog).toEqual([{ situationId: 'expiring', lineIndex: 0, optionId: TSD_OPTION_ID, auto: false, tsd: 'perfect',
       tsdStats: { kind: 'expiry', seconds: 0, timeout: false, takenDays: expect.any(Number), mode: 'fresh' } }]);
   });
 

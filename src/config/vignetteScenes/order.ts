@@ -57,6 +57,15 @@ export const ORDER_SCENES: Record<string, VignetteRecipe> = {
     { kind: 'box', at: [0.4, 0, 1.1], dented: true }, { kind: 'product', at: [1.0, 0.1, 1.0], rot: [Math.PI / 2, 0, 0.8] },
   ]),
   'jam.slip.ok': scene(dog('cheer', 'happy', null, [0.7, 0, 0.6], -0.4), [rack(), { kind: 'cart', at: [-0.7, 0, 0.5], turn: 1.3 }, icon('star')]),
+  // «Попросить убрать тележку» (X2, Дружелюбие): коллега откатывает тележку / спорят у тележки
+  'jam.askMove.ok': scene(dog('point', 'happy', null, [0.2, 0, 0.6], 0.6), [
+    rack(), { kind: 'cart', at: [1.6, 0, 0.3], turn: -1.4 },
+    { kind: 'npc', role: 'picker', at: [2.35, 0, 0.45], turn: -1.4, pose: 'push', mood: 'happy', hold: null }, icon('check', [0.8, 2.3, 0]),
+  ], WIDE_CAMERA),
+  'jam.askMove.bad': scene(dog('impatient', 'angry', null, [0.4, 0, 0.6], 0.6), [
+    rack(), { kind: 'cart', at: [1.3, 0, 0.45], turn: -1.4 },
+    { kind: 'npc', role: 'picker', at: [2.1, 0, 0.5], turn: -1.9, pose: 'impatient', mood: 'angry', hold: null }, icon('cross', [1.2, 2.3, 0]),
+  ], WIDE_CAMERA),
   'jam.slip.bad': scene(dog('oops', 'oops', null, [0.6, 0, 0.6], 0.3), [rack('gap', 'gap'), ...floorMess(), { kind: 'cart', at: [1.6, 0, 0.1], turn: -1.2 }]),
 
   // ── «Товар в глубине полки» (deep) ──
@@ -89,6 +98,9 @@ export const ORDER_SCENES: Record<string, VignetteRecipe> = {
   'missing.substitute.bad': customer('bad', 'think', 'think'),
   'missing.skip.ok': SKIP_OK,
   'missing.skip.bad': SKIP_BAD,
+  // «Вспомнить, где ещё лежит» (X2, Память)
+  'missing.recall.ok': scene(dog('point', 'happy', null, [0.8, 0, 0.6], -0.5), [rack('empty'), rack('product', 'product', NEIGHBOR_AT), icon('star', [1.85, 2.3, 0])], WIDE_CAMERA),
+  'missing.recall.bad': scene(dog('think', 'think', null, [0.8, 0, 0.6], 0), [rack('empty', 'empty'), rack('other', 'other', NEIGHBOR_AT), icon('question', [0.8, 2.3, 0])], WIDE_CAMERA),
   'missing.checkNear.ok': scene(dog('idle', 'happy', 'product', [0.8, 0, 0.6], -0.3), [rack('empty'), rack('gap', 'product', NEIGHBOR_AT), icon('star', [0.8, 2.3, 0])], WIDE_CAMERA),
   'missing.checkNear.bad': scene(dog('oops', 'oops', null, [0.8, 0, 0.6], 0), [rack('empty', 'empty'), rack('empty', 'empty', NEIGHBOR_AT)], WIDE_CAMERA),
 };

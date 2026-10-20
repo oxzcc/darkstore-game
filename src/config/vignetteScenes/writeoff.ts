@@ -33,6 +33,9 @@ export const WRITEOFF_SCENES: Record<string, VignetteRecipe> = {
   // ── «Просроченной партии не видно» (w_missing) ──
   'w_missing.search.ok': scene(dog('point', 'happy', null, [0.8, 0, 0.6], -0.5), [rack('empty'), rack('product', 'product', NEIGHBOR_AT), mark('check')], WIDE_CAMERA),
   'w_missing.search.bad': scene(dog('tired', 'tired', null, [0.8, 0, 0.6], 0), [rack('empty', 'empty'), rack('other', 'empty', NEIGHBOR_AT), mark('question')], WIDE_CAMERA),
+  // «Вспомнить, куда переложили» (X2, Память)
+  'w_missing.recall.ok': scene(dog('point', 'happy', null, [0.8, 0, 0.6], -0.5), [rack('empty'), rack('product', 'product', NEIGHBOR_AT), mark('star')], WIDE_CAMERA),
+  'w_missing.recall.bad': scene(dog('think', 'think', null, [0.8, 0, 0.6], 0), [rack('empty', 'empty'), rack('other', 'other', NEIGHBOR_AT), mark('question')], WIDE_CAMERA),
   'w_missing.asFound.ok': writeoff(at('idle', 'happy', 'tsd'), [mark('check')]),
   'w_missing.asFound.bad': writeoff(at('oops', 'oops', 'tsd'), [mark('cross')]),
 
@@ -54,6 +57,9 @@ export const WRITEOFF_SCENES: Record<string, VignetteRecipe> = {
   // ── «Зона брака заставлена» (w_scrapFull) ──
   'w_scrapFull.nearby.ok': writeoff(at('point', 'happy'), [helper(-0.3), mark('check')], true),
   'w_scrapFull.nearby.bad': writeoff(at('oops', 'oops'), [helper(2.6), mark('cross')], true),
+  // «Позвать коллегу» (X2, Дружелюбие): вдвоём / никто не пришёл
+  'w_scrapFull.callMate.ok': writeoff(at('carry', 'happy', 'box'), [helper(-0.3), mark('star')]),
+  'w_scrapFull.callMate.bad': writeoff(at('tired', 'tired', 'box'), [mark('cross')], true),
   'w_scrapFull.clear.ok': writeoff(at('idle', 'happy'), [mark('star')]),
   'w_scrapFull.clear.bad': writeoff(at('oops', 'oops'), [
     { kind: 'box', at: [1.2, 0.2, 0.05], rot: [0, 0.6, 1.25] }, { kind: 'box', at: [2.9, 0, 0.4], rot: [0, -0.5, 0] },

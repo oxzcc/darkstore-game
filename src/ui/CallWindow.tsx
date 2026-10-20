@@ -1,19 +1,19 @@
 // Окно развилки по центру экрана — по макету автора ui_11 (13.10; docs/10-minigames-concept.md, раздел 3).
 // Сначала над сборщиком только красный «!» с таймером по контуру (scene/Pickers.tsx). Клик по нему — это окно:
-// слева портрет (пока заглушка), справа реплика сборщика; ниже карточки вариантов (время, риск словом и делениями);
+// слева портрет (пока заглушка), справа реплика сборщика; ниже карточки вариантов (время, какая характеристика и сложность,
+// полоса шансов «Идеально / Неплохо / Провал» этого сборщика — X2, docs/10 раздел 14.6);
 // закрытые варианты — серые с требованием. Мир на паузе; внизу — что сборщик выберет сам и через сколько.
 // × или Esc — закрыть, мир идёт дальше. После ответа окно ~1,5 с показывает выбор, потом открывается следующая развилка.
 import { useEffect, type CSSProperties, type ReactNode } from 'react';
 import type { Picker } from '../model/picker';
 import { useGameStore } from '../store/gameStore';
 import { callsView, flashView, plural, type CallOptionView } from '../store/selectors';
-import { RISK_LOOK, taskTitle } from './labels';
+import { LEVEL_NAME, OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK, taskTitle } from './labels';
 import type { TaskType } from '../model/task';
 import Vx from './Vx';
 import { usePhone } from '../app/usePhone';
 
 const FLASH_MS = 1500;
-const STAT_NAME = { accuracy: 'точность', speed: 'скорость' } as const;
 
 type CardProps = {
   picker: Picker;
@@ -35,14 +35,26 @@ type CardProps = {
   portrait?: ReactNode;
 };
 
-/** Риск варианта — процентом этого сборщика и полоской (P4, решение автора 18.10): ровно этот шанс потом крутит барабан. */
-function Risk({ risk, chance }: { risk: CallOptionView['risk']; chance: number }) {
+/** Шансы варианта у этого сборщика (X2): тонкая полоса трёх исходов и «Идеально» процентом — ровно по ним потом бросок. */
+function Chances({ o }: { o: CallOptionView }) {
+  const c = o.chances;
+  if (!c) return null;
   return (
-    <span className={`fork-risk risk-${risk}`} title={`Риск ${RISK_LOOK[risk].name}; с учётом Нюха сборщика`}>
-      <b>{Math.round(chance * 100)}%</b>
-      <span className="fork-risk-bar"><i style={{ width: `${Math.min(100, chance * 100)}%` }} /></span>
+    <span className="fork-chances" title={`Идеально ${pct(c.perfect)}% · Неплохо ${pct(c.withErrors)}% · Провал ${pct(c.failed)}%`}>
+      <span className="fork-chances-bar">
+        {OUTCOMES_ORDER.map((k) => <i key={k} style={{ width: `${c[k] * 100}%`, background: OUTCOME_LOOK[k].color }} />)}
+      </span>
+      <b>{pct(c.perfect)}%</b>
     </span>
   );
+}
+
+const pct = (x: number) => Math.round(x * 100);
+
+/** Что проверяет вариант: «Нюх 5 · обычно» или «надёжно». */
+function checkText(o: CallOptionView): string {
+  if (o.level === 'safe' || !o.stat) return LEVEL_NAME.safe;
+  return `${STAT_LOOK[o.stat].name} ${o.statValue ?? ''} · ${LEVEL_NAME[o.level]}`;
 }
 
 /** Подпись строки времени на карточке варианта — по типу задания (у приёмки не «сборка»). */
@@ -98,7 +110,7 @@ function ForkCard(p: CardProps) {
               </div>
               {o.locked && (
                 <div className="fork-option-text">
-                  {o.requires ? `Нужна ${STAT_NAME[o.requires.stat]} ${o.requires.min} — у ${p.picker.name} меньше.` : o.text}
+                  {o.requires ? `Нужно: ${STAT_LOOK[o.requires.stat].name} ${o.requires.min} — у ${p.picker.name} меньше.` : o.text}
                 </div>
               )}
               <div className="fork-option-line" />
@@ -110,7 +122,7 @@ function ForkCard(p: CardProps) {
               ) : (
                 <>
                   <div className="fork-option-row"><span>{WORK_TIME_LABEL[p.taskType]}</span><b className={o.seconds > 0 ? 'slow' : ''}>{secondsText(o.seconds)}</b></div>
-                  <div className="fork-option-row"><span>{p.riskLabel}</span><Risk risk={o.risk} chance={o.chance} /></div>
+                  <div className="fork-option-row"><span>{checkText(o)}</span><Chances o={o} /></div>
                 </>
               )}
             </button>

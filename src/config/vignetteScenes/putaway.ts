@@ -20,6 +20,9 @@ export const PUTAWAY_SCENES: Record<string, VignetteRecipe> = {
   'p_taken.neighbor.bad': scene(dog('oops', 'oops', 'tsd'), [rack('other', 'product'), CART, icon('cross', [0.35, 2.4, 0.1])]),
   'p_taken.clear.ok': scene(dog('idle', 'happy'), [rack('product', 'other'), CART, icon('star', [0.35, 2.4, 0.1])]),
   'p_taken.clear.bad': scene(dog('think', 'think', 'product'), [rack('messy', 'messy'), CART, icon('cross', [0.35, 2.4, 0.1])]),
+  // «Запомнить адрес и вернуться» (X2, Память)
+  'p_taken.rememberBack.ok': scene(dog('idle', 'happy', 'product'), [rack('gap', 'product'), CART, icon('check', [0.35, 2.4, 0.1])]),
+  'p_taken.rememberBack.bad': scene(dog('think', 'think'), [rack('gap', 'other'), CART, icon('question', [0.35, 2.4, 0.1])]),
   'p_taken.stack.ok': scene(dog('idle', 'happy'), [rack('messy', 'product'), CART, icon('check', [0.35, 2.4, 0.1])]),
   'p_taken.stack.bad': scene(dog('oops', 'oops'), [rack('messy', 'messy'), CART, icon('question', [0.35, 2.4, 0.1])]),
 
@@ -72,6 +75,8 @@ export const PUTAWAY_SCENES: Record<string, VignetteRecipe> = {
   'p_jam.squeeze.bad': scene(dog('oops', 'oops', null, [0.5, 0, 0.35], 0.2), [
     rack(), { kind: 'cart', at: [-0.6, 0, 0.6], turn: 1.3, full: true }, CART, ...floorMess().slice(2),
   ]),
+  'p_jam.askMove.ok': fromOrder('jam.askMove.ok'),
+  'p_jam.askMove.bad': fromOrder('jam.askMove.bad'),
   'p_jam.slip.ok': fromOrder('jam.slip.ok'),
   'p_jam.slip.bad': fromOrder('jam.slip.bad'),
 };

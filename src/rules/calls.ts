@@ -4,22 +4,43 @@
 // списание — у полки перед тем, как снять партию, или в зоне брака (M7e2).
 // Всё здесь — чистые функции: план развилки при отправке, вызов, ответ игрока, ответ сборщика по таймеру, влияние на исход.
 import type { GameState } from '../model/game';
-import type { Call, CallAnswer, CallReveal, RiskLevel } from '../model/call';
+import type { Call, CallAnswer, CallReveal } from '../model/call';
 import type { Picker, PickerJob } from '../model/picker';
-import type { Outcome, Task } from '../model/task';
+import type { Outcome, OutcomeChances, Task } from '../model/task';
 import { CALLS, SITUATION_BY_ID, SITUATIONS, TSD_GAMES_READY, TSD_OPTION_ID, type CallOption, type Situation } from '../config/calls';
 import { startTsdGame } from './tsdGame';
 import { formatAddress } from './address';
 import { taskLines } from './taskLines';
 import type { Rng } from './random';
 import { createRng } from './random';
+import { effectiveStat } from './pickerStats';
+import { guardedRoll, type GuardMode } from './guard';
 
-const RISK_ORDER: RiskLevel[] = ['low', 'medium', 'high'];
-const OUTCOME_ORDER: Outcome[] = ['perfect', 'withErrors', 'failed'];
+/**
+ * Шансы варианта у этого сборщика (docs/10, раздел 14.6; X2). «Надёжно» — у всех одни; иначе от характеристики варианта
+ * с учётом усталости: каждое очко выше 5 — +6% «Идеально» и −3% «Провала», ниже — наоборот (CALLS.perStat).
+ * `penalty` — на сколько ниже считать характеристику (сборщик решил сам — CALLS.autoPenalty).
+ * Ограничение «не выше неплохо» (cap) — доля «Идеально» переходит в «Неплохо».
+ */
+export function optionChances(option: CallOption, picker: Picker, penalty = 0): OutcomeChances {
+  const base = CALLS.levels[option.level];
+  let perfect = base.perfect;
+  let failed = base.failed;
+  if (option.level !== 'safe' && option.stat) {
+    const d = effectiveStat(picker, option.stat) - penalty - CALLS.perStat.ref;
+    perfect = Math.min(1, Math.max(0, perfect + d * CALLS.perStat.perfect));
+    failed = Math.min(1 - perfect, Math.max(0, failed - d * CALLS.perStat.failed));
+  }
+  if (option.cap === 'withErrors' || option.cap === 'failed') perfect = 0;
+  if (option.cap === 'failed') failed = 1;
+  const r = (x: number) => Math.round(x * 1e6) / 1e6; // без хвостов вроде 0,30000000000000004
+  return { perfect: r(perfect), withErrors: r(Math.max(0, 1 - perfect - failed)), failed: r(failed) };
+}
 
-/** Риск на ступень выше (когда сборщик решил сам). */
-export function raiseRisk(r: RiskLevel): RiskLevel {
-  return RISK_ORDER[Math.min(RISK_ORDER.length - 1, RISK_ORDER.indexOf(r) + 1)];
+/** Что проверял вариант и сколько было у сборщика — для окна итога; у «надёжно» — ничего. */
+function checkOf(option: CallOption, picker: Picker, penalty: number): CallAnswer['check'] {
+  if (option.level === 'safe' || !option.stat) return undefined;
+  return { stat: option.stat, value: Math.max(0, effectiveStat(picker, option.stat) - penalty) };
 }
 
 /**
@@ -65,12 +86,10 @@ export function raiseCall(state: GameState, pickerId: string): GameState {
   const situation = SITUATION_BY_ID[plan.situationId];
   if (!situation) return state;
   const options = optionsFor(situation, picker);
-  // что выберет сборщик сам, решается сразу (окно показывает это): чем точнее, тем чаще самый безопасный вариант
+  // что выберет сборщик сам, решается сразу (окно показывает это): лучший для себя по «Идеально» с характеристикой −2 (X2),
+  // при равенстве — где меньше провала, потом быстрее
   const rng = createRng(state.rngSeed);
-  const safest = [...options].sort((a, b) =>
-    RISK_ORDER.indexOf(a.risk) - RISK_ORDER.indexOf(b.risk) || a.seconds - b.seconds)[0];
-  const careful = rng.next() < picker.stats.accuracy / 10;
-  const auto = careful ? safest : options[Math.floor(rng.next() * options.length)];
+  const auto = autoChoice(options, picker);
   // вариант «Взять ТСД» — с шансом, у ситуаций с готовой игрой (10, раздел 11.1); сборщик сам его не выбирает
   const tsd = hasReadyGame(situation) && (CALLS.forceTsd || plan.forceTsd || rng.next() < CALLS.tsdChance) ? situation.tsdGame! : null;
   const call: Call = {
@@ -85,6 +104,16 @@ export function raiseCall(state: GameState, pickerId: string): GameState {
     tsd,
   };
   return { ...state, rngSeed: rng.seed(), nextId: state.nextId + 1, calls: [...state.calls, call] };
+}
+
+/** Что выберет сборщик сам: лучший «Идеально» с характеристикой −2, потом меньше провала, потом быстрее. */
+export function autoChoice(options: CallOption[], picker: Picker): CallOption {
+  const score = (o: CallOption) => optionChances(o, picker, CALLS.autoPenalty);
+  return [...options].sort((a, b) => {
+    const ca = score(a);
+    const cb = score(b);
+    return cb.perfect - ca.perfect || ca.failed - cb.failed || a.seconds - b.seconds;
+  })[0];
 }
 
 /** Первые CALLS.maxVisible вызовов на экране: у показанных впервые запускается таймер. */
@@ -108,9 +137,12 @@ function resolve(state: GameState, call: Call, option: CallOption, auto: boolean
     situationId: call.situationId,
     lineIndex: call.lineIndex,
     optionId: option.id,
-    risk: auto ? raiseRisk(option.risk) : option.risk,
     auto,
+    // шансы — в момент ответа, ровно те, что были на карточке (сам — с характеристикой −2)
+    chances: optionChances(option, picker, auto ? CALLS.autoPenalty : 0),
   };
+  const check = checkOf(option, picker, auto ? CALLS.autoPenalty : 0);
+  if (check) answer.check = check;
   const job = picker.job;
   // время варианта — отдельным шагом перед текущим (сбором позиции)
   const steps = option.seconds > 0
@@ -144,7 +176,7 @@ export function answerCall(state: GameState, callId: string, optionId: string): 
   return resolve(state, call, option, false);
 }
 
-/** Игрок не ответил — сборщик решает сам, и хуже (10, раздел 3): выбор решён заранее (raiseCall), риск — на ступень выше. */
+/** Игрок не ответил — сборщик решает сам, и хуже (10, раздел 14.6): выбор решён заранее (raiseCall), характеристика −2. */
 export function autoAnswer(state: GameState, callId: string): GameState {
   const call = state.calls.find((c) => c.id === callId);
   if (!call) return state;
@@ -162,48 +194,23 @@ export function expireCalls(state: GameState): GameState {
 }
 
 /**
- * Раскрытие развилок в конце заказа: по каждому ответу — бросок осложнения по риску (CALLS.complication),
- * осложнение ухудшает исход на ступень; потом ограничение варианта (cap), например «не выше с ошибками».
- * Всё, что выпало, записывается — окно результата показывает это игроку (решение автора 13.10).
+ * Раскрыть развилку в конце задания (X2, docs/10 раздел 14.6): один бросок по шансам выбранного варианта
+ * со скрытыми подпорками (14.7). Игрок брал ТСД — броска нет, итог игры и есть исход (11.4).
+ * Развилки не было — null (тогда бросок по характеристикам делает advanceWorld).
+ * `streak` — подарков подряд (campaign.guardStreak); возвращается новый.
  */
-/** Шанс осложнения для ответа с этим риском у сборщика с этой точностью (CALLS.riskByAccuracy). */
-export function complicationChance(risk: RiskLevel, accuracy: number = CALLS.riskByAccuracy.ref): number {
-  const { ref, perPoint, min, max } = CALLS.riskByAccuracy;
-  const factor = Math.min(max, Math.max(min, 1 - (accuracy - ref) * perPoint));
-  return CALLS.complication[risk] * factor;
-}
-
-/**
- * Раскрыть развилки заказа. `accuracy` — точность сборщика: от неё зависит шанс осложнения.
- * С 14.10 (решение автора) у заказа с развилкой броска по характеристикам нет: advanceWorld передаёт сюда «идеально»,
- * и исход зависит только от развилок.
- */
-export function revealCalls(outcome: Outcome, log: CallAnswer[] | undefined, rng: Rng, accuracy?: number): { calls: CallReveal[]; final: Outcome } {
-  let idx = OUTCOME_ORDER.indexOf(outcome);
-  const calls: CallReveal[] = [];
-  for (const a of log ?? []) {
-    if (a.tsd) {
-      // игрок взял ТСД: броска нет, итог игры сразу двигает исход (10, раздел 11.4): с ошибками — на ступень, провал — на две
-      idx = Math.min(OUTCOME_ORDER.length - 1, idx + OUTCOME_ORDER.indexOf(a.tsd));
-      calls.push({ ...a, chance: 0, roll: 1, complication: a.tsd !== 'perfect', capped: false, after: OUTCOME_ORDER[idx] });
-      continue;
-    }
-    const chance = complicationChance(a.risk, accuracy);
-    const roll = rng.next();
-    const complication = roll < chance;
-    if (complication) idx = Math.min(OUTCOME_ORDER.length - 1, idx + 1);
-    const cap = SITUATION_BY_ID[a.situationId]?.options.find((o) => o.id === a.optionId)?.cap;
-    const capIdx = cap ? OUTCOME_ORDER.indexOf(cap) : -1;
-    const capped = capIdx > idx;
-    if (capped) idx = capIdx;
-    calls.push({ ...a, chance, roll, complication, capped, after: OUTCOME_ORDER[idx] });
+export function revealCalls(log: CallAnswer[] | undefined, rng: Rng, streak = 0, mode: GuardMode = 'on'):
+  { calls: CallReveal[]; final: Outcome; chances: OutcomeChances; roll: number; streak: number } | null {
+  const a = log?.[log.length - 1]; // развилка на задание одна
+  if (!a) return null;
+  const capped = !!SITUATION_BY_ID[a.situationId]?.options.find((o) => o.id === a.optionId)?.cap;
+  if (a.tsd) {
+    const chances: OutcomeChances = { perfect: 0, withErrors: 0, failed: 0, [a.tsd]: 1 };
+    return { calls: [{ ...a, roll: 0, capped: false, after: a.tsd }], final: a.tsd, chances, roll: 0, streak };
   }
-  return { calls, final: OUTCOME_ORDER[idx] };
-}
-
-/** Только итоговый исход с учётом развилок. */
-export function applyCalls(outcome: Outcome, log: CallAnswer[] | undefined, rng: Rng): Outcome {
-  return revealCalls(outcome, log, rng).final;
+  const chances = a.chances ?? CALLS.levels.normal; // в старых записях шансов нет
+  const g = guardedRoll(chances, rng.next(), streak, mode);
+  return { calls: [{ ...a, roll: g.value, capped, after: g.outcome }], final: g.outcome, chances, roll: g.value, streak: g.streak };
 }
 
 /** Что подставить в тексты развилки: {picker}, {product}, {address}, {aisle}, {seconds}. */
