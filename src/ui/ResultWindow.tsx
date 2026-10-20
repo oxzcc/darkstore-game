@@ -102,8 +102,17 @@ function Result({ card, renderArt, renderPortrait }: Props & { card: ResultCard 
               {done ? (complication ? 'Осложнение!' : 'Сработало!') : '…'}
             </div>
           </> : <>
-            {v.tsdGame && <span className="rw-odds plain">Игра «{TSD_GAME_NAME[v.tsdGame]}»</span>}
-            <div className="rw-art">{art ?? <span className="rw-art-stub">{p.name[0]}</span>}</div>
+            {/* играли на ТСД (вариант А, 20.10): экран ТСД с оценкой игры и её цифрами — «как я сыграл»; сценка ниже — только на компьютере */}
+            {v.tsdResult && v.tsdGame ? (
+              <div className="rw-tsdres" style={{ '--gc': OUTCOME_LOOK[v.tsdResult.outcome].color } as CSSProperties}>
+                <div className="rw-tsdres-head"><i />ТСД · {TSD_GAME_NAME[v.tsdGame]}</div>
+                <div className="rw-tsdres-screen">
+                  <b>{OUTCOME_LOOK[v.tsdResult.outcome].name}</b>
+                  {v.tsdResult.facts.map((f, i) => <span key={i}>{f}</span>)}
+                </div>
+              </div>
+            ) : v.tsdGame && <span className="rw-odds plain">Игра «{TSD_GAME_NAME[v.tsdGame]}»</span>}
+            <div className={`rw-art${v.tsdResult ? ' rw-art-extra' : ''}`}>{art ?? <span className="rw-art-stub">{p.name[0]}</span>}</div>
           </>}
         </section>
 

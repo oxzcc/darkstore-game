@@ -14,7 +14,7 @@ import { pickerActivity } from './jobs';
 import type { Rng } from './random';
 import { answerCall, raiseCall, revealCalls } from './calls';
 import { sendPicker } from './tsd';
-import { submitBarcodeGuess, closeExpiryUnit, closeTsdGame, depthMovesFrom, moveDepthBox, openExpiryUnit, takeExpiryUnit, tapDepthBox } from './tsdGame';
+import { submitBarcodeGuess, closeExpiryUnit, closeTsdGame, depthMovesFrom, moveDepthBox, openExpiryUnit, takeExpiryUnit, tapDepthBox, tsdStatsOf } from './tsdGame';
 import { expiryDate } from './minigames/expiry';
 import { CALLS } from '../config/calls';
 
@@ -102,7 +102,9 @@ describe('«Взять ТСД» в развилке', () => {
     expect(moveDepthBox(g, 1, 3)).toBe(g);
     const back = closeTsdGame(g);
     expect(back.tsdGame).toBe(null);
-    expect(back.tasks[taskId].callLog).toEqual([{ situationId: 'deep', lineIndex: 0, optionId: TSD_OPTION_ID, risk: 'low', auto: false, tsd: 'perfect' }]);
+    expect(back.tasks[taskId].callLog).toEqual([{ situationId: 'deep', lineIndex: 0, optionId: TSD_OPTION_ID, risk: 'low', auto: false, tsd: 'perfect',
+      // цифры игры — для кадра «Вы решили» в окне итога (вариант А, 20.10)
+      tsdStats: { kind: 'depth', seconds: dg(g).elapsed, moves: 1, best: dg(g).best, timeout: false, tooMany: false } }]);
     expect(back.pickers.lucky.state).toBe('working');
     const done = runUntil(back, (x) => x.tasks[taskId].status === 'done');
     expect(done.tasks[taskId].status).toBe('done');
@@ -279,5 +281,23 @@ describe('«Штрихкод»', () => {
     const late = runUntil(start().g, (x) => x.tsdGame?.result !== null, 0.5);
     expect(bg(late)).toMatchObject({ result: 'failed', note: 'timeout' });
     expect(bg(late).elapsed).toBe(BARCODE.timeLimit + BARCODE.introSeconds);
+  });
+});
+
+describe('цифры игры на ТСД для окна итога (tsdStatsOf)', () => {
+  const base = { callId: 'c', taskId: 't', pickerId: 'lucky', situationId: 's', lineIndex: 0, address: { aisle: 1, rack: 1, shelf: 1 },
+    rack: { aisle: 1, rack: 1 }, noteAt: 0, result: 'perfect' as const };
+
+  it('«Штрихкод»: время без вступления, сколько попыток, угадан ли код', () => {
+    const g: BarcodeGame = { ...base, kind: 'barcode', elapsed: 20, timeLimit: 90, startDelay: 2, productId: 'coffee', code: [], hiddenFrom: 5,
+      hiddenCount: 4, side: 0, attempts: 6, perfectWithin: 4, guesses: [{ digits: [], marks: [] }, { digits: [], marks: [] }], note: 'solved' };
+    expect(tsdStatsOf(g)).toEqual({ kind: 'barcode', seconds: 18, timeout: false, tries: 2, attempts: 6, solved: true });
+  });
+
+  it('«Срок»: какой срок у взятой штуки', () => {
+    const g: ExpiryGame = { ...base, kind: 'expiry', elapsed: 21, timeLimit: 45, productId: 'coffee', need: 2, mode: 'fresh', perfectSeconds: 28,
+      units: [{ days: 0, side: 0, seen: false }, { days: 3, side: 1, seen: false }], open: null, taken: 1, note: 'taken' };
+    expect(tsdStatsOf(g)).toEqual({ kind: 'expiry', seconds: 21, timeout: false, takenDays: 3, mode: 'fresh' });
+    expect(tsdStatsOf({ ...g, taken: null, note: 'timeout' })).toMatchObject({ takenDays: null, timeout: true });
   });
 });
