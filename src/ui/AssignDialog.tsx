@@ -1,12 +1,15 @@
 // Окно «Кого отправить?» по центру (решение автора 18.10, прототип «Сборщики: назначение и барабан»):
-// задание в шапке, ниже вертикальные карточки сборщиков — портрет, флаг с именем, опыт под это задание, полоса шансов
-// («?» — из чего она сложилась) и «Готово через». Нажатие на карточку — назначить (правка автора 18.10: меньше информации).
+// задание в шапке и «Что нужно» (откуда требования, X3), ниже вертикальные карточки сборщиков — портрет, флаг с именем,
+// пятиугольник характеристик с пунктиром требований (X3, макет StatsAssign), полоса шансов («?» — из чего она сложилась) и «Готово через». Нажатие на карточку — назначить (правка автора 18.10: меньше информации).
 // Все числа — из selectors (а те — из rules); окно само ничего не считает.
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Picker } from '../model/picker';
 import type { Task } from '../model/task';
 import { useGameStore } from '../store/gameStore';
-import { activityOf, addressText, assignCardView, clockText, groupedLines, money, pickerList, takeTimer, taskSummary, type AssignCardView } from '../store/selectors';
+import { activityOf, addressText, assignCardView, clockText, groupedLines, money, pickerList, plural, takeTimer, taskNeeds, taskSummary, type AssignCardView } from '../store/selectors';
+import type { RequirementReason } from '../rules/requirements';
+import type { StatBlock } from '../model/picker';
+import StatPentagon from './StatPentagon';
 import { TIRED_BADGE_FROM } from '../config/pickers';
 import { activityLine } from './activityText';
 import { OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK, TASK_TYPE_LOOK, taskTitle } from './labels';
@@ -52,6 +55,7 @@ export default function AssignDialog({ renderPortrait }: { renderPortrait?: (pic
       <Vx className="ac-window" bodyClass="window">
         <div className="ac-inner">
           <TaskHead task={task} />
+          <Needs task={task} />
           <div className="ac-cards">
             {pickerList(game.pickers).map((p) => {
               const v = assignCardView(game, p.id, task.id);
@@ -70,6 +74,7 @@ export default function AssignDialog({ renderPortrait }: { renderPortrait?: (pic
               );
             })}
           </div>
+          <div className="ac-legend">Пунктир — что нужно, заливка — что умеет сборщик, красное — не хватает</div>
         </div>
       </Vx>
       </div>
@@ -110,6 +115,39 @@ function WhyPopover({ view, rect }: { view: AssignCardView | null; rect: DOMRect
         {OUTCOME_LOOK.withErrors.name} {pct(chances.withErrors)}%, {OUTCOME_LOOK.failed.name.toLowerCase()} {pct(chances.failed)}%.
         {' '}{STAT_LOOK.speed.name} {p.stats.speed}: {eta === null ? 'дорога —' : `до места ${clockText(eta)}`}.
       </span>
+    </div>
+  );
+}
+
+/** «Лапы 5, Нюх 5» — только ненулевые, в порядке осей. */
+function statsText(adds: Partial<StatBlock>, sign = ''): string {
+  return (Object.keys(STAT_LOOK) as (keyof typeof STAT_LOOK)[])
+    .filter((k) => k !== 'energy' && (adds as Record<string, number | undefined>)[k])
+    .map((k) => `${STAT_LOOK[k].name} ${sign}${(adds as Record<string, number>)[k]}`)
+    .join(', ');
+}
+
+/** Строка «откуда требование»: «4 позиции → Память 4», «есть вода → Сила 5», «+ Лапы 5, Нюх 5». */
+function reasonText(r: RequirementReason, productName: (id: string) => string, only: boolean): string {
+  switch (r.kind) {
+    case 'base': return only ? statsText(r.adds) : `+ ${statsText(r.adds)}`;
+    case 'lines': return `${r.count} ${plural(r.count, 'позиция', 'позиции', 'позиций')} → ${statsText(r.adds)}`;
+    case 'shelves': return `${r.count} ${plural(r.count, 'полка', 'полки', 'полок')} → ${statsText(r.adds)}`;
+    case 'pallets': return `${r.count} ${plural(r.count, 'паллета', 'паллеты', 'паллет')} → ${statsText(r.adds, '+')}`;
+    case 'heavy': return `есть ${productName(r.productId).toLowerCase()} → ${statsText(r.adds)}`;
+    case 'difficulty': return `сложность ${r.level} → всё ×${r.factor.toFixed(2).replace('.', ',').replace(/0$/, '')}`;
+  }
+}
+
+/** «Что нужно»: откуда взялись требования задания (X3, макет StatsAssign). */
+function Needs({ task }: { task: Task }) {
+  const products = useGameStore((s) => s.game.products);
+  const { reasons } = taskNeeds(task);
+  const name = (id: string) => products[id]?.name ?? id;
+  return (
+    <div className="ac-needs">
+      <b>Что нужно</b>
+      {reasons.map((r, i) => <span key={i}>{reasonText(r, name, reasons.length === 1)}</span>)}
     </div>
   );
 }
@@ -183,13 +221,13 @@ type CardProps = {
 
 /**
  * Карточка сборщика — вся карточка кнопка, как вариант в развилке (правка автора 18.10).
- * На карточке только то, по чему выбирают: опыт под это задание, шансы и когда будет готово.
- * Лапы, Нюх и опыт по всем типам — в расчёте шансов и в профиле; бодрость — плашкой, только когда устал.
+ * На карточке только то, по чему выбирают: пятиугольник против требований, шансы и когда будет готово.
+ * Числа — в расчёте шансов («?») и в профиле; бодрость — плашкой, только когда устал.
  */
 function PickerCard({ view, busy, portrait, open, onWhy, onSend }: CardProps) {
-  const { picker: p, breakdown, total } = view;
-  const { chances, needs, coverage } = breakdown;
-  const short = needs.filter((x) => x.have < x.need);
+  const phone = usePhone();
+  const { picker: p, breakdown, total, stats, req } = view;
+  const { chances } = breakdown;
   const tired = p.stats.fatigue >= TIRED_BADGE_FROM ? Math.round(p.stats.fatigue) : null;
   const pick = () => { if (!busy) onSend(); };
   return (
@@ -210,10 +248,8 @@ function PickerCard({ view, busy, portrait, open, onWhy, onSend }: CardProps) {
         </div>
 
         <div className="ac-body">
-          {/* временно, до пятиугольника (X3): покрытие требований и чего не хватает */}
-          <div className="ac-rank">
-            <span className="grow">Покрытие <b>{pct(coverage)}%</b>{short.length > 0 && <> · не хватает: {short.map((x) => STAT_LOOK[x.stat].name).join(', ')}</>}</span>
-          </div>
+          {/* что умеет сборщик против того, что нужно заданию (X3) */}
+          <div className="ac-pent"><StatPentagon stats={stats} req={req} color={p.color} size={phone ? 80 : 104} /></div>
 
           <div className="ac-chance">
             <span className="ac-bar">
