@@ -1022,3 +1022,51 @@ svg.i.sm { width: 18px; height: 18px; }
 .phone .rw-p3 { gap: 8px; }
 .phone .rw-ribbon { margin: 0 24px 2px; padding: 6px 14px; font-size: 21px; }
 .phone .rw-text { font-size: 13px; }
+
+/* ---------- R3: экраны ТСД на телефоне (макет R0: сверху полка, снизу терминал) ---------- */
+/* подсказки клавиш (Enter) и слова «клик» — только на компьютере */
+.phone-only { display: none; }
+.phone .phone-only { display: inline; }
+.phone .desk-only, .phone .kbd { display: none; }
+/* сверху слева плашка «Стеллаж 1.2 · ТСД у вас» — в одну строку */
+.phone .tsd-hint.top { left: 12px; right: 12px; top: 12px; }
+.phone .closeup-place > .vx-edge > .vx-body { padding: 4px 12px 4px 4px; gap: 8px; }
+.phone .closeup-place .avatar.small { width: 34px; height: 34px; }
+.phone .closeup-place { min-width: 0; }
+.phone .closeup-title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.phone .closeup-sub { display: none; }
+/* «Глубина» и «Срок»: плашка под ней во всю ширину, в две строки — что найти, потом ходы или срок и время */
+.phone .depth-hud-wrap { left: 12px; right: 12px; top: 64px; transform: none; align-items: stretch; }
+.phone .depth-hud > .vx-edge > .vx-body { flex-direction: column; }
+.phone .depth-hud-item { padding: 8px 12px; gap: 10px; }
+.phone .depth-hud-item .swatch { width: 34px; height: 34px; }
+.phone .depth-hud-label { font-size: 10px; }
+.phone .depth-hud-name { font-size: 18px; }
+.phone .depth-hud-sep { width: auto; height: 2px; margin: 0 12px; }
+.phone .depth-hud-moves { min-width: 0; padding: 8px 12px 10px; gap: 6px; }
+.phone .depth-hud-moves-top b { font-size: 20px; }
+.phone .depth-note { align-self: center; }
+/* «Срок»: «Взять» — крупно внизу во всю ширину */
+.phone .expiry-hold { left: 16px; right: 16px; bottom: calc(20px + env(safe-area-inset-bottom)); transform: none; }
+.phone .expiry-hold .btn { width: 100%; }
+.phone .expiry-hold-hint { font-size: 13px; text-align: center; }
+/* итог игры — по центру во всю ширину */
+.phone .depth-result { width: calc(100% - 32px); }
+.phone .depth-result > .vx-edge > .vx-body { padding: 20px 18px 18px; text-align: center; }
+.phone .depth-result-name { font-size: 32px; }
+.phone .depth-result .btn { width: 100%; height: 52px; }
+/* «Штрихкод»: корпус терминала снизу во всю ширину, нарисован стилями (картинка pdt.png вертикальная и не влезает) */
+.phone .pdt-wrap { left: 8px; right: 8px; top: auto; bottom: calc(10px + env(safe-area-inset-bottom)); transform: none; animation: pdt-up 0.35s ease-out; }
+@keyframes pdt-up { from { opacity: 0; transform: translateY(24px); } }
+.phone .pdt { width: auto; height: auto; filter: none; padding: 10px 10px 12px; background: #2F2A23; border-radius: 26px; box-shadow: 0 6px 0 #1E1A15; }
+.phone .pdt-body, .phone .pdt-hw-ok { display: none; }
+.phone .pdt-screen { position: relative; left: auto; top: auto; width: auto; height: auto; border-radius: 14px; gap: 5px; }
+.phone .pdt-head { margin-top: 0; padding: 6px 10px; }
+.phone .pdt-head-title { font-size: 17px; }
+.phone .pdt-rows { gap: 3px; padding: 6px 0 4px; }
+.phone .pdt-cell { width: 40px; height: 32px; }
+.phone .pdt-legend { padding-bottom: 4px; }
+.phone .pdt-keys { gap: 6px; }
+.phone .pdt-key { height: 44px; }
+.phone .pdt-actions { margin-top: 2px; padding: 0 8px 8px; }
+.phone .pdt-btn { height: 46px; }

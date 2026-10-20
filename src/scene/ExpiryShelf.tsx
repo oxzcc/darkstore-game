@@ -13,6 +13,8 @@ import { useGameStore } from '../store/gameStore';
 import { expiryDate } from '../rules/minigames/expiry';
 import { tsdShelfPose } from './closeupView';
 import ProductLowPoly, { lowPolySize } from './models/ProductLowPoly';
+import { PHONE } from '../config/phone';
+import { isPhone } from '../app/usePhone';
 
 const V = WAREHOUSE_VIEW.expiryShelf;
 const CARTON_SIDE = '#C9A26B';
@@ -104,7 +106,11 @@ export default function ExpiryShelf({ map }: { map: WarehouseMap }) {
     if (!slot) return;
     slot.matrixWorld.decompose(tmp.pos, tmp.q, tmp.s);
     // у глаз: на inspectDistance перед камерой, чуть ниже центра; повёрнута как камера, плюс поворот игрока
-    tmp.eyePos.set(0, -V.inspectDrop, -V.inspectDistance).applyQuaternion(camera.quaternion).add(camera.position);
+    // на телефоне (R3) — дальше и крупнее: узкий экран смотрит шире
+    const phone = isPhone();
+    const dist = phone ? PHONE.closeup.expiryDistance : V.inspectDistance;
+    const big = phone ? PHONE.closeup.expiryScale : V.inspectScale;
+    tmp.eyePos.set(0, -V.inspectDrop, -dist).applyQuaternion(camera.quaternion).add(camera.position);
     tmp.eyeQ.copy(camera.quaternion).multiply(spin.current);
     const t = smooth(lift.current);
     // модель стоит на y = 0 — у глаз её поднимаем на половину высоты, чтобы вращалась вокруг середины
@@ -112,7 +118,7 @@ export default function ExpiryShelf({ map }: { map: WarehouseMap }) {
     parent.updateMatrixWorld();
     const worldPos = tmp.pos.clone().lerp(tmp.eyePos, t);
     const worldQ = tmp.q.clone().slerp(tmp.eyeQ, t);
-    const scale = 1 + (V.inspectScale - 1) * t;
+    const scale = 1 + (big - 1) * t;
     g.position.copy(parent.worldToLocal(worldPos));
     const parentQ = new Quaternion();
     parent.getWorldQuaternion(parentQ);

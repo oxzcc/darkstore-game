@@ -3,7 +3,7 @@
 // 3) она сама поворачивается к игроку стороной со штрихкодом. Дальше штука висит перед камерой слева, справа — ТСД.
 // Сцена только рисует: время вступления — game.elapsed, код и сторона наклейки — из store (rules/minigames/barcode.ts).
 import { useMemo, useRef } from 'react';
-import { Group, Quaternion, Vector3 } from 'three';
+import { Group, PerspectiveCamera, Quaternion, Vector3 } from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { WarehouseMap } from '../model/warehouse';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
@@ -11,6 +11,8 @@ import { PALETTE } from '../config/palette';
 import { useGameStore } from '../store/gameStore';
 import { tsdShelfPose } from './closeupView';
 import ProductLowPoly, { lowPolySize } from './models/ProductLowPoly';
+import { PHONE } from '../config/phone';
+import { isPhone } from '../app/usePhone';
 
 const V = WAREHOUSE_VIEW.barcodeShelf;
 const smooth = (t: number) => t * t * (3 - 2 * t);
@@ -54,8 +56,13 @@ export default function BarcodeShelf({ map }: { map: WarehouseMap }) {
 
     slot.updateMatrixWorld();
     slot.matrixWorld.decompose(tmp.slotPos, tmp.slotQ, tmp.slotS);
-    // у глаз: левее центра (справа — ТСД), на inspectDistance перед камерой
-    tmp.eyePos.set(V.inspectOffsetX, -V.inspectDrop, -V.inspectDistance).applyQuaternion(camera.quaternion).add(camera.position);
+    // у глаз: левее центра (справа — ТСД), на inspectDistance перед камерой.
+    // На телефоне (R3) терминал снизу: штука по центру и выше — на долю barcodeRaise половины высоты кадра
+    const phone = isPhone();
+    const halfH = V.inspectDistance * Math.tan(((camera as PerspectiveCamera).fov * Math.PI) / 360);
+    const x = phone ? 0 : V.inspectOffsetX;
+    const y = phone ? halfH * PHONE.closeup.barcodeRaise : -V.inspectDrop;
+    tmp.eyePos.set(x, y, -V.inspectDistance).applyQuaternion(camera.quaternion).add(camera.position);
     // лицом к игроку и чуть наискосок — чтобы было видно, что это объёмная упаковка
     tmp.tilt.setFromAxisAngle(Y, V.tiltYaw).multiply(new Quaternion().setFromAxisAngle(X, V.tiltPitch));
     tmp.front.copy(camera.quaternion).multiply(tmp.tilt);

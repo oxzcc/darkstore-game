@@ -72,7 +72,7 @@ export default function DepthTsd({ view, onClose }: { view: DepthView; onClose: 
           <Vx className="depth-result" style={{ '--oc': result.color } as CSSProperties}>
             <div className="depth-result-name">{result.name}</div>
             <div className="depth-result-sub">{resultText(view)}</div>
-            <button className="btn primary" onClick={onClose}><Vx>К складу · Enter</Vx></button>
+            <button className="btn primary" onClick={onClose}><Vx>К складу<span className="kbd"> · Enter</span></Vx></button>
           </Vx>
         </div>
       )}

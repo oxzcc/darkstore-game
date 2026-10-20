@@ -114,7 +114,7 @@ export default function BarcodeTsd({ view, onDigit, onErase, onEnter, onClose }:
           <Vx className="depth-result" style={{ '--oc': result.color } as CSSProperties}>
             <div className="depth-result-name">{result.name}</div>
             <div className="depth-result-sub">{resultText}</div>
-            <button className="btn primary" onClick={onClose}><Vx>К складу · Enter</Vx></button>
+            <button className="btn primary" onClick={onClose}><Vx>К складу<span className="kbd"> · Enter</span></Vx></button>
           </Vx>
         </div>
       )}
