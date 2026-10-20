@@ -106,9 +106,11 @@ function Result({ card, renderArt, renderPortrait }: Props & { card: ResultCard 
             {v.tsdResult && v.tsdGame ? (
               <div className="rw-tsdres" style={{ '--gc': OUTCOME_LOOK[v.tsdResult.outcome].color } as CSSProperties}>
                 <div className="rw-tsdres-head"><i />ТСД · {TSD_GAME_NAME[v.tsdGame]}</div>
+                {/* оценку словом не пишем — она в кадре «Итог» (правка автора 20.10: повторялась); здесь только цифры, цвет — по оценке */}
                 <div className="rw-tsdres-screen">
-                  <b>{OUTCOME_LOOK[v.tsdResult.outcome].name}</b>
-                  {v.tsdResult.facts.map((f, i) => <span key={i}>{f}</span>)}
+                  {v.tsdResult.facts.length
+                    ? v.tsdResult.facts.map((f, i) => i === 0 ? <b key={i}>{f}</b> : <span key={i}>{f}</span>)
+                    : <b>Игра пройдена</b>}
                 </div>
               </div>
             ) : v.tsdGame && <span className="rw-odds plain">Игра «{TSD_GAME_NAME[v.tsdGame]}»</span>}

@@ -280,7 +280,7 @@ button { font-family: inherit; }
 .rw-tsdres-head { display: flex; align-items: center; gap: 8px; color: #B7D7A8; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
 .rw-tsdres-head i { width: 8px; height: 8px; border-radius: 50%; background: var(--gc); box-shadow: 0 0 6px var(--gc); }
 .rw-tsdres-screen { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 10px; background: #F4F2EC; border-radius: 10px; border-top: 6px solid var(--gc); text-align: center; }
-.rw-tsdres-screen b { font-size: 28px; line-height: 1.1; text-transform: uppercase; color: var(--gc); }
+.rw-tsdres-screen b { font-size: 19px; line-height: 1.2; color: var(--text); }
 .rw-tsdres-screen span { font-size: 14px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
 .rw-art.rw-art-extra { height: 150px; }
 .rw-shout { min-height: 32px; text-align: center; font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #fff;
@@ -1089,4 +1089,4 @@ svg.i.sm { width: 18px; height: 18px; }
 .phone .rw-bubble { font-size: 13px; line-height: 1.3; padding: 8px 10px; }
 /* вариант А: на телефоне после игры на ТСД сценку не показываем — кадр и так говорит, как сыграли, а место по высоте нужнее */
 .phone .rw-art.rw-art-extra { display: none; }
-.phone .rw-tsdres-screen b { font-size: 24px; }
+.phone .rw-tsdres-screen b { font-size: 17px; }
