@@ -1005,3 +1005,20 @@ svg.i.sm { width: 18px; height: 18px; }
 .phone .hint { width: calc(100vw - 24px); }
 .phone .btn.primary { min-height: 52px; }
 .phone .ac-veil:has(> .rw) { place-items: center stretch; } /* итог — по центру, а не листом */
+
+/* R2, правка после проверки на телефоне (20.10): итог не влезал по высоте — верх и «Дальше» уходили за экран.
+   Стопка выравнивается по центру только если влезает (safe), иначе — от верха с прокруткой; средний кадр — в две колонки, барабан мельче. */
+.phone .rw { align-content: safe center; row-gap: 18px; padding-top: 20px; }
+.phone .rw-p2 { display: grid; grid-template-columns: minmax(0, 1fr) 128px; column-gap: 12px; row-gap: 8px; align-content: start; }
+.phone .rw-p2 > :not(.rr-reel):not(.rw-tab) { grid-column: 1; }
+.phone .rw-p2 > .rr-reel { grid-column: 2; grid-row: 1 / span 4; align-self: center; width: 232px; zoom: 0.55; }
+.phone .rw-p2 > .rw-art { grid-column: 1 / -1; height: 140px; }
+.phone .rw-p2 .rw-shout { align-self: end; text-align: left; font-size: 18px; }
+.phone .rw-sticker { padding: 8px 10px; border-width: 3px; }
+.phone .rw-sticker b { font-size: 14px; }
+.phone .rw-check { width: 26px; height: 26px; }
+.phone .rw-odds { font-size: 12px; }
+.phone .rw-whyc { font-size: 12px; }
+.phone .rw-p3 { gap: 8px; }
+.phone .rw-ribbon { margin: 0 24px 2px; padding: 6px 14px; font-size: 21px; }
+.phone .rw-text { font-size: 13px; }
