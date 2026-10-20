@@ -7,15 +7,12 @@ import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from
 import type { Picker } from '../model/picker';
 import { useGameStore, type RollCard } from '../store/gameStore';
 import { rollView } from '../store/selectors';
-import { SPEC_RANKS } from '../config/pickers';
 import { ROLL_SHOUT } from '../config/taskReport';
-import { EXP_NAME, OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK, nameForm } from './labels';
+import { OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK, nameForm } from './labels';
 import type { ReelSeg } from './ReelTsd';
 import ChanceBar from './ChanceBar';
 import { play } from '../audio/engine';
 import { FinalFrame, Join, StoryFrame } from './ResultFrames';
-
-const signedPct = (v: number) => `${v < 0 ? '−' : '+'}${Math.abs(Math.round(v * 100))}%`;
 
 type Props = { renderPortrait?: (picker: Picker) => ReactNode };
 
@@ -66,8 +63,9 @@ function Roll({ card, renderPortrait }: Props & { card: RollCard }) {
             <div className={`rw-shout${done ? ` go ${shoutClass}` : ' wait'}`}>{done ? ROLL_SHOUT[card.outcome] : '…'}</div>
           </div>
           <span className="rw-sub">
-            {STAT_LOOK.accuracy.name} {v.why.accuracy} · {EXP_NAME[v.taskType]}: {SPEC_RANKS[v.why.level] ?? v.why.level}
-            {v.why.tired !== null && <> · <span className="rw-sub-warn">Устал {signedPct(v.why.tired)}</span></>}
+            Покрытие требований {Math.round(v.why.coverage * 100)}%
+            {v.why.short.length > 0 && <> · не хватило: {v.why.short.map((n) => STAT_LOOK[n.stat].name).join(', ')}</>}
+            {v.why.tired !== null && <> · <span className="rw-sub-warn">Устал {v.why.tired}%</span></>}
           </span>
         </section>
 

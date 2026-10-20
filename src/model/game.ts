@@ -37,6 +37,12 @@ export type ShiftEvent =
       call: Call;
       optionId: string;
       at: number;
+    }
+  | {
+      kind: 'levelUp';        // сборщик получил новый уровень и очко (docs/10, раздел 14.8)
+      pickerId: string;
+      level: number;
+      at: number;
     };
 
 export type GameClock = {

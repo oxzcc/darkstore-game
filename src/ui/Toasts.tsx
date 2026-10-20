@@ -18,7 +18,9 @@ function Toast({ toast }: { toast: ToastData }) {
   return (
     <Vx className="toast" style={{ '--oc': look.color } as CSSProperties} onClick={() => dismiss(toast.id)}>
       <Icon name={look.icon} />
-      {toast.expired
+      {toast.levelUp
+        ? <span>{toast.pickerName}: <b>новый уровень {toast.levelUp}!</b> Очко — в итогах смены</span>
+        : toast.expired
         ? <span>{taskTitle({ type: toast.taskType, number: toast.taskNumber })}: <b>не успели взять</b></span>
         : <span>{taskTitle({ type: toast.taskType, number: toast.taskNumber })} · {toast.pickerName}: <b>{look.name}</b></span>}
     </Vx>

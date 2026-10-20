@@ -4,7 +4,8 @@ import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { buildWarehouseMap } from './warehouse';
 import { createInitialGame } from './game';
 import { createRng } from './random';
-import { OUTCOMES, outcomeBreakdown, outcomeChances, rollOutcome } from './outcome';
+import { OUTCOMES, chancesForCoverage, coverage, outcomeBreakdown, outcomeChances, rollOutcome } from './outcome';
+import { taskRequirements } from './requirements';
 import { jobSecondsEstimate, etaToTask } from './jobs';
 
 describe('исходы', () => {
@@ -34,30 +35,28 @@ describe('исходы', () => {
     for (const o of OUTCOMES) expect(Math.abs(counts[o] / n - chances[o]) < 0.02).toBe(true);
   });
 
-  it('раскладка шанса «идеально» складывается ровно в шанс', () => {
+  it('раскладка: те же шансы, покрытие от 0 до 1, нужды — из требований задания', () => {
     for (const task of Object.values(game.tasks)) {
+      const req = taskRequirements(task);
       for (const p of Object.values(game.pickers)) {
         for (const fatigue of [0, 40, 100]) {
-          for (const level of [1, 3, 5]) {
-            const picker = { ...p, stats: { ...p.stats, fatigue }, specialization: { ...p.specialization, [task.type]: { level, xp: 0 } } };
-            const { chances, parts } = outcomeBreakdown(picker, task);
-            expect(chances).toEqual(outcomeChances(picker, task));
-            const sum = parts.reduce((s, x) => s + x.value, 0);
-            expect(Math.abs(sum - chances.perfect) < 1e-9).toBe(true);
-          }
+          const picker = { ...p, stats: { ...p.stats, fatigue } };
+          const b = outcomeBreakdown(picker, task);
+          expect(b.chances).toEqual(outcomeChances(picker, task));
+          expect(b.coverage).toBeGreaterThanOrEqual(0);
+          expect(b.coverage).toBeLessThanOrEqual(1);
+          for (const n of b.needs) expect(n.need).toBe(req[n.stat]);
         }
       }
     }
   });
 
-  it('свежий сборщик без опыта: усталость и опыт дают 0, предела нет', () => {
-    const task = { ...Object.values(game.tasks)[0], difficulty: 1 as const };
-    const p = Object.values(game.pickers)[0];
-    const fresh = { ...p, stats: { ...p.stats, fatigue: 0 }, specialization: { ...p.specialization, [task.type]: { level: 1, xp: 0 } } };
-    const parts = outcomeBreakdown(fresh, task).parts;
-    expect(parts.map((x) => x.kind)).toEqual(['base', 'accuracy', 'spec', 'fatigue']);
-    expect(Math.abs(parts[2].value)).toBeLessThan(1e-9);
-    expect(Math.abs(parts[3].value)).toBeLessThan(1e-9);
+  it('покрытие: всё закрыто — 1; не хватает — доля; шансы растут с покрытием', () => {
+    const req = { speed: 4, accuracy: 4, strength: 0, memory: 2, friendly: 0 };
+    expect(coverage({ speed: 9, accuracy: 9, strength: 1, memory: 9, friendly: 1 }, req)).toBe(1);
+    expect(coverage({ speed: 2, accuracy: 4, strength: 1, memory: 1, friendly: 1 }, req)).toBeCloseTo(7 / 10, 9);
+    expect(chancesForCoverage(0.5).perfect).toBeLessThan(chancesForCoverage(0.9).perfect);
+    expect(chancesForCoverage(1).perfect).toBeCloseTo(0.85, 9);
   });
 
   it('оценка времени задания: не меньше дороги до места', () => {

@@ -1,4 +1,4 @@
-// Сборщики растут и устают (M8c; решения автора 15.10).
+// Сборщики: шансы от покрытия требований, рост уровня и очки, усталость (docs/10, раздел 14; решения автора 20.10).
 import { describe, expect, it } from 'vitest';
 import type { GameState } from '../model/game';
 import type { Picker } from '../model/picker';
@@ -11,77 +11,84 @@ import { advanceWorld } from './advance';
 import { canAssign, dispatchTask } from './tasks/lifecycle';
 import { outcomeChances } from './outcome';
 import { pickSeconds } from './time';
-import { countOutcome, effectiveAccuracy, growAfterTask, shiftTally, specPerfectBonus, xpToNext } from './pickerStats';
+import { canSpendPoint, countOutcome, effectiveAccuracy, effectiveStat, growAfterTask, shiftTally, spendPoint, xpToNext } from './pickerStats';
 import { canRest, endRest, sendToRest } from './rest';
 import { endShift, startNextShift } from './shift';
 import { pickerActivity } from './jobs';
 
 const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
 const order = (s: GameState) => Object.values(s.tasks).find((t) => t.type === 'order')!;
-const easy = (t: Task): Task => ({ ...t, difficulty: 1 });
 const pct = (n: number) => Math.round(n * 100);
 
-describe('шансы по характеристикам', () => {
-  it('стартовые шансы как в утверждённой таблице: Лаки 60/30/10, Коржик 50/36/14, Буран 70/24/6', () => {
+/** Заказ с заданными товарами (по одному на позицию), сложность 1. */
+const withLines = (t: Task, products: string[]): Task => t.type === 'order'
+  ? { ...t, difficulty: 1, payload: { lines: products.map((productId, i) => ({ productId, address: { aisle: 1, rack: 1, shelf: (i % 3) + 1 }, qty: 1 })) } }
+  : t;
+
+describe('шансы от покрытия требований (docs/10, раздел 14.5)', () => {
+  it('пример из документа: заказ на 4 позиции с водой — Лаки 85/13/2, Коржик ≈59/31/11, Буран 72/22/6', () => {
     const g = createInitialGame(map, 1);
-    const t = easy(order(g));
+    const t = withLines(order(g), ['water', 'eggs', 'milk', 'chips']);
     const c = (id: string) => outcomeChances(g.pickers[id], t);
-    expect([pct(c('lucky').perfect), pct(c('lucky').withErrors), pct(c('lucky').failed)]).toEqual([60, 30, 10]);
-    expect([pct(c('korzh').perfect), pct(c('korzh').withErrors), pct(c('korzh').failed)]).toEqual([50, 36, 14]);
-    expect([pct(c('buran').perfect), pct(c('buran').withErrors), pct(c('buran').failed)]).toEqual([70, 24, 6]);
+    const row = (id: string) => [pct(c(id).perfect), pct(c(id).withErrors), pct(c(id).failed)];
+    expect(row('lucky')).toEqual([85, 13, 2]);
+    expect(row('korzh')).toEqual([59, 31, 11]); // покрытие 15/19; округление по отдельности даёт 101
+    expect(row('buran')).toEqual([72, 22, 6]);
   });
 
-  it('сложное задание — шансы хуже; сумма всегда 1', () => {
+  it('сложное задание требует больше — шансы хуже; сумма всегда 1', () => {
     const g = createInitialGame(map, 1);
-    const t = order(g);
+    const t = withLines(order(g), ['water', 'eggs', 'milk']);
     const hard = outcomeChances(g.pickers.lucky, { ...t, difficulty: 3 });
-    const light = outcomeChances(g.pickers.lucky, { ...t, difficulty: 1 });
+    const light = outcomeChances(g.pickers.lucky, t);
     expect(hard.perfect).toBeLessThan(light.perfect);
-    expect(hard.failed).toBeGreaterThan(light.failed);
     for (const c of [hard, light]) expect(c.perfect + c.withErrors + c.failed).toBeCloseTo(1, 9);
   });
 
-  it('усталость ухудшает шансы и замедляет работу; специализация — наоборот', () => {
+  it('усталость снижает все характеристики: шансы хуже, работа медленнее', () => {
     const g = createInitialGame(map, 1);
-    const t = easy(order(g));
+    const t = withLines(order(g), ['eggs', 'milk']);
     const fresh = g.pickers.lucky;
     const tired: Picker = { ...fresh, stats: { ...fresh.stats, fatigue: 100 } };
-    const skilled: Picker = { ...fresh, specialization: { ...fresh.specialization, order: { level: 3, xp: 0 } } };
-    expect(effectiveAccuracy(tired, 'order')).toBe(fresh.stats.accuracy - PICKER_GROWTH.fatigue.maxPenalty);
+    expect(effectiveAccuracy(tired)).toBe(fresh.stats.accuracy - PICKER_GROWTH.fatigue.maxPenalty);
+    expect(effectiveStat(tired, 'strength')).toBe(fresh.stats.strength - PICKER_GROWTH.fatigue.maxPenalty);
     expect(outcomeChances(tired, t).perfect).toBeLessThan(outcomeChances(fresh, t).perfect);
     expect(pickSeconds(tired)).toBeGreaterThan(pickSeconds(fresh));
-    expect(outcomeChances(skilled, t).perfect).toBeGreaterThan(outcomeChances(fresh, t).perfect);
-    expect(pickSeconds(skilled)).toBeLessThan(pickSeconds(fresh));
-    // специализация другого типа на сборку не влияет
-    const otherSkill: Picker = { ...fresh, specialization: { ...fresh.specialization, putaway: { level: 5, xp: 0 } } };
-    expect(outcomeChances(otherSkill, t)).toEqual(outcomeChances(fresh, t));
   });
 });
 
-describe('опыт и усталость после задания', () => {
+describe('опыт, уровень и очки (docs/10, раздел 14.8)', () => {
   it('опыт зависит от исхода: идеально +2, неплохо +1, провал 0; усталость +8%', () => {
     const p = createInitialGame(map, 1).pickers.lucky;
-    expect(growAfterTask(p, 'order', 'perfect').specialization.order.xp).toBe(2);
-    expect(growAfterTask(p, 'order', 'withErrors').specialization.order.xp).toBe(1);
-    expect(growAfterTask(p, 'order', 'failed').specialization.order.xp).toBe(0);
-    expect(growAfterTask(p, 'order', 'failed').stats.fatigue).toBe(PICKER_GROWTH.fatigue.perTask);
+    expect(growAfterTask(p, 'perfect').xp).toBe(2);
+    expect(growAfterTask(p, 'withErrors').xp).toBe(1);
+    expect(growAfterTask(p, 'failed').xp).toBe(0);
+    expect(growAfterTask(p, 'failed').stats.fatigue).toBe(PICKER_GROWTH.fatigue.perTask);
   });
 
-  it('набрал порог — уровень специализации растёт; потолок — 5; растёт только специализация', () => {
+  it('набрал порог — новый уровень и очко; характеристики сами не растут', () => {
     let p = createInitialGame(map, 1).pickers.lucky;
-    const { speed, accuracy } = p.stats;
-    p = growAfterTask(p, 'order', 'perfect'); // 2 из 3
-    expect(p.specialization.order).toEqual({ level: 1, xp: 2 });
-    p = growAfterTask(p, 'order', 'perfect'); // 4 → уровень 2, остаток 1
-    expect(p.specialization.order).toEqual({ level: 2, xp: 4 - xpToNext(1) });
-    for (let i = 0; i < 40; i++) p = growAfterTask(p, 'order', 'perfect');
-    expect(p.specialization.order).toEqual({ level: PICKER_GROWTH.spec.maxLevel, xp: 0 });
-    expect(p.stats.speed).toBe(speed);
-    expect(p.stats.accuracy).toBe(accuracy);
-    expect(p.stats.fatigue).toBe(100); // не выше 100
+    const before = { ...p.stats };
+    p = growAfterTask(p, 'perfect'); // 2 из 3
+    expect(p).toMatchObject({ level: 1, xp: 2, points: 0 });
+    p = growAfterTask(p, 'perfect'); // 4 → уровень 2, остаток 1
+    expect(p).toMatchObject({ level: 2, xp: 4 - xpToNext(1), points: 1 });
+    expect(p.stats.speed).toBe(before.speed);
+    expect(p.stats.memory).toBe(before.memory);
   });
 
-  it('в игре: закрыл заказ — опыт в «Сборке» и усталость', () => {
+  it('очко вкладывается в характеристику, потолок — 10', () => {
+    const p = { ...createInitialGame(map, 1).pickers.korzh, points: 3 };
+    const a = spendPoint(p, 'accuracy');
+    expect(a).toMatchObject({ points: 2 });
+    expect(a.stats.accuracy).toBe(p.stats.accuracy + 1);
+    const maxed = { ...p, stats: { ...p.stats, speed: 10 } };
+    expect(canSpendPoint(maxed, 'speed')).toBe(false);
+    expect(spendPoint(maxed, 'speed')).toBe(maxed);
+    expect(spendPoint({ ...p, points: 0 }, 'memory').stats.memory).toBe(p.stats.memory);
+  });
+
+  it('в игре: закрыл заказ — опыт сборщику и усталость', () => {
     let s = createInitialGame(map, 1);
     const t = order(s);
     s = dispatchTask(s, map, t.id, 'lucky');
@@ -89,7 +96,7 @@ describe('опыт и усталость после задания', () => {
     for (let i = 0; i < 6000 && s.tasks[t.id].status !== 'done'; i++) s = advanceWorld(s, map, 0.1).state;
     const p = s.pickers.lucky;
     expect(p.stats.fatigue).toBe(PICKER_GROWTH.fatigue.perTask);
-    expect(p.specialization.order.xp + (p.specialization.order.level - 1) * 3).toBe(PICKER_GROWTH.spec.xp[s.tasks[t.id].outcome!]);
+    expect(p.xp + (p.level - 1) * 3).toBe(PICKER_GROWTH.xp[s.tasks[t.id].outcome!]);
   });
 });
 
@@ -128,7 +135,7 @@ describe('перерыв', () => {
 describe('между сменами и в итогах', () => {
   it('усталость за ночь падает вдвое; в итогах — опыт, рост уровня, усталость', () => {
     let s = createInitialGame(map, 1);
-    const lucky = growAfterTask(growAfterTask(s.pickers.lucky, 'order', 'perfect'), 'order', 'perfect'); // уровень 2, усталость 16
+    const lucky = growAfterTask(growAfterTask(s.pickers.lucky, 'perfect'), 'perfect'); // уровень 2, усталость 16
     s = { ...s, pickers: { ...s.pickers, lucky }, shiftLog: [
       { kind: 'taskDone', taskId: 'a', pickerId: 'lucky', outcome: 'perfect', at: 1 },
       { kind: 'taskDone', taskId: 'b', pickerId: 'lucky', outcome: 'perfect', at: 2 },
@@ -136,11 +143,11 @@ describe('между сменами и в итогах', () => {
     s = endShift(s);
     const g = s.campaign.history[0].growth.lucky;
     expect(g.xp).toBe(4);
-    expect(g.levelUps).toEqual([{ type: 'order', level: 2 }]);
+    expect(g).toMatchObject({ fromLevel: 1, level: 2 });
     expect(g.fatigue).toBe(16);
     const n = startNextShift(s, map);
     expect(n.pickers.lucky.stats.fatigue).toBe(8);
-    expect(n.campaign.startLevels.lucky.order).toBe(2);
+    expect(n.campaign.startLevels.lucky).toBe(2);
   });
 });
 
@@ -160,10 +167,5 @@ describe('итоги сборщика для профиля (P2)', () => {
       { kind: 'taskDone', pickerId: 'lucky', outcome: 'withErrors' as const },
     ];
     expect(shiftTally(log, 'lucky')).toEqual({ done: 2, perfect: 1, withErrors: 1, failed: 0 });
-  });
-
-  it('бонус опыта к «идеально»: на первом уровне ноль, дальше растёт', () => {
-    expect(specPerfectBonus(1)).toBe(0);
-    expect(specPerfectBonus(3)).toBeGreaterThan(specPerfectBonus(2));
   });
 });

@@ -15,7 +15,6 @@ import { createPutawayTasks } from './putaway';
 import { assignDeadlines } from './deadline';
 import { levelsOf, restBetweenShifts } from './pickerStats';
 import type { Picker } from '../model/picker';
-import type { TaskType } from '../model/task';
 import { PICKER_GROWTH } from '../config/balance';
 
 /** Кампания на старте. */
@@ -57,17 +56,13 @@ export function shiftResult(state: GameState): ShiftResult {
   const keptOverdue = Object.values(state.tasks).filter((t) => t.overdue).length;
   const open = Object.values(state.tasks).filter(isOpen).length;
   const appeared = closed + open + expired - keptOverdue;
-  // рост сборщиков за смену (M8c): опыт по исходам, новые уровни специализаций, усталость сейчас
+  // рост сборщиков за смену: опыт по исходам, уровень в начале и в конце смены, усталость сейчас (docs/10, раздел 14.8)
   const growth: ShiftResult['growth'] = {};
   for (const p of Object.values(state.pickers)) {
-    const start = state.campaign.startLevels?.[p.id];
-    const levelUps = (Object.entries(p.specialization) as [TaskType, { level: number }][])
-      .filter(([t, s]) => s.level > (start?.[t] ?? s.level))
-      .map(([type, s]) => ({ type, level: s.level }));
-    growth[p.id] = { xp: 0, levelUps, fatigue: Math.round(p.stats.fatigue) };
+    growth[p.id] = { xp: 0, fromLevel: state.campaign.startLevels?.[p.id] ?? p.level, level: p.level, fatigue: Math.round(p.stats.fatigue) };
   }
   for (const e of state.shiftLog) {
-    if (e.kind === 'taskDone' && growth[e.pickerId]) growth[e.pickerId].xp += PICKER_GROWTH.spec.xp[e.outcome];
+    if (e.kind === 'taskDone' && growth[e.pickerId]) growth[e.pickerId].xp += PICKER_GROWTH.xp[e.outcome];
   }
   return {
     shift: state.campaign.shift,

@@ -1,6 +1,7 @@
 // Стартовые сборщики (05-pickers.md; имена, породы и цвета — 08-art-style.md, раздел 3.2).
 // Характеристики по шкале 1–10; разные профили, чтобы выбор сборщика имел смысл.
 // Стартовые значения, утверждены автором для первой версии; меняются здесь.
+import type { StatBlock } from '../model/picker';
 
 /** Как выглядит порода на сцене (W7). Размеры и цвета — из концепт-рендера «Даркстор: Moving Out-стиль» (одобрен автором 16.10),
  *  окрасы — по art/reference/character_picker_*.png. Только для модели, правила это не читают. */
@@ -20,14 +21,11 @@ export type PickerTemplate = {
   breed: string;
   color: string;
   look: DogLook;
-  speed: number;
-  accuracy: number;
+  /** Пять характеристик на старте (docs/10, раздел 14.3; допущение Claude: сумма 25 у всех). */
+  stats: StatBlock;
 };
 
 export const STAT_SCALE = { min: 1, max: 10 };
-export const START_SPECIALIZATION_LEVEL = 1;
-/** Уровни опыта по типу задания словами вместо «ур. N» (решение автора 18.10). Индекс — уровень; шкала 1–5 (PICKER_GROWTH.spec.maxLevel). */
-export const SPEC_RANKS = ['', 'Новичок', 'Ученик', 'Знаток', 'Профи', 'Мастер'];
 /** С какой усталости (%) на карточке в окне назначения появляется плашка «Устал» (решение автора 18.10: бодрость — только когда устал). */
 export const TIRED_BADGE_FROM = 40;
 
@@ -44,9 +42,13 @@ export const BULLDOG: DogLook = {
 };
 
 export const STARTING_PICKERS: PickerTemplate[] = [
-  { id: 'lucky', name: 'Лаки',   breed: 'лабрадор', color: '#2280FF', look: LABRADOR, speed: 5, accuracy: 5 }, // ровный середняк
-  { id: 'korzh', name: 'Коржик', breed: 'корги',    color: '#E0409B', look: CORGI,    speed: 7, accuracy: 3 }, // быстрый, но ошибается чаще
-  { id: 'buran', name: 'Буран',  breed: 'хаски',    color: '#9B4DFF', look: HUSKY,    speed: 3, accuracy: 7 }, // медленный, но точный
+  // speed — Лапы, accuracy — Нюх, strength — Сила, memory — Память, friendly — Дружелюбие
+  { id: 'lucky', name: 'Лаки',   breed: 'лабрадор', color: '#2280FF', look: LABRADOR,
+    stats: { speed: 5, accuracy: 5, strength: 5, memory: 5, friendly: 5 } }, // ровный
+  { id: 'korzh', name: 'Коржик', breed: 'корги',    color: '#E0409B', look: CORGI,
+    stats: { speed: 8, accuracy: 3, strength: 3, memory: 5, friendly: 6 } }, // быстрый и общительный, но невнимательный
+  { id: 'buran', name: 'Буран',  breed: 'хаски',    color: '#9B4DFF', look: HUSKY,
+    stats: { speed: 3, accuracy: 7, strength: 6, memory: 7, friendly: 2 } }, // медленный, внимательный и сильный, но угрюмый
 ];
 
 /** Породы курьеров у двери выдачи (W8a, art/reference/character_courier_*.png) — только декорация. */

@@ -4,7 +4,7 @@ import type { TaskType } from '../model/task';
 import type { Cell } from '../model/warehouse';
 
 /** Версия формата GameState (09, раздел 12). */
-export const GAME_STATE_VERSION = 16; // 16: компактный склад 14 × 13, 36 адресов (W−1)
+export const GAME_STATE_VERSION = 17; // 17: пять характеристик, без опыта по типам заданий (X1); 16: компактный склад 14 × 13 (W−1)
 
 /**
  * «Взять ТСД» (02, раздел 6; 06, разделы 2–3). Допущения из документов, автор их ещё не подтвердил.
@@ -158,22 +158,17 @@ export const ROLL_REEL = {
   symbols: 20,        // символов на ленте: «идеально» / «неплохо» / «провал» — в пропорции шансов
 };
 
+/**
+ * Рост и усталость сборщика (docs/10, раздел 14.8; решения автора 20.10). Опыта по типам заданий больше нет:
+ * опыт копит сборщик целиком, новый уровень даёт очко, очки игрок вкладывает на экране итогов смены.
+ */
 export const PICKER_GROWTH = {
-  chances: {
-    base: 0.35, perPoint: 0.05,          // идеально
-    failBase: 0.2, failPerPoint: 0.02,   // провал
-    minFail: 0.02, maxPerfect: 0.95,
-    perDifficulty: { perfect: 0.05, failed: 0.02 }, // за каждую ступень сложности выше первой
-  },
-  spec: {
-    maxLevel: 5,                         // растёт только специализация по типу задания (решение автора 15.10)
-    bonusPerLevel: 0.5,                  // к рабочей точности и скорости на заданиях этого типа
-    xpToNext: 3,                         // опыта до следующего уровня = xpToNext × текущий уровень
-    xp: { perfect: 2, withErrors: 1, failed: 0 }, // опыт зависит от исхода (решение автора 15.10)
-  },
+  xp: { perfect: 2, withErrors: 1, failed: 0 }, // опыт за задание по исходу (решение автора 15.10)
+  xpToNext: 3,                         // опыта до следующего уровня = xpToNext × текущий уровень
+  pointsPerLevel: 1,                   // очков за новый уровень
   fatigue: {
     perTask: 8,                          // % за каждое закрытое задание
-    maxPenalty: 3,                       // при 100% — минус 3 к рабочей точности и скорости; выгорания нет (решение автора 15.10)
+    maxPenalty: 3,                       // при 100% — минус 3 ко всем характеристикам; выгорания нет (решение автора 15.10)
     restPerSecond: 3,                    // % в секунду на перерыве
     betweenShifts: 0.5,                  // между сменами усталость падает вдвое
   },
@@ -196,3 +191,42 @@ export const SHIFT_PLAN: ShiftPlan[] = [
   { load: 1.2, orderMargin: 1.3, forkChance: 0.4,  deliveryEvery: 75,  tutorial: false },
   { load: 1.3, orderMargin: 1.2, forkChance: 0.45, deliveryEvery: 75,  tutorial: false },
 ];
+
+/**
+ * Требования задания по пяти характеристикам (docs/10, раздел 14.4; допущение Claude 20.10).
+ * base — по типу; остальное — от содержимого. Значения 0–10; сложность умножает всё на (1 + perDifficulty × (сложность − 1)).
+ */
+export const REQUIREMENTS = {
+  order: { base: { speed: 5, accuracy: 5 }, memoryPerLineFrom: 2, memoryPerLine: 2, heavyStrength: 5 },
+  receiving: { base: { strength: 5, accuracy: 4, friendly: 4 }, strengthPerPallet: 1 },
+  putaway: { base: { strength: 4, speed: 3 }, memoryPerShelfFrom: 1, memoryPerShelf: 2 },
+  writeoff: { base: { accuracy: 6, speed: 2 }, heavyStrength: 4 },
+  maxMemory: 8,
+  max: 10,
+  perDifficulty: 0.15,
+};
+
+/**
+ * Шанс от покрытия требований (docs/10, раздел 14.5): покрытие = сумма min(есть, нужно) / сумма нужно.
+ * Между точками — по прямой; ниже первой — как у первой.
+ */
+export const COVERAGE_CHANCES: { coverage: number; perfect: number; withErrors: number; failed: number }[] = [
+  { coverage: 0.4, perfect: 0.15, withErrors: 0.4, failed: 0.45 },
+  { coverage: 0.6, perfect: 0.35, withErrors: 0.4, failed: 0.25 },
+  { coverage: 0.8, perfect: 0.6, withErrors: 0.3, failed: 0.1 },
+  { coverage: 1.0, perfect: 0.85, withErrors: 0.13, failed: 0.02 },
+];
+
+/**
+ * Скрытые подпорки бросков, как в Dispatch (docs/10, раздел 14.7; решение автора 20.10: скрытые).
+ * sure — «Идеально» от этой доли выпадает наверняка, но не больше maxStreak раз подряд; честный промах на sure и выше сбрасывает счётчик.
+ * floor — «Идеально» не ниже этого (в окне показываем те же шансы — подпорка скрытая); noFailUpTo — провал не больше этого не выпадает.
+ */
+export const GUARD = {
+  enabled: true,
+  sure: 0.76,
+  maxStreak: 3,
+  floor: 0.15,
+  noFailUpTo: 0.05,
+  offInLastShift: true,
+};
