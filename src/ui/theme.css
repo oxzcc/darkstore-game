@@ -1010,7 +1010,7 @@ svg.i.sm { width: 18px; height: 18px; }
    Стопка выравнивается по центру только если влезает (safe), иначе — от верха с прокруткой; средний кадр — в две колонки, барабан мельче. */
 .phone .rw { align-content: safe center; row-gap: 18px; padding-top: 20px; }
 .phone .rw-p2 { display: grid; grid-template-columns: minmax(0, 1fr) 128px; column-gap: 12px; row-gap: 8px; align-content: start; }
-.phone .rw-p2 > :not(.rr-reel):not(.rw-tab) { grid-column: 1; }
+.phone .rw-p2 > :not(.rr-reel):not(.rw-tab):not(.rw-art) { grid-column: 1; }
 .phone .rw-p2 > .rr-reel { grid-column: 2; grid-row: 1 / span 4; align-self: center; width: 232px; zoom: 0.55; }
 .phone .rw-p2 > .rw-art { grid-column: 1 / -1; height: 140px; }
 .phone .rw-p2 .rw-shout { align-self: end; text-align: left; font-size: 18px; }
@@ -1070,3 +1070,12 @@ svg.i.sm { width: 18px; height: 18px; }
 .phone .pdt-key { height: 44px; }
 .phone .pdt-actions { margin-top: 2px; padding: 0 8px 8px; }
 .phone .pdt-btn { height: 46px; }
+
+/* R3, правка после проверки на телефоне (20.10): итог с игрой на ТСД не влезал — сценка вставала в узкую колонку и вытягивалась.
+   Без барабана средний кадр в одну колонку, сценка ниже; первый кадр компактнее; если всё равно не влезает — окно прокручивается, «Дальше» не теряется. */
+.phone .rw { overflow-y: auto; }
+.phone .rw-p2:not(:has(> .rr-reel)) { grid-template-columns: minmax(0, 1fr); }
+.phone .rw-p2 > .rw-art { height: 120px; }
+.phone .rw-p1 .rw-plate { padding-top: 6px; padding-bottom: 6px; }
+.phone .rw-face { width: 76px; height: 76px; }
+.phone .rw-bubble { font-size: 13px; line-height: 1.3; padding: 8px 10px; }
