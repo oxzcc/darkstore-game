@@ -1,12 +1,8 @@
 // Сборщики: создание стартовой команды. Опыт, усталость и перерывы появятся в M8.
 import type { Picker } from '../model/picker';
-import type { TaskType } from '../model/task';
 import type { Cell, WarehouseMap } from '../model/warehouse';
 import type { PickerTemplate } from '../config/pickers';
-import { START_SPECIALIZATION_LEVEL } from '../config/pickers';
 import { blockedCells, isRestSeat } from './warehouse';
-
-const TASK_TYPES: TaskType[] = ['order', 'putaway', 'receiving', 'writeoff'];
 
 /** Клетки зоны отдыха по порядку, кроме дивана, кулера и растения: здесь сборщики стоят на старте смены (07, раздел 2). */
 function restCells(map: WarehouseMap): Cell[] {
@@ -42,7 +38,7 @@ function spreadCells(cells: Cell[], count: number): Cell[] {
   return chosen;
 }
 
-/** Стартовая команда: все свободны, без усталости, специализации на стартовом уровне. */
+/** Стартовая команда: все свободны, без усталости, первый уровень. */
 export function createPickers(templates: PickerTemplate[], map: WarehouseMap): Record<string, Picker> {
   const spots = spreadCells(restCells(map), templates.length);
   if (templates.length > spots.length) throw new Error('Сборщиков больше, чем мест в зоне отдыха');
@@ -55,10 +51,10 @@ export function createPickers(templates: PickerTemplate[], map: WarehouseMap): R
       color: t.color,
       state: 'idle',
       taskId: null,
-      stats: { speed: t.speed, accuracy: t.accuracy, fatigue: 0 },
-      specialization: Object.fromEntries(
-        TASK_TYPES.map((type) => [type, { level: START_SPECIALIZATION_LEVEL, xp: 0 }]),
-      ) as Picker['specialization'],
+      stats: { ...t.stats, fatigue: 0 },
+      level: 1,
+      xp: 0,
+      points: 0,
       position: spots[i],
       path: [],
       pathProgress: 0,

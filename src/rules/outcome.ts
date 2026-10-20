@@ -1,62 +1,64 @@
-// Исходы заданий (09, раздел 5.1). outcomeChances — ЕДИНСТВЕННОЕ место, где считаются шансы:
-// карточка сборщика в интерфейсе показывает ровно те шансы, по которым потом бросается исход.
-import type { Picker } from '../model/picker';
+// Исходы заданий (09, раздел 5.1; docs/10, раздел 14.5). outcomeChances — ЕДИНСТВЕННОЕ место, где считаются шансы:
+// окно назначения показывает ровно те шансы, по которым потом бросается исход (подпорки — скрытые, guard.ts).
+import { STAT_KEYS, type Picker, type StatBlock, type StatKey } from '../model/picker';
 import type { Outcome, OutcomeChances, Task } from '../model/task';
-import { PICKER_GROWTH } from '../config/balance';
-import { effectiveAccuracy, fatiguePenalty, specBonus } from './pickerStats';
+import { COVERAGE_CHANCES } from '../config/balance';
+import { effectiveStats } from './pickerStats';
+import { taskRequirements } from './requirements';
 import type { Rng } from './random';
 
 export const OUTCOMES: Outcome[] = ['perfect', 'withErrors', 'failed'];
 
-/**
- * Шансы трёх исходов, если поручить задание сборщику (M8c; формула утверждена автором 15.10).
- * От рабочей точности (характеристика + специализация − усталость) и сложности задания (PICKER_GROWTH.chances).
- */
+/** Покрытие требований: сумма min(есть, нужно) / сумма нужно. Запас сверх нужного ничего не даёт. Ничего не нужно — 1. */
+export function coverage(stats: StatBlock, req: StatBlock): number {
+  let need = 0;
+  let got = 0;
+  for (const k of STAT_KEYS) { need += req[k]; got += Math.min(stats[k], req[k]); }
+  return need > 0 ? got / need : 1;
+}
+
+/** Шансы трёх исходов по покрытию: между точками COVERAGE_CHANCES — по прямой. */
+export function chancesForCoverage(c: number): OutcomeChances {
+  const t = COVERAGE_CHANCES;
+  if (c <= t[0].coverage) return pick(t[0]);
+  for (let i = 1; i < t.length; i++) {
+    if (c <= t[i].coverage) {
+      const a = t[i - 1];
+      const b = t[i];
+      const k = (c - a.coverage) / (b.coverage - a.coverage);
+      const perfect = a.perfect + (b.perfect - a.perfect) * k;
+      const failed = a.failed + (b.failed - a.failed) * k;
+      return { perfect, withErrors: Math.max(0, 1 - perfect - failed), failed };
+    }
+  }
+  return pick(t[t.length - 1]);
+}
+const pick = (p: OutcomeChances): OutcomeChances => ({ perfect: p.perfect, withErrors: p.withErrors, failed: p.failed });
+
+/** Шансы трёх исходов, если поручить задание сборщику: рабочие характеристики (− усталость) против требований задания. */
 export function outcomeChances(picker: Picker, task: Task): OutcomeChances {
-  const c = PICKER_GROWTH.chances;
-  const acc = effectiveAccuracy(picker, task.type);
-  const harder = Math.max(0, task.difficulty - 1);
-  const perfect = Math.min(c.maxPerfect, Math.max(0, c.base + c.perPoint * acc - c.perDifficulty.perfect * harder));
-  const failed = Math.min(1 - perfect, Math.max(c.minFail, c.failBase - c.failPerPoint * acc + c.perDifficulty.failed * harder));
-  return { perfect, withErrors: Math.max(0, 1 - perfect - failed), failed };
+  return chancesForCoverage(coverage(effectiveStats(picker), taskRequirements(task)));
 }
 
-/** Из чего сложился шанс «идеально»: каждое слагаемое — доля 0…1 (со знаком). Сумма частей = outcomeChances().perfect. */
-export type ChancePart =
-  | { kind: 'base'; value: number }                      // база
-  | { kind: 'accuracy'; points: number; value: number }  // Нюх (точность)
-  | { kind: 'spec'; level: number; value: number }       // опыт по типу задания
-  | { kind: 'fatigue'; fatigue: number; value: number }  // усталость
-  | { kind: 'difficulty'; difficulty: number; value: number } // сложность задания
-  | { kind: 'limit'; value: number };                    // упёрлись в предел шкалы или шансов
+/** Строка раскладки для «Почему такие шансы?»: характеристика, сколько есть (с усталостью), сколько нужно. */
+export type StatNeed = { stat: StatKey; have: number; need: number };
 
-export type OutcomeBreakdown = { chances: OutcomeChances; parts: ChancePart[] };
+export type OutcomeBreakdown = { chances: OutcomeChances; coverage: number; needs: StatNeed[]; fatigue: number };
 
-/**
- * Шансы и их раскладка для окна назначения («Почему такие шансы?»).
- * Считается по тем же числам, что outcomeChances; части складываются ровно в шанс «идеально».
- */
+/** Шансы и их раскладка для окна назначения: только нужные заданию характеристики. */
 export function outcomeBreakdown(picker: Picker, task: Task): OutcomeBreakdown {
-  const c = PICKER_GROWTH.chances;
-  const chances = outcomeChances(picker, task);
-  const spec = specBonus(picker, task.type);
-  const tired = fatiguePenalty(picker);
-  const harder = Math.max(0, task.difficulty - 1);
-  const parts: ChancePart[] = [
-    { kind: 'base', value: c.base },
-    { kind: 'accuracy', points: picker.stats.accuracy, value: c.perPoint * picker.stats.accuracy },
-    { kind: 'spec', level: picker.specialization[task.type]?.level ?? 1, value: c.perPoint * spec },
-    { kind: 'fatigue', fatigue: picker.stats.fatigue, value: -c.perPoint * tired },
-  ];
-  if (harder > 0) parts.push({ kind: 'difficulty', difficulty: task.difficulty, value: -c.perDifficulty.perfect * harder });
-  // всё, что срезали пределы (шкала 1–10 у рабочей точности, maxPerfect и 0 у шанса), — отдельной строкой
-  const sum = parts.reduce((s, x) => s + x.value, 0);
-  const limit = chances.perfect - sum;
-  if (Math.abs(limit) > 1e-9) parts.push({ kind: 'limit', value: limit });
-  return { chances, parts };
+  const have = effectiveStats(picker);
+  const req = taskRequirements(task);
+  const cov = coverage(have, req);
+  return {
+    chances: chancesForCoverage(cov),
+    coverage: cov,
+    needs: STAT_KEYS.filter((k) => req[k] > 0).map((k) => ({ stat: k, have: have[k], need: req[k] })),
+    fatigue: picker.stats.fatigue,
+  };
 }
 
-/** Бросок исхода по шансам. */
+/** Бросок исхода по шансам (честный, без подпорок; с подпорками — guard.ts). */
 export function rollOutcome(chances: OutcomeChances, rng: Rng): Outcome {
   return outcomeAt(chances, rng.next());
 }

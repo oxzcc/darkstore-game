@@ -4,34 +4,20 @@
 // Все числа — из selectors (а те — из rules); окно само ничего не считает.
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Picker } from '../model/picker';
-import type { Task, TaskType } from '../model/task';
+import type { Task } from '../model/task';
 import { useGameStore } from '../store/gameStore';
-import { activityOf, addressText, assignCardView, clockText, groupedLines, money, pickerList, takeTimer, taskSummary, type AssignCardView, type ChancePart } from '../store/selectors';
-import { SPEC_RANKS, TIRED_BADGE_FROM } from '../config/pickers';
+import { activityOf, addressText, assignCardView, clockText, groupedLines, money, pickerList, takeTimer, taskSummary, type AssignCardView } from '../store/selectors';
+import { TIRED_BADGE_FROM } from '../config/pickers';
 import { activityLine } from './activityText';
-import { EXP_NAME, OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK, TASK_TYPE_LOOK, taskTitle } from './labels';
-import { Avatar, Pips } from './PickerBits';
+import { OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK, TASK_TYPE_LOOK, taskTitle } from './labels';
+import { Avatar } from './PickerBits';
 import Vx from './Vx';
 import Icon from './icons';
 import { usePhone } from '../app/usePhone';
 
 const pct = (v: number) => Math.round(v * 100);
-const signed = (v: number) => {
-  const n = pct(v);
-  return n > 0 ? `+${n}%` : n < 0 ? `−${-n}%` : '0%';
-};
-
-/** Подпись строки раскладки шанса. */
-function partLabel(p: ChancePart, type: TaskType): string {
-  switch (p.kind) {
-    case 'base': return 'База';
-    case 'accuracy': return `${STAT_LOOK.accuracy.name} ${p.points}`;
-    case 'spec': return `${EXP_NAME[type]}: ${SPEC_RANKS[p.level] ?? p.level}`;
-    case 'fatigue': return `Усталость ${Math.round(p.fatigue)}%`;
-    case 'difficulty': return `Сложность задания ${p.difficulty}`;
-    case 'limit': return 'Предел шансов';
-  }
-}
+/** Число характеристики: целое — как есть, дробное (усталость) — с одним знаком. */
+const statNum = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1).replace('.', ','));
 
 /** `renderPortrait` — 3D-портрет сборщика (его передаёт App: интерфейс сам 3D не импортирует). */
 export default function AssignDialog({ renderPortrait }: { renderPortrait?: (picker: Picker) => ReactNode }) {
@@ -75,7 +61,6 @@ export default function AssignDialog({ renderPortrait }: { renderPortrait?: (pic
                 <PickerCard
                   key={p.id}
                   view={v}
-                  task={task}
                   busy={busy}
                   portrait={renderPortrait?.(p)}
                   open={why?.pickerId === p.id}
@@ -89,7 +74,7 @@ export default function AssignDialog({ renderPortrait }: { renderPortrait?: (pic
       </Vx>
       </div>
       {why && game.pickers[why.pickerId] && (
-        <WhyPopover view={assignCardView(game, why.pickerId, task.id)} task={task} rect={why.rect} />
+        <WhyPopover view={assignCardView(game, why.pickerId, task.id)} rect={why.rect} />
       )}
     </div>
   );
@@ -97,10 +82,10 @@ export default function AssignDialog({ renderPortrait }: { renderPortrait?: (pic
 
 const POP_W = 270;
 /** Расчёт шанса — поверх, справа от «?» (не влезает — слева), по высоте в пределах экрана. */
-function WhyPopover({ view, task, rect }: { view: AssignCardView | null; task: Task; rect: DOMRect }) {
+function WhyPopover({ view, rect }: { view: AssignCardView | null; rect: DOMRect }) {
   if (!view) return null;
   const { picker: p, breakdown, eta } = view;
-  const { chances, parts } = breakdown;
+  const { chances, needs, coverage, fatigue } = breakdown;
   const right = rect.right + 10 + POP_W <= window.innerWidth - 8;
   const left = right ? rect.right + 10 : Math.max(8, rect.left - 10 - POP_W);
   const top = Math.min(Math.max(8, rect.top - 60), window.innerHeight - 300);
@@ -110,16 +95,17 @@ function WhyPopover({ view, task, rect }: { view: AssignCardView | null; task: T
       style={{ left, top, width: POP_W, '--pc': p.color, '--arrow-y': `${rect.top + rect.height / 2 - top}px` } as CSSProperties}
       onClick={(e) => e.stopPropagation()}
     >
-      <b>{p.name}: шанс «{OUTCOME_LOOK.perfect.name}»</b>
-      {parts.map((x, i) => (
-        <span key={i} className="row">
-          <span>{partLabel(x, task.type)}</span>
-          <span className={x.kind === 'base' ? '' : x.value > 0.0005 ? 'plus' : x.value < -0.0005 ? 'minus' : 'zero'}>
-            {x.kind === 'base' ? `${pct(x.value)}%` : signed(x.value)}
-          </span>
+      <b>{p.name}: что нужно заданию</b>
+      {/* требования задания против рабочих характеристик (docs/10, раздел 14.5); не хватает — красным */}
+      {needs.map((x) => (
+        <span key={x.stat} className="row">
+          <span>{STAT_LOOK[x.stat].name}</span>
+          <span className={x.have >= x.need ? 'plus' : 'minus'}>{statNum(x.have)} из {x.need}</span>
         </span>
       ))}
-      <span className="row total"><span>Итого</span><span>{pct(chances.perfect)}%</span></span>
+      <span className="row total"><span>Покрытие</span><span>{pct(coverage)}%</span></span>
+      <span className="row"><span>{OUTCOME_LOOK.perfect.name}</span><span>{pct(chances.perfect)}%</span></span>
+      {fatigue > 0 && <span className="ac-mute">Усталость {Math.round(fatigue)}% снижает все характеристики.</span>}
       <span className="ac-mute">
         {OUTCOME_LOOK.withErrors.name} {pct(chances.withErrors)}%, {OUTCOME_LOOK.failed.name.toLowerCase()} {pct(chances.failed)}%.
         {' '}{STAT_LOOK.speed.name} {p.stats.speed}: {eta === null ? 'дорога —' : `до места ${clockText(eta)}`}.
@@ -188,7 +174,6 @@ function TaskHead({ task }: { task: Task }) {
 
 type CardProps = {
   view: AssignCardView;
-  task: Task;
   busy: string | null;
   portrait: ReactNode;
   open: boolean;
@@ -201,11 +186,11 @@ type CardProps = {
  * На карточке только то, по чему выбирают: опыт под это задание, шансы и когда будет готово.
  * Лапы, Нюх и опыт по всем типам — в расчёте шансов и в профиле; бодрость — плашкой, только когда устал.
  */
-function PickerCard({ view, task, busy, portrait, open, onWhy, onSend }: CardProps) {
+function PickerCard({ view, busy, portrait, open, onWhy, onSend }: CardProps) {
   const { picker: p, breakdown, total } = view;
-  const { chances, parts } = breakdown;
-  const level = p.specialization[task.type]?.level ?? 1;
-  const tired = p.stats.fatigue >= TIRED_BADGE_FROM ? parts.find((x) => x.kind === 'fatigue')?.value ?? 0 : null;
+  const { chances, needs, coverage } = breakdown;
+  const short = needs.filter((x) => x.have < x.need);
+  const tired = p.stats.fatigue >= TIRED_BADGE_FROM ? Math.round(p.stats.fatigue) : null;
   const pick = () => { if (!busy) onSend(); };
   return (
     <div
@@ -221,13 +206,13 @@ function PickerCard({ view, task, busy, portrait, open, onWhy, onSend }: CardPro
           {portrait ?? <Avatar picker={p} />}
           <span className="ac-flag">{p.name}</span>
           {busy && <span className="ac-busy">{busy}</span>}
-          {!busy && tired !== null && <span className="ac-tired">Устал {signed(tired)}</span>}
+          {!busy && tired !== null && <span className="ac-tired">Устал {tired}%</span>}
         </div>
 
         <div className="ac-body">
+          {/* временно, до пятиугольника (X3): покрытие требований и чего не хватает */}
           <div className="ac-rank">
-            <span className="grow">{TASK_TYPE_LOOK[task.type].name}: <b>{SPEC_RANKS[level] ?? level}</b></span>
-            <Pips value={level} />
+            <span className="grow">Покрытие <b>{pct(coverage)}%</b>{short.length > 0 && <> · не хватает: {short.map((x) => STAT_LOOK[x.stat].name).join(', ')}</>}</span>
           </div>
 
           <div className="ac-chance">

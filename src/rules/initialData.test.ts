@@ -1,5 +1,6 @@
 // Проверка стартовых данных из config: если в них ошибка, тест покажет, где именно.
 import { describe, expect, it } from 'vitest';
+import { STAT_KEYS } from '../model/picker';
 import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { PRODUCTS } from '../config/products';
 import { CAMPAIGN_START_SHIFT, INITIAL_STOCK } from '../config/initialStock';
@@ -61,14 +62,14 @@ describe('стартовые сборщики', () => {
     expect(new Set(list.map((p) => `${p.position.x},${p.position.z}`)).size).toBe(3);
   });
 
-  it('характеристики в шкале, цвета разные, специализации по 4 типам', () => {
+  it('пять характеристик в шкале, цвета разные, старт — уровень 1 без очков', () => {
     const list = Object.values(pickers);
     for (const p of list) {
-      for (const v of [p.stats.speed, p.stats.accuracy]) {
-        expect(v).toBeGreaterThanOrEqual(STAT_SCALE.min);
-        expect(v).toBeLessThanOrEqual(STAT_SCALE.max);
+      for (const k of STAT_KEYS) {
+        expect(p.stats[k]).toBeGreaterThanOrEqual(STAT_SCALE.min);
+        expect(p.stats[k]).toBeLessThanOrEqual(STAT_SCALE.max);
       }
-      expect(Object.keys(p.specialization).sort()).toEqual(['order', 'putaway', 'receiving', 'writeoff']);
+      expect(p).toMatchObject({ level: 1, xp: 0, points: 0 });
     }
     expect(new Set(list.map((p) => p.color)).size).toBe(3);
   });

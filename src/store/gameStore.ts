@@ -18,7 +18,7 @@ import type { Call, OutcomeReveal } from '../model/call';
 import type { Address } from '../model/address';
 import { advanceWorld } from '../rules/advance';
 import { rewardFor } from '../rules/rewards';
-import { outcomeBreakdown, type ChancePart } from '../rules/outcome';
+import { outcomeBreakdown, type OutcomeBreakdown } from '../rules/outcome';
 import { worldDt } from '../rules/time';
 import { finishCampaign, startNextShift } from '../rules/shift';
 import { endRest, sendToRest } from '../rules/rest';
@@ -30,7 +30,9 @@ import type { HintId } from '../config/tutorial';
 export const WAREHOUSE_MAP = buildWarehouseMap(WAREHOUSE_LAYOUT);
 
 /** Всплывашка об итоге задания; expired — срок взять задание вышел (M8b), тогда pickerName пустой. */
-export type Toast = { id: number; taskType: TaskType; taskNumber: number; pickerName: string; outcome: Outcome; expired?: boolean };
+export type Toast = { id: number; taskType: TaskType; taskNumber: number; pickerName: string; outcome: Outcome; expired?: boolean;
+  /** «Лаки: новый уровень 3!» (docs/10, раздел 14.8) — тогда задание не показываем. */
+  levelUp?: number };
 /** Всплывашка у денег и рейтинга в верхней панели: «+180 ₽», «+0,05» (M6). */
 export type Gain = { id: number; money: number; rating: number };
 
@@ -45,7 +47,7 @@ export type RollCard = {
   id: number; taskId: string; taskType: TaskType; taskNumber: number; pickerId: string;
   outcome: Outcome; chances: Record<Outcome, number>; value: number; gain: Gain;
   /** Из чего сложились шансы — по сборщику до задания (после него растут опыт и усталость). */
-  parts: ChancePart[];
+  breakdown: OutcomeBreakdown;
 };
 
 /** Состояние интерфейса: что выделено и что открыто. Не игровое, не сохраняется. */
@@ -239,6 +241,11 @@ export const useGameStore = create<Store>()(persist((set) => ({
       const rolls: RollCard[] = [];
       const gains: Gain[] = [];
       for (const e of events) {
+        if (e.kind === 'levelUp') {
+          // новый уровень: очко вкладывается на экране итогов смены
+          toasts.push({ id: nextToastId++, taskType: 'order', taskNumber: 0, pickerName: state.pickers[e.pickerId]?.name ?? '', outcome: 'perfect', levelUp: e.level });
+          continue;
+        }
         if (e.kind === 'taskExpired') {
           // просрочка: штраф у денег и рейтинга и всплывашка (M8b)
           const t = state.tasks[e.taskId];
@@ -254,7 +261,7 @@ export const useGameStore = create<Store>()(persist((set) => ({
             const t = state.tasks[e.taskId];
             rolls.push({ id: nextToastId++, taskId: e.taskId, taskType: t.type, taskNumber: t.number, pickerId: e.pickerId,
               outcome: e.outcome, chances: e.roll.chances, value: e.roll.value, gain,
-              parts: outcomeBreakdown(s.game.pickers[e.pickerId] ?? state.pickers[e.pickerId], t).parts });
+              breakdown: outcomeBreakdown(s.game.pickers[e.pickerId] ?? state.pickers[e.pickerId], t) });
             continue;
           }
           gains.push(gain);

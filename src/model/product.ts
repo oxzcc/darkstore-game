@@ -20,6 +20,7 @@ export type Product = {
   id: string;
   name: string;
   shelfLifeShifts: number; // срок годности в сменах
+  heavy?: boolean;         // тяжёлый: заказу и списанию с ним нужна Сила (docs/10, раздел 14.4)
   look: ProductLook;       // заглушка из кубов, пока нет воксельных иконок (08, раздел 9)
   icon?: string;           // путь к картинке в public/assets (пока нет)
 };

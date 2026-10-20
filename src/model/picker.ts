@@ -1,13 +1,20 @@
 // Сборщик (docs/05-pickers.md, docs/09-architecture.md, раздел 4.5).
-import type { TaskType } from './task';
 import type { Cell } from './warehouse';
 
 export type PickerState = 'idle' | 'walking' | 'waiting' | 'calling' | 'working' | 'playing' | 'resting';
 
-export type PickerStats = {
-  speed: number;    // 1–10
-  accuracy: number; // 1–10
-  fatigue: number;  // 0–100 (%)
+/**
+ * Пять характеристик сборщика, шкала 1–10 (docs/10, раздел 14.3; решения автора 20.10).
+ * Ключи в коде: speed — Лапы, accuracy — Нюх (имена остались от первых версий), strength — Сила, memory — Память, friendly — Дружелюбие.
+ */
+export type StatKey = 'speed' | 'accuracy' | 'strength' | 'memory' | 'friendly';
+/** Порядок осей везде (пятиугольник, списки): Лапы сверху, дальше по часовой. */
+export const STAT_KEYS: StatKey[] = ['speed', 'accuracy', 'strength', 'memory', 'friendly'];
+/** Пять чисел по характеристикам: у сборщика — что умеет, у задания — что нужно (0 — не нужно). */
+export type StatBlock = Record<StatKey, number>;
+
+export type PickerStats = StatBlock & {
+  fatigue: number;  // 0–100 (%) — состояние, а не характеристика: снижает все пять
 };
 
 /** Один шаг работы над заданием: дойти до клетки, собрать позицию заказа или расфасовать. */
@@ -60,7 +67,10 @@ export type Picker = {
   state: PickerState;
   taskId: string | null;
   stats: PickerStats;
-  specialization: Record<TaskType, { level: number; xp: number }>;
+  /** Рост (docs/10, раздел 14.8): опыт копит сборщик целиком, новый уровень даёт очко; очки игрок вкладывает после смены. */
+  level: number;
+  xp: number;                    // опыт к следующему уровню
+  points: number;                // невложенные очки
   position: Cell;                // клетка, где стоит; во время ходьбы — откуда вышел на текущий отрезок
   path: Cell[];                  // оставшийся маршрут текущего отрезка (без стартовой клетки)
   pathProgress: number;          // сколько клеток пути пройдено (дробное — между клетками)

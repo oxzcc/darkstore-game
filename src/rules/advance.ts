@@ -7,7 +7,9 @@ import { blockedWithPallets, distancesFrom, findPath } from './warehouse';
 import type { Cell } from '../model/warehouse';
 import { secondsPerCell } from './time';
 import { createRng } from './random';
-import { outcomeAt, outcomeChances } from './outcome';
+import { outcomeChances } from './outcome';
+import { guardedRoll, type GuardMode } from './guard';
+import { isTutorial } from './shiftPlan';
 import { declineTsd, worldSpeed, worldSpeedFor } from './tsd';
 import { expireCalls, raiseCall, revealCalls, showQueuedCalls } from './calls';
 import { tickTsdGame } from './tsdGame';
@@ -20,7 +22,7 @@ import { endShift } from './shift';
 import { assignDeadlines, expireTasks } from './deadline';
 import { growAfterTask, restFor, countOutcome } from './pickerStats';
 import { endRest, isRestingInPlace } from './rest';
-import { SHIFT } from '../config/balance';
+import { GUARD, SHIFT } from '../config/balance';
 
 /** Перейти к следующему шагу работы. Состояние сборщика — по виду шага. */
 function nextStep(p: Picker): Picker {
@@ -122,6 +124,7 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
   const blocked = blockedWithPallets(map, Object.values(state.pallets).filter((pl) => pl.state !== 'empty').map((pl) => pl.cell));
   const rng = createRng(state.rngSeed);
   const events: ShiftEvent[] = [];
+  let guardStreak = state.campaign.guardStreak ?? 0; // скрытые подпорки: «подарков» подряд
   const newCallers: string[] = []; // кто за этот шаг остановился на развилке
   const pickers = { ...state.pickers };
   // сколько идёт личная сборка — в темпе своего сборщика (×1), а не замедленного мира
@@ -173,8 +176,11 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
       // а риск ответа считается по точности сборщика. Развилки не было — бросок по характеристикам (10, раздел 3).
       const hadCall = (task.callLog?.length ?? 0) > 0;
       const chances = outcomeChances(p, task);
-      const roll = hadCall ? 0 : rng.next();
-      const base = hadCall ? 'perfect' : outcomeAt(chances, roll);
+      // бросок по характеристикам — со скрытыми подпорками (docs/10, раздел 14.7); value — куда встал маркер на полосе
+      const guarded = hadCall ? null : guardedRoll(chances, rng.next(), guardStreak, guardMode(state));
+      if (guarded) guardStreak = guarded.streak;
+      const roll = guarded?.value ?? 0;
+      const base = guarded?.outcome ?? 'perfect';
       const { calls, final: outcome } = revealCalls(base, task.callLog, rng, p.stats.accuracy);
       setTask(task.id, { status: 'done', outcome });
       // была развилка — окно результата с раскрытием исхода; иначе обычная всплывашка.
@@ -182,8 +188,10 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
       const reveal = calls.length > 0 ? { chances, roll, base, calls, final: outcome } : undefined;
       const shown = hadCall ? {} : { roll: { chances, value: roll } }; // бросок по характеристикам — для барабана (P3)
       events.push({ kind: 'taskDone', taskId: task.id, pickerId: p.id, outcome, at: time, cell: p.position, ...(reveal ? { reveal } : {}), ...shown });
-      // опыт по типу задания (зависит от исхода) и усталость (M8c)
-      p = { ...countOutcome(growAfterTask(p, task.type, outcome), outcome), state: 'idle', taskId: null, job: null, path: [], pathProgress: 0 };
+      // опыт сборщику (зависит от исхода) и усталость; новый уровень даёт очко (docs/10, раздел 14.8)
+      const grown = growAfterTask(p, outcome);
+      if (grown.level > p.level) events.push({ kind: 'levelUp', pickerId: p.id, level: grown.level, at: time });
+      p = { ...countOutcome(grown, outcome), state: 'idle', taskId: null, job: null, path: [], pathProgress: 0 };
     }
     pickers[id] = p;
     if (p.state === 'calling') newCallers.push(id); // уже звавшие сюда не попадают — их пропускает continue выше
@@ -196,6 +204,7 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
     pickers,
     tasks,
     minigame,
+    campaign: guardStreak === (state.campaign.guardStreak ?? 0) ? state.campaign : { ...state.campaign, guardStreak },
     shiftLog: events.length ? [...state.shiftLog, ...events] : state.shiftLog,
   }, dt); // игра на ТСД идёт в обычном темпе, а не замедленного мира
   // закрытые задания: деньги, рейтинг, собранный товар уходит с полок (M6)
@@ -240,4 +249,10 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
   if (next.clock.time >= SHIFT.durationSeconds) next = endShift(next);
 
   return { state: next, events };
+}
+
+/** Подпорки бросков: в последней смене выключены, в обучающей — без ограничения «подряд» (docs/10, раздел 14.7). */
+export function guardMode(state: GameState): GuardMode {
+  if (GUARD.offInLastShift && state.campaign.shift >= state.campaign.totalShifts) return 'off';
+  return isTutorial(state) ? 'tutorial' : 'on';
 }

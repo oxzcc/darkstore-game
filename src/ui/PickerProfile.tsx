@@ -6,9 +6,9 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Picker, PickerTally } from '../model/picker';
 import { useGameStore } from '../store/gameStore';
 import { pickerProfileView, restAllowed } from '../store/selectors';
-import { SPEC_RANKS, STAT_SCALE } from '../config/pickers';
+import { STAT_SCALE } from '../config/pickers';
 import { activityLine } from './activityText';
-import { EXP_NAME, OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK, TASK_TYPE_LOOK } from './labels';
+import { OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK } from './labels';
 import { Avatar, Pips } from './PickerBits';
 import Vx from './Vx';
 import Icon from './icons';
@@ -68,12 +68,12 @@ export default function PickerProfile({ renderPortrait }: { renderPortrait?: (pi
 
               <section className="pf-sect">
                 <h3>Характеристики</h3>
-                <Stat icon={STAT_LOOK.speed.icon} name={STAT_LOOK.speed.name} hint="Как быстро ходит и работает: меньше секунд в дороге и на задании.">
-                  <Pips value={p.stats.speed * 5 / STAT_SCALE.max} /><b>{p.stats.speed} из {STAT_SCALE.max}</b>
-                </Stat>
-                <Stat icon={STAT_LOOK.accuracy.icon} name={STAT_LOOK.accuracy.name} hint="Как редко ошибается: чем выше, тем больше шанс «Идеально» и меньше «Провал».">
-                  <Pips value={p.stats.accuracy * 5 / STAT_SCALE.max} /><b>{p.stats.accuracy} из {STAT_SCALE.max}</b>
-                </Stat>
+                {/* пять характеристик (docs/10, раздел 14.3); пятиугольник — в X3 */}
+                {v.stats.map((st) => (
+                  <Stat key={st.key} icon={STAT_LOOK[st.key].icon} name={STAT_LOOK[st.key].name} hint={STAT_LOOK[st.key].hint}>
+                    <Pips value={st.base * 5 / STAT_SCALE.max} /><b>{st.base} из {STAT_SCALE.max}</b>
+                  </Stat>
+                ))}
                 <Stat icon={STAT_LOOK.energy.icon} name={STAT_LOOK.energy.name} hint="Падает после каждого задания и снижает скорость и шансы. Восстанавливается на перерыве.">
                   <span className="pf-bar"><b className={v.energy < 40 ? 'low' : v.energy < 65 ? 'mid' : ''} style={{ width: `${v.energy}%` }} /></span>
                   <b>{v.energy}%</b>
@@ -81,35 +81,16 @@ export default function PickerProfile({ renderPortrait }: { renderPortrait?: (pi
               </section>
 
               <section className="pf-sect">
-                <h3>Опыт по заданиям</h3>
-                {v.exp.map((e) => (
-                  <div key={e.type} className="pf-exp">
-                    <Vx className="task-icon small" style={{ '--tint': TASK_TYPE_LOOK[e.type].tint } as CSSProperties}>
-                      <Icon name={TASK_TYPE_LOOK[e.type].icon} small />
-                    </Vx>
-                    <div className="grow">
-                      <div className="pf-exp-row">
-                        <span>{TASK_TYPE_LOOK[e.type].name}: <b>{SPEC_RANKS[e.level] ?? e.level}</b></span>
-                        <Pips value={e.level} max={v.maxLevel} />
-                      </div>
-                      <div className="pf-exp-row small">
-                        {e.need === null
-                          ? <span>Высший уровень</span>
-                          : <>
-                            <span className="pf-bar"><b style={{ width: `${(e.xp / e.need) * 100}%` }} /></span>
-                            <span>{e.xp} из {e.need} до «{SPEC_RANKS[e.level + 1]}»</span>
-                          </>}
-                        <span className="pf-bonus" title={`${EXP_NAME[e.type]} прибавляет к шансу «Идеально» на этих заданиях`}>
-                          {e.bonus > 0 ? `+${pct(e.bonus)}% к «Идеально»` : 'без бонуса'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                <h3>Уровень {v.level}</h3>
+                <div className="pf-exp-row small">
+                  <span className="pf-bar"><b style={{ width: `${(v.xp / v.xpNeed) * 100}%` }} /></span>
+                  <span>{v.xp} из {v.xpNeed} опыта до уровня {v.level + 1}</span>
+                </div>
+                {v.points > 0 && <div className="pf-bonus">Очков: {v.points} — вложить можно на экране итогов смены</div>}
                 <div className="ac-mute">
                   Опыт за задание: {OUTCOME_LOOK.perfect.name.toLowerCase()} +{v.xpPerOutcome.perfect},
                   {' '}{OUTCOME_LOOK.withErrors.name.toLowerCase()} +{v.xpPerOutcome.withErrors},
-                  {' '}{OUTCOME_LOOK.failed.name.toLowerCase()} +{v.xpPerOutcome.failed}.
+                  {' '}{OUTCOME_LOOK.failed.name.toLowerCase()} +{v.xpPerOutcome.failed}. Новый уровень — очко в любую характеристику.
                 </div>
               </section>
 

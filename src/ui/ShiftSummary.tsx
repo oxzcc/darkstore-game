@@ -4,7 +4,7 @@
 import type { CSSProperties } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { campaignSummaryView, LOSE_RATING, money, plural, ratingText, shiftSummaryView, signedRating } from '../store/selectors';
-import { OUTCOME_LOOK, OUTCOMES_ORDER, TASK_TYPE_LOOK } from './labels';
+import { OUTCOME_LOOK, OUTCOMES_ORDER } from './labels';
 import { Avatar } from './PickerBits';
 import Vx from './Vx';
 import Icon from './icons';
@@ -65,7 +65,7 @@ export default function ShiftSummary() {
                         {g && (
                           <div className="summary-growth">
                             +{g.xp} опыта
-                            {g.levelUps.map((u) => <b key={u.type}> · {TASK_TYPE_LOOK[u.type].name} ур. {u.level} ↑</b>)}
+                            {g.level > g.fromLevel && <b> · уровень {g.level} ↑ · +{g.level - g.fromLevel} {plural(g.level - g.fromLevel, 'очко', 'очка', 'очков')}</b>}
                             {' '}· усталость {g.fatigue}%
                           </div>
                         )}

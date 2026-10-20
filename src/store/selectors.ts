@@ -2,9 +2,9 @@
 // шансы и проверки берутся отсюда, а здесь — из rules.
 import type { GameState } from '../model/game';
 import type { OutcomeChances, Task } from '../model/task';
-import type { Picker, PickerActivity } from '../model/picker';
+import { STAT_KEYS, type Picker, type PickerActivity } from '../model/picker';
 import { outcomeBreakdown, outcomeChances, type OutcomeBreakdown } from '../rules/outcome';
-export type { ChancePart } from '../rules/outcome';
+export type { StatNeed } from '../rules/outcome';
 import { canAssign } from '../rules/tasks/lifecycle';
 import { formatAddress } from '../rules/address';
 import { etaToTask, jobSecondsEstimate, pickerActivity } from '../rules/jobs';
@@ -28,7 +28,7 @@ import { WAREHOUSE_MAP, hintWaits, type UiState } from './gameStore';
 import { isLastShift, shiftSecondsLeft } from '../rules/shift';
 import { secondsToTake } from '../rules/deadline';
 import { canRest } from '../rules/rest';
-import { EMPTY_TALLY, shiftTally, specPerfectBonus, xpToNext } from '../rules/pickerStats';
+import { EMPTY_TALLY, effectiveStats, shiftTally, xpToNext } from '../rules/pickerStats';
 import { isTutorial } from '../rules/shiftPlan';
 import { currentHint } from '../rules/tutorial';
 import { HINTS } from '../config/tutorial';
@@ -317,14 +317,8 @@ export function rollView(game: GameState, card: RollCard) {
     : {};
   const fill = (t: string) => t.replace(/\{(\w+)\}/g, (m, k: string) => ctx[k] ?? m);
   const report = TASK_REPORT[task.type];
-  let accuracy = picker.stats.accuracy;
-  let level = picker.specialization[task.type]?.level ?? 1;
-  let tired: number | null = null;
-  for (const part of card.parts) {
-    if (part.kind === 'accuracy') accuracy = part.points;
-    if (part.kind === 'spec') level = part.level;
-    if (part.kind === 'fatigue' && part.fatigue >= TIRED_BADGE_FROM) tired = part.value;
-  }
+  const b = card.breakdown; // по сборщику до задания (после него растут опыт и усталость)
+  const tired = b.fatigue >= TIRED_BADGE_FROM ? Math.round(b.fatigue) : null;
   return {
     picker,
     taskType: task.type,
@@ -332,9 +326,9 @@ export function rollView(game: GameState, card: RollCard) {
     speech: fill(report.speech),
     title: fill(report.results[card.outcome].title),
     text: fill(report.results[card.outcome].text),
-    /** Что повлияло на шансы: Нюх, опыт по этому типу, усталость (null — не устал). */
-    why: { accuracy, level, tired },
-    xp: level >= PICKER_GROWTH.spec.maxLevel ? 0 : PICKER_GROWTH.spec.xp[card.outcome],
+    /** Что повлияло на шансы: покрытие требований задания, чего не хватило, усталость в % (null — не устал). */
+    why: { coverage: b.coverage, short: b.needs.filter((n) => n.have < n.need), tired },
+    xp: PICKER_GROWTH.xp[card.outcome],
   };
 }
 
@@ -576,11 +570,6 @@ export const LOSE_RATING = SHIFT.loseRating;
 /** Можно ли отправить на перерыв (кнопка на карточке). */
 export const restAllowed = (game: GameState, pickerId: string) => canRest(game.pickers[pickerId]);
 
-/** Уровень специализации сборщика по типу задания — для окна «Кого отправить?». */
-export function specLevel(game: GameState, pickerId: string, taskId: string): number {
-  const t = game.tasks[taskId];
-  return t ? game.pickers[pickerId]?.specialization[t.type]?.level ?? 1 : 1;
-}
 
 // ---------- Обучающая смена (M8d) ----------
 
@@ -713,24 +702,17 @@ export function taskPins(game: GameState, map: WarehouseMap): TaskPin[] {
 export function pickerProfileView(game: GameState, pickerId: string) {
   const picker = game.pickers[pickerId];
   if (!picker) return null;
-  const maxLevel = PICKER_GROWTH.spec.maxLevel;
-  const exp = (['order', 'putaway', 'receiving', 'writeoff'] as const).map((type) => {
-    const { level, xp } = picker.specialization[type] ?? { level: 1, xp: 0 };
-    return {
-      type,
-      level,
-      xp,
-      need: level >= maxLevel ? null : xpToNext(level),
-      bonus: specPerfectBonus(level),
-    };
-  });
   return {
     picker,
     activity: pickerActivity(game, pickerId),
     energy: Math.round(100 - picker.stats.fatigue),
-    exp,
-    maxLevel,
-    xpPerOutcome: PICKER_GROWTH.spec.xp,
+    /** Пять характеристик: своя и рабочая (с усталостью) — docs/10, раздел 14.3. */
+    stats: STAT_KEYS.map((k) => ({ key: k, base: picker.stats[k], value: effectiveStats(picker)[k] })),
+    level: picker.level,
+    xp: picker.xp,
+    xpNeed: xpToNext(picker.level),
+    points: picker.points,
+    xpPerOutcome: PICKER_GROWTH.xp,
     shift: shiftTally(game.shiftLog, pickerId),
     campaign: picker.tally ?? EMPTY_TALLY,
   };

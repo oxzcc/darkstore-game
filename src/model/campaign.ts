@@ -15,8 +15,8 @@ export type ShiftResult = {
   money: number;                       // сколько денег прибавилось за смену (может быть меньше нуля)
   rating: number;                      // как изменился рейтинг
   pickers: Record<string, number>;     // сколько заданий закрыл каждый сборщик
-  /** Рост за смену (M8c): опыт, какие специализации поднялись (тип → новый уровень), усталость в конце смены. */
-  growth: Record<string, { xp: number; levelUps: { type: TaskType; level: number }[]; fatigue: number }>;
+  /** Рост за смену: опыт, уровень в начале и в конце смены, усталость в конце смены (docs/10, раздел 14.8). */
+  growth: Record<string, { xp: number; fromLevel: number; level: number; fatigue: number }>;
 };
 
 export type Campaign = {
@@ -28,8 +28,10 @@ export type Campaign = {
   history: ShiftResult[]; // итоги закончившихся смен
   /** Рейтинг в конце смены упал ниже SHIFT.loseRating — кампания проиграна (M8b, решение автора 14.10). */
   lost: boolean;
-  /** Уровни специализаций в начале смены — чтобы в итогах показать, что выросло (M8c). */
-  startLevels: Record<string, Record<TaskType, number>>;
+  /** Уровни сборщиков в начале смены — чтобы в итогах показать рост. */
+  startLevels: Record<string, number>;
+  /** Скрытые подпорки бросков (docs/10, раздел 14.7): сколько «подарков» подряд уже было. Нет поля — 0. */
+  guardStreak?: number;
   /** Обучающая смена (M8d): у каких типов заданий гарантированная развилка уже была; какие подсказки уже показаны. */
   tutorialForks: TaskType[];
   hintsSeen: string[];
