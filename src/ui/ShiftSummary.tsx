@@ -1,10 +1,15 @@
 // Итоги смены и итоги кампании (M8a; 02, раздел 11; решения автора 14.10).
 // Время смены вышло — мир стоит, по центру экран итогов: звёзды, сколько заданий закрыто и с каким исходом,
 // деньги и рейтинг за смену, кто сколько сделал. Кнопка — следующая смена или, после последней, итоги кампании.
-import type { CSSProperties } from 'react';
+// X3 (макет StatsSummary): у каждого сборщика пятиугольник; есть очки — «+» у характеристик, форма меняется на глазах.
+import { useState, type CSSProperties } from 'react';
+import { STAT_KEYS, type Picker, type StatKey } from '../model/picker';
+import { STAT_SCALE } from '../config/pickers';
+import { effectiveStats } from '../rules/pickerStats';
+import StatPentagon from './StatPentagon';
 import { useGameStore } from '../store/gameStore';
 import { campaignSummaryView, LOSE_RATING, money, plural, ratingText, shiftSummaryView, signedRating } from '../store/selectors';
-import { OUTCOME_LOOK, OUTCOMES_ORDER } from './labels';
+import { OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK } from './labels';
 import { Avatar } from './PickerBits';
 import Vx from './Vx';
 import Icon from './icons';
@@ -20,6 +25,28 @@ function Stars({ n, small }: { n: number; small?: boolean }) {
   );
 }
 
+/** Пятиугольник сборщика и «+» у характеристик, пока есть очки (docs/10, раздел 14.8). */
+function Points({ picker, canSpend }: { picker: Picker; canSpend: boolean }) {
+  const spend = useGameStore((s) => s.spendPoint);
+  const [flash, setFlash] = useState<StatKey | null>(null);
+  const add = (k: StatKey) => { spend(picker.id, k); setFlash(k); };
+  return (
+    <div className="summary-points">
+      <StatPentagon stats={effectiveStats(picker)} color={picker.color} size={110} numbers flash={flash} />
+      {canSpend && picker.points > 0 && (
+        <div className="summary-plus">
+          <b>Очков: {picker.points}</b>
+          {STAT_KEYS.map((k) => (
+            <button key={k} className="mini-btn" disabled={picker.stats[k] >= STAT_SCALE.max} onClick={() => add(k)}>
+              + {STAT_LOOK[k].name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const signedMoney = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${money(Math.abs(n))}`;
 
 export default function ShiftSummary() {
@@ -28,6 +55,8 @@ export default function ShiftSummary() {
   const shift = shiftSummaryView(game);
   const campaign = campaignSummaryView(game);
   if (!shift && !campaign) return null;
+  // вкладывать очки есть смысл, только если будет следующая смена
+  const canSpend = !!shift && !shift.last && !shift.lost;
 
   return (
     <div className="summary-back">
@@ -53,6 +82,9 @@ export default function ShiftSummary() {
                 <div><span>Деньги за смену</span><b className={shift.money < 0 ? 'bad' : ''}>{signedMoney(shift.money)}</b></div>
                 <div><span>Рейтинг</span><b className={shift.rating < 0 ? 'bad' : ''}>{signedRating(shift.rating)}</b></div>
               </div>
+              {canSpend && shift.pickers.some(({ picker }) => picker.points > 0) && (
+                <div className="summary-hint">Вложите очки: каждое +1 к характеристике, потолок {STAT_SCALE.max}. Невложенные останутся до следующей смены.</div>
+              )}
               <div className="summary-pickers">
                 {shift.pickers.map(({ picker, tasks }) => {
                   const g = shift.growth?.[picker.id];
@@ -70,6 +102,7 @@ export default function ShiftSummary() {
                           </div>
                         )}
                       </div>
+                      <Points picker={picker} canSpend={canSpend} />
                     </div>
                   );
                 })}

@@ -11,7 +11,7 @@ import { dispatchTask } from './tasks/lifecycle';
 import { openOrders } from './tasks/generator';
 import { acceptDelivery } from './deliveries';
 import { isExpiring } from './stock';
-import { endShift, finishCampaign, shiftResult, shiftSecondsLeft, starsFor, startNextShift } from './shift';
+import { endShift, finishCampaign, shiftResult, shiftSecondsLeft, spendPointInSummary, starsFor, startNextShift } from './shift';
 
 const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
 
@@ -115,5 +115,21 @@ describe('следующая смена', () => {
     const over = finishCampaign(s);
     expect(over.campaign.phase).toBe('over');
     expect(over.campaign.history).toHaveLength(SHIFT.totalShifts);
+  });
+});
+
+describe('очки в итогах смены (X3)', () => {
+  it('вкладываются только на экране итогов; невложенные переходят в следующую смену', () => {
+    const g0 = createInitialGame(map, 1);
+    const g = { ...g0, pickers: { ...g0.pickers, lucky: { ...g0.pickers.lucky, points: 2 } } };
+    expect(spendPointInSummary(g, 'lucky', 'memory')).toBe(g); // смена идёт — нельзя
+    const s = endShift(g);
+    const a = spendPointInSummary(s, 'lucky', 'memory');
+    expect(a.pickers.lucky).toMatchObject({ points: 1 });
+    expect(a.pickers.lucky.stats.memory).toBe(g.pickers.lucky.stats.memory + 1);
+    expect(spendPointInSummary(a, 'nobody', 'memory')).toBe(a);
+    const next = startNextShift(a, map);
+    expect(next.pickers.lucky.points).toBe(1);
+    expect(next.pickers.lucky.stats.memory).toBe(g.pickers.lucky.stats.memory + 1);
   });
 });
