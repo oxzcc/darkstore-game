@@ -25,7 +25,7 @@ function middleOf(chances: OutcomeChances, outcome: Outcome): number {
 /**
  * Бросок с подпорками. r — честное случайное 0…1, streak — сколько подарков подряд уже было.
  * 1) «Идеально» ≥ sure → «Идеально», пока подарков подряд меньше maxStreak; честный промах на ≥ sure сбрасывает счётчик.
- * 2) «Идеально» ниже floor — бросаем так, будто оно floor (доля берётся у соседних зон).
+ * 2) «Идеально» ниже floor — бросаем так, будто оно floor (доля берётся у соседних зон); у варианта с потолком (0%) — нет.
  * 3) провал не больше noFailUpTo не выпадает — вместо него «Неплохо».
  */
 export function guardedRoll(chances: OutcomeChances, r: number, streak: number, mode: GuardMode): GuardedRoll {
@@ -38,7 +38,7 @@ export function guardedRoll(chances: OutcomeChances, r: number, streak: number, 
     return { outcome: honest, value: r, streak: 0 }; // честный промах — подпорка снова включится
   }
   let outcome = honest;
-  if (chances.perfect < GUARD.floor && r < GUARD.floor) outcome = 'perfect';
+  if (chances.perfect > 0 && chances.perfect < GUARD.floor && r < GUARD.floor) outcome = 'perfect'; // 0 — вариант с потолком, подарка нет
   if (outcome === 'failed' && chances.failed <= GUARD.noFailUpTo) outcome = 'withErrors';
   return { outcome, value: outcome === honest ? r : middleOf(chances, outcome), streak };
 }

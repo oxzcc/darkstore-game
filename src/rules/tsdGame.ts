@@ -172,7 +172,6 @@ export function closeTsdGame(state: GameState): GameState {
     situationId: g.situationId,
     lineIndex: g.lineIndex,
     optionId: TSD_OPTION_ID,
-    risk: 'low', // у игры риска нет — исход решает итог (10, раздел 11.4)
     auto: false,
     tsd: g.result,
     tsdStats: tsdStatsOf(g),

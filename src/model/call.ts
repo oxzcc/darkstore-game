@@ -1,9 +1,13 @@
 // Развилки (docs/10-minigames-concept.md, раздел 3): сборщик упирается в ситуацию и зовёт диспетчера.
-import type { Outcome } from './task';
+import type { Outcome, OutcomeChances } from './task';
+import type { StatKey } from './picker';
 import type { TsdGameKind } from './tsdGame';
 
-/** Риск варианта. Игрок видит только слово (решение автора 12.10), шансы осложнения — в config. */
-export type RiskLevel = 'low' | 'medium' | 'high';
+/**
+ * Сложность варианта (docs/10, раздел 14.6; X2): «надёжно» — без проверки, у всех одни шансы;
+ * «обычно» и «рискованно» — проверка одной характеристики сборщика. Числа — CALLS.levels.
+ */
+export type OptionLevel = 'safe' | 'normal' | 'risky';
 
 /** Вызов от сборщика, который висит на экране (или ждёт в очереди). */
 export type Call = {
@@ -24,8 +28,11 @@ export type CallAnswer = {
   situationId: string;
   lineIndex: number;  // позиция заказа, к которой относилась развилка
   optionId: string;
-  risk: RiskLevel; // уже с учётом «решил сам» (на ступень выше)
-  auto: boolean;   // true — игрок не ответил, решил сборщик
+  auto: boolean;   // true — игрок не ответил, решил сборщик (характеристика −2)
+  /** Шансы варианта у этого сборщика в момент ответа — ровно то, что было на карточке; по ним в конце задания один бросок. Нет у ТСД. */
+  chances?: OutcomeChances;
+  /** Что проверял вариант и сколько было у сборщика (с усталостью и −2 за «решил сам»); нет — «надёжно» или ТСД. */
+  check?: { stat: StatKey; value: number };
   /** Игрок взял ТСД (optionId = TSD_OPTION_ID): итог его игры. Броска осложнения тогда нет (10, раздел 11.4). */
   tsd?: Outcome;
   /** Как прошла игра на ТСД — для кадра «Вы решили» в окне итога (решение автора 20.10, вариант А). */
@@ -38,20 +45,18 @@ export type TsdStats =
   | { kind: 'expiry'; seconds: number; timeout: boolean; takenDays: number | null; mode: 'fresh' | 'expired' }
   | { kind: 'barcode'; seconds: number; timeout: boolean; tries: number; attempts: number; solved: boolean };
 
-/** Раскрытие одной развилки в конце заказа: выпало ли осложнение и каким стал исход. */
+/** Раскрытие развилки в конце задания (X2): один бросок по шансам варианта. */
 export type CallReveal = CallAnswer & {
-  chance: number;      // шанс осложнения по риску (для ширины зоны на полосе; игрок видит только полосу)
-  roll: number;        // куда «упал маркер», 0…1: меньше chance — осложнение
-  complication: boolean;
-  capped: boolean;     // сработало ограничение варианта («исход не выше с ошибками»)
-  after: Outcome;      // исход после этой развилки
+  roll: number;        // куда встал маркер на полосе шансов варианта, 0…1 (у ТСД — 0)
+  capped: boolean;     // у варианта есть ограничение («исход не выше неплохо»)
+  after: Outcome;      // исход задания
 };
 
-/** Раскрытие исхода заказа (как «шарик» в Dispatch): бросок по характеристикам, потом развилки по очереди. */
+/** Раскрытие исхода задания с развилкой (как «шарик» в Dispatch): шансы варианта и куда встал маркер. */
 export type OutcomeReveal = {
-  chances: Record<Outcome, number>; // ширины зон «идеально / с ошибками / провал»
-  roll: number;                     // куда упал маркер на основной полосе, 0…1
-  base: Outcome;                    // исход по характеристикам
+  chances: Record<Outcome, number>; // ширины зон «идеально / неплохо / провал» — шансы выбранного варианта
+  roll: number;                     // куда встал маркер, 0…1
+  base: Outcome;                    // исход броска (то же, что final)
   calls: CallReveal[];
   final: Outcome;
   /** Исход хуже «идеально» по характеристикам: на какой позиции сборщик ошибся и сколько штук собрал (строка чека, ui_12). */

@@ -11,11 +11,11 @@ import { etaToTask, jobSecondsEstimate, pickerActivity } from '../rules/jobs';
 import { tsdOfferSecondsLeft } from '../rules/tsd';
 import { shelfContents } from '../rules/stock';
 import { takenPerLine } from '../rules/minigames/picking';
-import { callText, complicationChance, fillText, lineContext } from '../rules/calls';
+import { callText, fillText, lineContext, optionChances } from '../rules/calls';
 import { taskLines } from '../rules/taskLines';
 import { expiryDate } from '../rules/minigames/expiry';
 import { pickedQty, rewardFor } from '../rules/rewards';
-import { CALLS, DEPTH, EXPIRY, RESULT_XP, SITUATION_BY_ID, TSD_OPTION_ID, tsdTextFor, type CallOption } from '../config/calls';
+import { CALLS, DEPTH, EXPIRY, SITUATION_BY_ID, TSD_OPTION_ID, tsdTextFor, type CallOption } from '../config/calls';
 import type { RackRef } from '../model/minigame';
 import type { Call, TsdStats } from '../model/call';
 import type { CallFlash, ResultCard, RollCard } from './gameStore';
@@ -28,7 +28,7 @@ import { WAREHOUSE_MAP, hintWaits, type UiState } from './gameStore';
 import { isLastShift, shiftSecondsLeft } from '../rules/shift';
 import { secondsToTake } from '../rules/deadline';
 import { canRest } from '../rules/rest';
-import { EMPTY_TALLY, effectiveStats, shiftTally, xpToNext } from '../rules/pickerStats';
+import { EMPTY_TALLY, effectiveStat, effectiveStats, shiftTally, xpToNext } from '../rules/pickerStats';
 import { isTutorial } from '../rules/shiftPlan';
 import { currentHint } from '../rules/tutorial';
 import { HINTS } from '../config/tutorial';
@@ -250,25 +250,28 @@ export type PickingView = NonNullable<ReturnType<typeof pickingView>>;
 
 /** Вариант для окна (ui_11): доступен ли он этому сборщику, описание с подстановками.
  *  Закрытые показываются серыми с требованием — как в Dispatch (13.10). */
-/** chance — шанс осложнения этого варианта у этого сборщика (риск × Нюх, P4): то же число, по которому потом крутится барабан. */
-export type CallOptionView = CallOption & { locked: boolean; number: number | null; text: string; tsd?: boolean; chance: number };
+/** chances — шансы этого варианта у этого сборщика (X2): ровно по ним в конце задания один бросок; у ТСД — null.
+ *  statValue — сколько у сборщика той характеристики, что проверяет вариант (с усталостью). */
+export type CallOptionView = CallOption & { locked: boolean; number: number | null; text: string; tsd?: boolean; chances: OutcomeChances | null; statValue: number | null };
 
 function optionViews(game: GameState, call: Call): CallOptionView[] {
   const ctx = lineContext(game, call.taskId, call.lineIndex, call.pickerId);
   let n = 0;
   const views: CallOptionView[] = SITUATION_BY_ID[call.situationId].options.map((o) => {
     const locked = !call.optionIds.includes(o.id);
-    const chance = complicationChance(o.risk, game.pickers[call.pickerId]?.stats.accuracy);
-    return { ...o, locked, number: locked ? null : ++n, text: fillText(o.description, { ...ctx, seconds: o.seconds }), chance };
+    const picker = game.pickers[call.pickerId];
+    const chances = picker ? optionChances(o, picker) : null;
+    const statValue = picker && o.stat && o.level !== 'safe' ? effectiveStat(picker, o.stat) : null;
+    return { ...o, locked, number: locked ? null : ++n, text: fillText(o.description, { ...ctx, seconds: o.seconds }), chances, statValue };
   });
   // «Взять ТСД» — последней карточкой, если выпала (10, раздел 11.1). Пока идёт другая игра, второй не начать.
   if (call.tsd) {
     const t = tsdTextFor(SITUATION_BY_ID[call.situationId], call.tsd);
     const busy = game.tsdGame !== null || game.minigame !== null;
     views.push({
-      id: TSD_OPTION_ID, label: t.label, description: t.description, seconds: 0, risk: 'low', busyLabel: '',
+      id: TSD_OPTION_ID, label: t.label, description: t.description, seconds: 0, level: 'safe', busyLabel: '',
       okTitle: '', okText: '', badTitle: '', badText: '',
-      tsd: true, chance: 0, locked: busy, number: busy ? null : ++n,
+      tsd: true, chances: null, statValue: null, locked: busy, number: busy ? null : ++n,
       text: busy ? 'ТСД сейчас занят другой игрой.' : fillText(t.description, ctx),
     });
   }
@@ -358,7 +361,8 @@ export function resultView(game: GameState, card: ResultCard) {
   const c = reveal.calls[0];
   const option = c ? SITUATION_BY_ID[c.situationId]?.options.find((o) => o.id === c.optionId) : undefined;
   const ctx = c ? { ...lineContext(game, task.id, c.lineIndex, picker.id), seconds: option?.seconds ?? 0 } : {};
-  const worked = c ? !c.complication : true;
+  // окно итога (X2): «Идеально» — тексты «сработало», «Неплохо» и «Провал» — «не сработало» (свой текст для «Неплохо» — X4)
+  const worked = c ? c.after === 'perfect' : true;
   // игрок брал ТСД: тексты — по итогу его игры (10, раздел 11.4)
   const tsdKind = c?.tsd ? SITUATION_BY_ID[c.situationId]?.tsdGame : undefined;
   const tsdText = c?.tsd && tsdKind ? tsdTextFor(SITUATION_BY_ID[c.situationId], tsdKind).results[c.tsd] : undefined;
@@ -393,8 +397,8 @@ export function resultView(game: GameState, card: ResultCard) {
     speech: situation ? fillText(situation.speech, lineCtx) : '',
     riskLabel: situation?.riskLabel ?? '',
     options,
-    /** Ответ вариантом (не ТСД) — барабан «Сработало / Осложнение» по шансу варианта; null — играли на ТСД. */
-    reel: c && !c.tsd ? { chance: c.chance, roll: c.roll, complication: c.complication } : null,
+    /** Ответ вариантом (не ТСД) — полоса трёх исходов по шансам варианта и куда встал маркер; null — играли на ТСД. */
+    reel: c && !c.tsd ? { chances: reveal.chances, roll: c.roll, check: c.check ?? null, level: option?.level ?? 'normal' } : null,
     /** Какую игру на ТСД играли (для подписи в окне итога); null — ответили вариантом. */
     tsdGame: c?.tsd ? tsdKind ?? null : null,
     /** Как сыграли на ТСД — кадр «Вы решили» (решение автора 20.10, вариант А): оценка игры и её цифры. */
@@ -414,7 +418,7 @@ export function resultView(game: GameState, card: ResultCard) {
     lines,
     money: { got: reward.money, of: task.reward.money },
     rating: { got: reward.rating, of: task.reward.rating },
-    xp: RESULT_XP,
+    xp: PICKER_GROWTH.xp[reveal.final],
     outcome: reveal.final,
     /** Для сценки-иллюстрации итога (config/vignettes.ts): какая развилка, какой вариант, сработал ли, какой товар. */
     art: c ? {

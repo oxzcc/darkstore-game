@@ -1,13 +1,14 @@
 // Окно итога задания с развилкой — три кадра комикса (правка автора 18.10, P4; вид — прототип «Окно итога задания», одобрен автором):
-// 1. «Что случилось» — задание, реплика сборщика пузырём, его портрет; 2. «Вы решили» — выбранный вариант и ТСД с барабаном
-// «Сработало / Осложнение» по шансу варианта (а если брали ТСД — сценка итога игры); 3. «Итог» — сразу после остановки барабана:
+// 1. «Что случилось» — задание, реплика сборщика пузырём, его портрет; 2. «Вы решили» — выбранный вариант и полоса трёх исходов
+// по шансам варианта, маркер встаёт на выпавшем (X2: один бросок; а если брали ТСД — цифры и сценка итога игры); 3. «Итог» — сразу после остановки барабана:
 // лента исхода, что произошло, награды жетонами, «Дальше». Мир на паузе. Клик по окну, Enter или Esc во время барабана — сразу итог, потом — закрыть.
 // Задания без развилки показывает RollWindow — те же кадры (ResultFrames).
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Picker } from '../model/picker';
 import { useGameStore, type ResultCard } from '../store/gameStore';
 import { resultView } from '../store/selectors';
-import { OUTCOME_LOOK, TSD_GAME_NAME } from './labels';
+import { LEVEL_NAME, OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK, TSD_GAME_NAME } from './labels';
+import { ROLL_SHOUT } from '../config/taskReport';
 import type { ReelSeg } from './ReelTsd';
 import ChanceBar from './ChanceBar';
 import { play } from '../audio/engine';
@@ -45,17 +46,14 @@ function Result({ card, renderArt, renderPortrait }: Props & { card: ResultCard 
     return () => clearTimeout(t);
   }, [reel]);
 
-  // итог виден — звук (M9e): у барабана «Сработало / Осложнение», у игры на ТСД — исход задания
+  // итог виден — звук (M9e): исход задания
   useEffect(() => {
-    if (!done) return;
-    if (reel) play(reel.complication ? 'complication' : 'worked', { delay: 0.12 });
-    else play(card.reveal.final);
+    if (done) play(card.reveal.final, { delay: reel ? 0.12 : 0 });
   }, [done]);
 
-  const segs = useMemo<ReelSeg[]>(() => (reel ? [
-    { key: 'ok', share: 1 - reel.chance, color: OUTCOME_LOOK.perfect.color, icon: 'check' },
-    { key: 'bad', share: reel.chance, color: OUTCOME_LOOK.failed.color, icon: 'fail' },
-  ] : []), [reel]);
+  const segs = useMemo<ReelSeg[]>(() => (reel
+    ? OUTCOMES_ORDER.map((o) => ({ key: o, share: reel.chances[o], color: OUTCOME_LOOK[o].color, icon: OUTCOME_LOOK[o].icon }))
+    : []), [reel]);
 
   const next = () => (done ? dismiss(card.id) : setDone(true));
   useEffect(() => {
@@ -73,7 +71,11 @@ function Result({ card, renderArt, renderPortrait }: Props & { card: ResultCard 
     ...v.lines.filter((l) => l.note || l.picked < l.qty).map((l) => `${l.name}: ${l.note ?? `${l.picked} из ${l.qty}`}`),
   ];
   const chosen = v.options.find((o) => o.chosen);
-  const complication = reel?.complication ?? false;
+  const shoutClass = v.outcome === 'perfect' ? 'ok' : v.outcome === 'withErrors' ? 'mid' : 'bad';
+  const checkLine = reel
+    ? [reel.check ? `${STAT_LOOK[reel.check.stat].name} ${reel.check.value}` : null, LEVEL_NAME[reel.level],
+       `${v.riskLabel.toLowerCase()}: ${Math.round(reel.chances.failed * 100)}%`].filter(Boolean).join(' · ')
+    : '';
 
   return (
     <div className="ac-veil">
@@ -81,24 +83,17 @@ function Result({ card, renderArt, renderPortrait }: Props & { card: ResultCard 
         <StoryFrame tab="Что случилось" taskType={v.taskType} taskNumber={v.taskNumber} speech={v.speech} picker={p} portrait={renderPortrait?.(p)} />
         <Join />
 
-        {/* 2. что решили (упрощение по макету «Итог · В», 20.10): вариант жирной строкой; ответ вариантом — тонкая полоса шанса
-            с маркером и «Сработало! / Осложнение!»; играли на ТСД — одна строка цифр игры (сценка — только на компьютере) */}
-        <section className={`rw-panel rw-p2${done && complication ? ' shake' : ''}`}>
+        {/* 2. что решили (упрощение по макету «Итог · В», 20.10): вариант жирной строкой; ответ вариантом — тонкая полоса трёх исходов
+            с маркером и «Чисто! / Почти! / Мимо!» (X2); играли на ТСД — одна строка цифр игры (сценка — только на компьютере) */}
+        <section className={`rw-panel rw-p2${done && v.outcome === 'failed' ? ' shake' : ''}`}>
           <span className="rw-tab" style={{ '--tc': 'var(--text)' } as CSSProperties}>{v.auto ? `${p.name} решил сам` : 'Вы решили'}</span>
           <b className="rw-choice">{chosen?.label ?? v.optionLabel}</b>
           {reel ? <>
             <div className="rw-chance">
-              <ChanceBar
-                segs={segs}
-                marker={1 - reel.roll /* правила: бросок < шанса — осложнение; «сработало» на полосе слева, поэтому зеркально */}
-                done={done}
-                onDone={() => setDone(true)}
-              />
-              <div className={`rw-shout${done ? ` go ${complication ? 'bad' : 'ok'}` : ' wait'}`}>
-                {done ? (complication ? 'Осложнение!' : 'Сработало!') : '…'}
-              </div>
+              <ChanceBar segs={segs} marker={reel.roll} done={done} onDone={() => setDone(true)} />
+              <div className={`rw-shout${done ? ` go ${shoutClass}` : ' wait'}`}>{done ? ROLL_SHOUT[v.outcome] : '…'}</div>
             </div>
-            <span className="rw-sub">{v.riskLabel}: {Math.round(reel.chance * 100)}%</span>
+            <span className="rw-sub">{checkLine}</span>
           </> : <>
             {v.tsdResult?.facts.length
               ? <span className="rw-sub">{v.tsdResult.facts.join(' · ')}</span>

@@ -4,23 +4,30 @@
 // 13.10: итог развилок — в окне результата после заказа (okText / badText).
 // 13.10 (переделка): сначала только красный «!» над сборщиком с таймером по контуру; клик — окно по центру, мир на паузе.
 // 13.10 (макеты ui_11, ui_12): реплика сборщика от первого лица, карточки вариантов, итог — «чек» заказа. Тексты — черновик Claude, правь здесь.
+// 20.10 (X2, docs/10 раздел 14.6): у варианта — сложность и характеристика, один бросок по его шансам в конце задания.
 // 14.10: 7 ситуаций сборки; у «срок», «штрихкод», «глубина» с шансом есть вариант «Взять ТСД» (10, раздел 11).
-import type { RiskLevel } from '../model/call';
-import type { Outcome, TaskType } from '../model/task';
+import type { OptionLevel } from '../model/call';
+import type { StatKey } from '../model/picker';
+import type { Outcome, OutcomeChances, TaskType } from '../model/task';
 import type { TsdGameKind } from '../model/tsdGame';
 
 export const CALLS = {
   chance: 0.35,       // шанс развилки на задание (решение автора 12.10; тестовое 1 возвращено 15.10)
   answerSeconds: 15,     // таймер «!» над сборщиком, игровые секунды (на паузе и при открытом окне стоит); решение автора 13.10
   maxVisible: 3,         // сколько вызовов на экране одновременно
-  /** Шанс осложнения по риску: осложнение ухудшает исход задания на ступень. */
-  complication: { low: 0.1, medium: 0.35, high: 0.6 } as Record<RiskLevel, number>,
   /**
-   * Риск зависит от точности сборщика (решение автора 14.10, как в Dispatch): шанс осложнения × множитель.
-   * Множитель = 1 − (точность − ref) × perPoint, в границах [min, max]. ДОПУЩЕНИЕ Claude по числам:
-   * точность 5 — как в таблице выше, 10 — вдвое реже (низкий риск 5%), 1 — в 1,4 раза чаще (низкий риск 14%).
+   * Шансы варианта по сложности при характеристике 5 (docs/10, раздел 14.6; X2, решение автора 20.10).
+   * «Надёжно» — без проверки, у всех одинаково.
    */
-  riskByAccuracy: { ref: 5, perPoint: 0.1, min: 0.5, max: 1.5 },
+  levels: {
+    safe: { perfect: 0.8, withErrors: 0.17, failed: 0.03 },
+    normal: { perfect: 0.6, withErrors: 0.3, failed: 0.1 },
+    risky: { perfect: 0.4, withErrors: 0.35, failed: 0.25 },
+  } as Record<OptionLevel, OutcomeChances>,
+  /** Каждое очко характеристики выше ref: +perfect к «Идеально» и −failed к «Провалу»; ниже — наоборот. */
+  perStat: { ref: 5, perfect: 0.06, failed: 0.03 },
+  /** Не ответили вовремя — сборщик решает сам, характеристика считается на столько ниже. */
+  autoPenalty: 2,
   /**
    * Шанс, что в окне развилки есть вариант «Взять ТСД» (у ситуаций с игрой). ДОПУЩЕНИЕ Claude (автор поручил 14.10):
    * развилка у 35% заказов × 3 ситуации из 7 × 50% ≈ игра в 1 заказе из 13 (10, раздел 11.1).
@@ -140,14 +147,15 @@ export type CallOption = {
   label: string;          // «Поискать свежее»
   description: string;    // что сделает сборщик и чем это грозит — на карточке варианта (ui_11)
   seconds: number;        // сколько добавит к работе
-  risk: RiskLevel;
+  level: OptionLevel;     // надёжно / обычно / рискованно (X2)
+  stat?: StatKey;         // какую характеристику проверяет; у «надёжно» — нет
   busyLabel: string;      // что пишет карточка сборщика внизу, пока он это делает
-  okTitle: string;        // окно итога (ui_12): «Сработало»
+  okTitle: string;        // окно итога (ui_12): исход «Идеально»
   okText: string;
-  badTitle: string;       // окно итога: «Не сработало» — осложнение, исход хуже на ступень
+  badTitle: string;       // окно итога: «Неплохо» и «Провал» (свой текст для «Неплохо» — X4)
   badText: string;
   cap?: Outcome;          // исход не выше (например, пропустил позицию — не выше «с ошибками»)
-  requires?: { stat: 'speed' | 'accuracy'; min: number }; // вариант есть только у сборщика с такой характеристикой
+  requires?: { stat: StatKey; min: number }; // вариант есть только у сборщика с такой характеристикой
 };
 
 /**
@@ -172,19 +180,19 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс жалобы',
     options: [
       {
-        id: 'take', label: 'Взять как есть', seconds: 0, risk: 'high', busyLabel: 'Берёт товар',
+        id: 'take', label: 'Взять как есть', seconds: 0, level: 'risky', stat: 'accuracy', busyLabel: 'Берёт товар',
         description: '{product} уйдёт клиенту. Может, он не заметит — а может, пожалуется.',
         okTitle: 'Клиент не заметил', okText: '{product} доехал до клиента, и жалоб не было. В этот раз повезло.',
         badTitle: 'Клиент пожаловался на срок', badText: 'Клиент увидел дату на упаковке и написал жалобу.',
       },
       {
-        id: 'fresher', label: 'Поискать свежее', seconds: 20, risk: 'low', busyLabel: 'Ищет свежее',
+        id: 'fresher', label: 'Поискать свежее', seconds: 20, level: 'normal', stat: 'strength', busyLabel: 'Ищет свежее',
         description: '{picker} переберёт упаковки на полке — в глубине может быть партия с другим сроком.',
         okTitle: 'Нашлась свежая партия', okText: '{picker} нашёл {product} со сроком на неделю вперёд. Задержка — {seconds} секунд.',
         badTitle: 'Свежего не нашлось', badText: 'Других партий не было, пришлось взять что есть. Клиент заметил дату.',
       },
       {
-        id: 'report', label: 'Сообщить на списание', seconds: 3, risk: 'medium', busyLabel: 'Сообщает на списание',
+        id: 'report', label: 'Сообщить на списание', seconds: 3, level: 'safe', busyLabel: 'Сообщает на списание',
         description: '{picker} отметит партию в ТСД и возьмёт товар из той же партии. Задание на списание — позже (M7).',
         okTitle: 'Партия отмечена', okText: '{picker} отметил партию на {address} для списания. Задержка — {seconds} секунды.',
         badTitle: 'Отметка потерялась', badText: '{picker} отметил партию, но клиенту всё равно ушёл товар с коротким сроком.',
@@ -198,25 +206,25 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс перепутать',
     options: [
       {
-        id: 'byEye', label: 'Взять на глаз', seconds: 0, risk: 'high', busyLabel: 'Берёт на глаз',
+        id: 'byEye', label: 'Взять на глаз', seconds: 0, level: 'risky', stat: 'accuracy', busyLabel: 'Берёт на глаз',
         description: '{picker} возьмёт ту, что больше похожа. Быстро — если не перепутает.',
         okTitle: 'Угадал', okText: '{picker} взял нужную упаковку с первого раза.',
         badTitle: 'Перепутал', badText: 'Клиенту приехал не тот товар — очень похожий, но не {product}.',
       },
       {
-        id: 'label', label: 'Сверить по этикетке', seconds: 10, risk: 'low', busyLabel: 'Сверяет этикетку',
+        id: 'label', label: 'Сверить по этикетке', seconds: 10, level: 'normal', stat: 'accuracy', busyLabel: 'Сверяет этикетку',
         description: '{picker} прочитает этикетки на обеих упаковках. Надёжно, но время идёт.',
         okTitle: 'Сверил', okText: '{picker} прочитал этикетки и взял {product}. Задержка — {seconds} секунд.',
         badTitle: 'Этикетки тоже похожи', badText: 'Даже по этикетке разница почти не видна — {picker} всё равно ошибся.',
       },
       {
-        id: 'both', label: 'Взять обе, лишнее вернуть', seconds: 20, risk: 'low', busyLabel: 'Берёт обе упаковки',
+        id: 'both', label: 'Взять обе, лишнее вернуть', seconds: 20, level: 'safe', busyLabel: 'Берёт обе упаковки',
         description: '{picker} возьмёт обе и сверит на фасовке, лишнюю вернёт на полку.',
         okTitle: 'Разобрался на фасовке', okText: 'На фасовке {picker} спокойно сверил упаковки и вернул лишнюю. Задержка — {seconds} секунд.',
         badTitle: 'Вернул не ту', badText: 'На фасовке {picker} вернул на полку как раз {product}.',
       },
       {
-        id: 'capColor', label: 'Узнать по цвету крышки', seconds: 0, risk: 'low', requires: { stat: 'accuracy', min: 7 }, busyLabel: 'Смотрит на крышки',
+        id: 'capColor', label: 'Узнать по цвету крышки', seconds: 0, level: 'normal', stat: 'accuracy', requires: { stat: 'accuracy', min: 7 }, busyLabel: 'Смотрит на крышки',
         description: '{picker} внимательный: помнит, что у нужного товара другая крышка.',
         okTitle: 'Узнал по крышке', okText: '{picker} сразу взял упаковку с нужной крышкой.',
         badTitle: 'Крышки одинаковые', badText: 'В этой партии крышки поменяли — {picker} ошибся.',
@@ -231,19 +239,19 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс перепутать',
     options: [
       {
-        id: 'noScan', label: 'Взять без скана', seconds: 0, risk: 'medium', busyLabel: 'Берёт без скана',
+        id: 'noScan', label: 'Взять без скана', seconds: 0, level: 'risky', stat: 'accuracy', busyLabel: 'Берёт без скана',
         description: '{picker} возьмёт товар, не сканируя. Если это не тот товар — никто не заметит до клиента.',
         okTitle: 'Товар тот', okText: 'Без скана, но {product} тот самый — клиент доволен.',
         badTitle: 'Взял не тот', badText: 'Без скана {picker} не заметил, что взял не тот товар.',
       },
       {
-        id: 'another', label: 'Взять другую штуку', seconds: 10, risk: 'low', busyLabel: 'Ищет целый штрихкод',
+        id: 'another', label: 'Взять другую штуку', seconds: 10, level: 'normal', stat: 'speed', busyLabel: 'Ищет целый штрихкод',
         description: '{picker} поищет на полке упаковку с целым штрихкодом. Если она одна — позицию придётся пропустить.',
         okTitle: 'Нашёл целую', okText: 'У соседней упаковки штрихкод целый — скан прошёл. Задержка — {seconds} секунд.',
         badTitle: 'Целых не было', badText: 'Все упаковки помяты, {product} пришлось взять без скана — и это оказался не он.',
       },
       {
-        id: 'skipScan', label: 'Пропустить позицию', seconds: 0, risk: 'low', cap: 'withErrors', busyLabel: 'Пропускает позицию',
+        id: 'skipScan', label: 'Пропустить позицию', seconds: 0, level: 'safe', cap: 'withErrors', busyLabel: 'Пропускает позицию',
         description: '{picker} пойдёт дальше без этой позиции. Быстро, но заказ будет неполным: не выше «неплохо».',
         okTitle: 'Позиция пропущена', okText: '{product} в заказ не попал, остальное собрано вовремя. Клиенту вернут деньги за позицию.',
         badTitle: 'Клиент заметил недостачу', badText: '{product} в заказ не попал, и клиент написал жалобу.',
@@ -257,28 +265,34 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Риск уронить товар',
     options: [
       {
-        id: 'wait', label: 'Подождать', seconds: 15, risk: 'low', busyLabel: 'Ждёт, пока освободится проход',
+        id: 'wait', label: 'Подождать', seconds: 15, level: 'safe', busyLabel: 'Ждёт, пока освободится проход',
         description: '{picker} подождёт, пока тележку уберут. Надёжно, но время идёт.',
         okTitle: 'Проход освободился', okText: 'Тележку откатили, и {picker} спокойно прошёл к полке. Задержка — {seconds} секунд.',
         badTitle: 'Ждать пришлось долго', badText: 'Тележку так и не убрали вовремя: {picker} потерял время и заказ собран с опозданием.',
       },
       {
-        id: 'around', label: 'Обойти по соседней аллее', seconds: 25, risk: 'low', busyLabel: 'Обходит',
+        id: 'around', label: 'Обойти по соседней аллее', seconds: 25, level: 'normal', stat: 'memory', busyLabel: 'Обходит',
         description: '{picker} пойдёт в обход. Дольше, зато никого не заденет.',
         okTitle: 'Обошёл без проблем', okText: '{picker} прошёл через соседнюю аллею и вернулся к нужной полке. Задержка — {seconds} секунд.',
         badTitle: 'Запутался в обходе', badText: '{picker} свернул не туда и взял товар не с той полки. Пришлось исправлять.',
       },
       {
-        id: 'squeeze', label: 'Протиснуться', seconds: 0, risk: 'high', busyLabel: 'Протискивается',
+        id: 'squeeze', label: 'Протиснуться', seconds: 0, level: 'risky', stat: 'speed', busyLabel: 'Протискивается',
         description: '{picker} попробует пролезть мимо тележки. Без задержки — если ничего не уронит.',
         okTitle: 'Протиснулся аккуратно', okText: '{picker} проскользнул мимо тележки и ничего не задел.',
         badTitle: 'Задел тележку', badText: '{picker} протискивался и уронил товар из заказа. Упаковка помялась.',
       },
       {
-        id: 'slip', label: 'Проскочить ловко', seconds: 5, risk: 'medium', requires: { stat: 'speed', min: 7 }, busyLabel: 'Проскакивает',
+        id: 'slip', label: 'Проскочить ловко', seconds: 5, level: 'normal', stat: 'speed', requires: { stat: 'speed', min: 7 }, busyLabel: 'Проскакивает',
         description: '{picker} шустрый: проскочит мимо тележки, почти не теряя времени.',
         okTitle: 'Проскочил', okText: '{picker} ловко проскочил мимо тележки — даже не притормозил.',
         badTitle: 'Чуть не врезался', badText: '{picker} проскочил, но задел стеллаж, и товар упал с полки.',
+      },
+      {
+        id: 'askMove', label: 'Попросить убрать тележку', seconds: 8, level: 'normal', stat: 'friendly', busyLabel: 'Просит пропустить',
+        description: '{picker} вежливо попросит коллегу откатить тележку в сторону.',
+        okTitle: 'Пропустили', okText: 'Коллега откатил тележку, {picker} прошёл к {address}. Задержка — {seconds} секунд.',
+        badTitle: 'Поругались', badText: 'Коллега заупрямился, {picker} спорил, а потом всё равно задел тележку.',
       },
     ],
   },
@@ -290,19 +304,19 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Риск уронить',
     options: [
       {
-        id: 'unpack', label: 'Разобрать передние', seconds: 25, risk: 'low', busyLabel: 'Разбирает полку',
+        id: 'unpack', label: 'Разобрать передние', seconds: 25, level: 'normal', stat: 'strength', busyLabel: 'Разбирает полку',
         description: '{picker} снимет передние коробки и аккуратно достанет товар. Надёжно, но долго.',
         okTitle: 'Достал аккуратно', okText: '{picker} разобрал полку и достал {product}. Задержка — {seconds} секунд.',
         badTitle: 'Поставил не туда', badText: '{picker} достал товар, но в спешке перепутал коробки при обратной расстановке.',
       },
       {
-        id: 'reach', label: 'Дотянуться', seconds: 0, risk: 'high', busyLabel: 'Тянется вглубь полки',
+        id: 'reach', label: 'Дотянуться', seconds: 0, level: 'risky', stat: 'speed', busyLabel: 'Тянется вглубь полки',
         description: '{picker} попробует достать товар через коробки. Быстро — если ничего не уронит.',
         okTitle: 'Дотянулся', okText: '{picker} аккуратно вытянул {product} через коробки.',
         badTitle: 'Уронил', badText: 'Передние коробки посыпались, и {product} помялся.',
       },
       {
-        id: 'skipDeep', label: 'Пропустить позицию', seconds: 0, risk: 'low', cap: 'withErrors', busyLabel: 'Пропускает позицию',
+        id: 'skipDeep', label: 'Пропустить позицию', seconds: 0, level: 'safe', cap: 'withErrors', busyLabel: 'Пропускает позицию',
         description: '{picker} пойдёт дальше без этой позиции. Быстро, но заказ будет неполным: не выше «неплохо».',
         okTitle: 'Позиция пропущена', okText: '{product} в заказ не попал, остальное собрано вовремя. Клиенту вернут деньги за позицию.',
         badTitle: 'Клиент заметил недостачу', badText: '{product} в заказ не попал, и клиент написал жалобу.',
@@ -316,25 +330,25 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Риск уронить',
     options: [
       {
-        id: 'alone', label: 'Снять одному', seconds: 0, risk: 'high', busyLabel: 'Снимает с верхней полки',
+        id: 'alone', label: 'Снять одному', seconds: 0, level: 'risky', stat: 'strength', busyLabel: 'Снимает с верхней полки',
         description: '{picker} снимет упаковку сам. Быстро — если удержит.',
         okTitle: 'Удержал', okText: '{picker} снял упаковку и ничего не уронил.',
         badTitle: 'Уронил', badText: 'Упаковка выскользнула, часть товара повреждена.',
       },
       {
-        id: 'ladder', label: 'Взять стремянку', seconds: 20, risk: 'low', busyLabel: 'Ходит за стремянкой',
+        id: 'ladder', label: 'Взять стремянку', seconds: 20, level: 'normal', stat: 'speed', busyLabel: 'Ходит за стремянкой',
         description: '{picker} сходит за стремянкой и снимет спокойно.',
         okTitle: 'Снял со стремянки', okText: 'Со стремянки {picker} снял упаковку без проблем. Задержка — {seconds} секунд.',
         badTitle: 'Стремянка была занята', badText: 'Стремянку пришлось ждать, и заказ собран с опозданием.',
       },
       {
-        id: 'byOne', label: 'Снимать по одной', seconds: 30, risk: 'low', busyLabel: 'Снимает по одной',
+        id: 'byOne', label: 'Снимать по одной', seconds: 30, level: 'safe', busyLabel: 'Снимает по одной',
         description: '{picker} вскроет упаковку на полке и будет снимать по одной штуке.',
         okTitle: 'Снял по одной', okText: '{picker} аккуратно снял всё по одной. Задержка — {seconds} секунд.',
         badTitle: 'Вскрытая упаковка', badText: 'Клиенту не понравилось, что упаковка вскрыта.',
       },
       {
-        id: 'ladderRun', label: 'Стремянка бегом', seconds: 10, risk: 'low', requires: { stat: 'speed', min: 7 }, busyLabel: 'Бежит за стремянкой',
+        id: 'ladderRun', label: 'Стремянка бегом', seconds: 10, level: 'normal', stat: 'speed', requires: { stat: 'speed', min: 7 }, busyLabel: 'Бежит за стремянкой',
         description: '{picker} шустрый: сбегает за стремянкой и вернётся быстро.',
         okTitle: 'Быстро обернулся', okText: '{picker} сбегал за стремянкой и снял упаковку. Задержка — {seconds} секунд.',
         badTitle: 'Споткнулся', badText: 'В спешке {picker} оступился на стремянке и уронил упаковку.',
@@ -348,28 +362,34 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс недовольства',
     options: [
       {
-        id: 'search', label: 'Поискать рядом', seconds: 15, risk: 'medium', busyLabel: 'Ищет рядом',
+        id: 'search', label: 'Поискать рядом', seconds: 15, level: 'normal', stat: 'accuracy', busyLabel: 'Ищет рядом',
         description: '{picker} обойдёт соседние стеллажи. Товар могли выложить не туда — а могли и не привезти.',
         okTitle: 'Товар лежал не на своём месте', okText: '{picker} обошёл стеллажи и нашёл {product} на соседней полке. Позиция в заказе, задержка — {seconds} секунд.',
         badTitle: 'Поиски ничего не дали', badText: '{picker} обошёл всё рядом, но {product} так и не нашёл. Позиция собрана не полностью.',
       },
       {
-        id: 'substitute', label: 'Заменить похожим', seconds: 0, risk: 'medium', busyLabel: 'Берёт замену',
+        id: 'substitute', label: 'Заменить похожим', seconds: 0, level: 'normal', stat: 'friendly', busyLabel: 'Берёт замену',
         description: '{picker} возьмёт похожий товар с соседней полки. Клиент может принять замену — а может расстроиться.',
         okTitle: 'Замена подошла', okText: 'Клиент не возражал против замены. Заказ собран без задержки.',
         badTitle: 'Клиенту не понравилась замена', badText: 'Клиент ждал именно {product}. Заказ доставлен, но оценку он поставил ниже.',
       },
       {
-        id: 'skip', label: 'Пропустить позицию', seconds: 0, risk: 'low', cap: 'withErrors', busyLabel: 'Пропускает позицию',
+        id: 'skip', label: 'Пропустить позицию', seconds: 0, level: 'safe', cap: 'withErrors', busyLabel: 'Пропускает позицию',
         description: '{picker} пойдёт дальше без этой позиции. Быстро, но заказ будет неполным: не выше «неплохо».',
         okTitle: 'Позиция пропущена', okText: '{product} в заказ не попал, остальное собрано вовремя. Клиенту вернут деньги за позицию.',
         badTitle: 'Клиент заметил недостачу', badText: '{product} в заказ не попал, и клиент написал жалобу.',
       },
       {
-        id: 'checkNear', label: 'Проверить соседние полки', seconds: 8, risk: 'low', requires: { stat: 'accuracy', min: 7 }, busyLabel: 'Проверяет соседние полки',
+        id: 'checkNear', label: 'Проверить соседние полки', seconds: 8, level: 'normal', stat: 'accuracy', requires: { stat: 'accuracy', min: 7 }, busyLabel: 'Проверяет соседние полки',
         description: '{picker} внимательный: быстро проверит полки рядом с адресом — чаще всего товар там.',
         okTitle: 'Нашёлся на соседней полке', okText: '{picker} заглянул на соседние полки и нашёл {product}. Задержка — {seconds} секунд.',
         badTitle: 'На соседних полках пусто', badText: '{picker} проверил полки рядом, но {product} нигде нет. Позиция собрана не полностью.',
+      },
+      {
+        id: 'recall', label: 'Вспомнить, где ещё лежит', seconds: 5, level: 'normal', stat: 'memory', busyLabel: 'Вспоминает адрес',
+        description: '{picker} вспомнит, на какой ещё полке видел {product}, и сходит туда.',
+        okTitle: 'Вспомнил', okText: '{picker} вспомнил вторую полку с товаром — {product} в тележке. Задержка — {seconds} секунд.',
+        badTitle: 'Память подвела', badText: 'На той полке, которую вспомнил {picker}, товара не оказалось.',
       },
     ],
   },
@@ -381,19 +401,19 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс ошибки в учёте',
     options: [
       {
-        id: 'recount', label: 'Пересчитать', seconds: 15, risk: 'low', busyLabel: 'Пересчитывает товар',
+        id: 'recount', label: 'Пересчитать', seconds: 15, level: 'normal', stat: 'accuracy', busyLabel: 'Пересчитывает товар',
         description: '{picker} пересчитает {product} поштучно. Долго, зато точно.',
         okTitle: 'Пересчитал', okText: '{picker} пересчитал {product}: недостачу записали верно. Задержка — {seconds} секунд.',
         badTitle: 'Сбился со счёта', badText: '{picker} пересчитывал дважды и всё равно записал неверную цифру.',
       },
       {
-        id: 'byInvoice', label: 'Принять по накладной', seconds: 0, risk: 'high', busyLabel: 'Принимает по накладной',
+        id: 'byInvoice', label: 'Принять по накладной', seconds: 0, level: 'risky', stat: 'accuracy', busyLabel: 'Принимает по накладной',
         description: '{picker} примет столько, сколько написано в накладной. Быстро, но в учёте может оказаться лишнее.',
         okTitle: 'Обошлось', okText: 'Оказалось, часть товара «{product}» лежала на другой паллете. Всё сошлось.',
         badTitle: 'Приняли лишнее', badText: 'В учёт попало больше товара «{product}», чем приехало. Поставщику уже не докажешь.',
       },
       {
-        id: 'markShort', label: 'Отметить недостачу', seconds: 5, risk: 'medium', busyLabel: 'Отмечает недостачу',
+        id: 'markShort', label: 'Отметить недостачу', seconds: 5, level: 'normal', stat: 'friendly', busyLabel: 'Отмечает недостачу',
         description: '{picker} примет то, что есть, и отметит недостачу в ТСД. Если ошибся с цифрой — спорить с поставщиком будет сложно.',
         okTitle: 'Недостача отмечена', okText: '{picker} отметил недостачу {product}, поставщик её признал. Задержка — {seconds} секунд.',
         badTitle: 'Поставщик не согласился', badText: 'Цифры в отметке и у водителя разошлись — недостачу не засчитали.',
@@ -407,25 +427,25 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс принять брак',
     options: [
       {
-        id: 'asIs', label: 'Принять как есть', seconds: 0, risk: 'high', busyLabel: 'Принимает коробку',
+        id: 'asIs', label: 'Принять как есть', seconds: 0, level: 'risky', stat: 'accuracy', busyLabel: 'Принимает коробку',
         description: '{picker} примет коробку не открывая. Быстро — если внутри всё целое.',
         okTitle: 'Внутри всё целое', okText: 'Коробка помята только снаружи, {product} в порядке.',
         badTitle: 'Внутри брак', badText: 'Часть товара «{product}» в коробке оказалась побита — приняли брак.',
       },
       {
-        id: 'toScrap', label: 'Отложить в брак', seconds: 10, risk: 'low', busyLabel: 'Откладывает коробку',
+        id: 'toScrap', label: 'Отложить в брак', seconds: 10, level: 'safe', busyLabel: 'Откладывает коробку',
         description: '{picker} не будет рисковать и отложит коробку в брак — пусть разбирается поставщик.',
         okTitle: 'Коробку отложили', okText: '{picker} отложил коробку, поставщик заменит {product}. Задержка — {seconds} секунд.',
         badTitle: 'Отложили целое', badText: 'В коробке всё было целое — товар зря ушёл в брак.',
       },
       {
-        id: 'inspect', label: 'Вскрыть и проверить', seconds: 20, risk: 'low', busyLabel: 'Проверяет содержимое',
+        id: 'inspect', label: 'Вскрыть и проверить', seconds: 20, level: 'normal', stat: 'accuracy', busyLabel: 'Проверяет содержимое',
         description: '{picker} вскроет коробку и проверит каждую штуку. Надёжно, но долго.',
         okTitle: 'Проверил', okText: '{picker} проверил {product}: битое отложил, целое принял. Задержка — {seconds} секунд.',
         badTitle: 'Пропустил трещину', badText: 'Одна побитая штука всё-таки проскочила в приёмку.',
       },
       {
-        id: 'quickLook', label: 'Осмотреть на месте', seconds: 5, risk: 'low', requires: { stat: 'accuracy', min: 7 }, busyLabel: 'Осматривает коробку',
+        id: 'quickLook', label: 'Осмотреть на месте', seconds: 5, level: 'normal', stat: 'accuracy', requires: { stat: 'accuracy', min: 7 }, busyLabel: 'Осматривает коробку',
         description: '{picker} внимательный: по углам и подтёкам сразу поймёт, есть ли там брак.',
         okTitle: 'Сразу видно', okText: '{picker} быстро осмотрел коробку и принял только целое. Задержка — {seconds} секунд.',
         badTitle: 'Не разглядел', badText: 'Снаружи коробка выглядела нормально, но внутри был брак.',
@@ -439,13 +459,13 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс перепутать товар',
     options: [
       {
-        id: 'noScan', label: 'Принять без скана', seconds: 0, risk: 'medium', busyLabel: 'Принимает без скана',
+        id: 'noScan', label: 'Принять без скана', seconds: 0, level: 'risky', stat: 'accuracy', busyLabel: 'Принимает без скана',
         description: '{picker} примет коробку по названию на ней. Если похожих товаров несколько — можно перепутать.',
         okTitle: 'Принял верно', okText: 'По названию на коробке {picker} принял именно {product}.',
         badTitle: 'Перепутал товар', badText: 'В учёт попал не тот товар — очень похожий на {product}.',
       },
       {
-        id: 'byInvoice', label: 'Ввести код по накладной', seconds: 15, risk: 'low', busyLabel: 'Вводит код вручную',
+        id: 'byInvoice', label: 'Ввести код по накладной', seconds: 15, level: 'normal', stat: 'accuracy', busyLabel: 'Вводит код вручную',
         description: '{picker} найдёт {product} в накладной и введёт код вручную. Дольше, но надёжнее.',
         okTitle: 'Код введён', okText: '{picker} нашёл код в накладной и принял {product}. Задержка — {seconds} секунд.',
         badTitle: 'Ошибся в цифре', badText: 'При вводе кода {picker} ошибся в одной цифре — товар записан неверно.',
@@ -459,19 +479,19 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс принять почти просрочку',
     options: [
       {
-        id: 'accept', label: 'Принять', seconds: 0, risk: 'high', busyLabel: 'Принимает партию',
+        id: 'accept', label: 'Принять', seconds: 0, level: 'risky', stat: 'accuracy', busyLabel: 'Принимает партию',
         description: '{picker} примет партию как есть. Если срок совсем короткий — товар уйдёт в списание.',
         okTitle: 'Успеем продать', okText: 'Срок короткий, но {product} разойдётся раньше.',
         badTitle: 'Приняли почти просрочку', badText: '{product} не успеют продать — партия уйдёт в списание.',
       },
       {
-        id: 'returnDriver', label: 'Вернуть водителю', seconds: 10, risk: 'medium', busyLabel: 'Оформляет возврат',
+        id: 'returnDriver', label: 'Вернуть водителю', seconds: 10, level: 'normal', stat: 'friendly', busyLabel: 'Оформляет возврат',
         description: '{picker} откажется от партии и оформит возврат. Поставщик может не согласиться.',
         okTitle: 'Возврат оформлен', okText: 'Водитель забрал {product} обратно. Задержка — {seconds} секунд.',
         badTitle: 'Возврат не приняли', badText: 'Водитель отказался забирать партию — пришлось принять.',
       },
       {
-        id: 'checkDates', label: 'Проверить даты', seconds: 20, risk: 'low', busyLabel: 'Проверяет даты',
+        id: 'checkDates', label: 'Проверить даты', seconds: 20, level: 'normal', stat: 'accuracy', busyLabel: 'Проверяет даты',
         description: '{picker} проверит даты на каждой коробке: может, короткий срок только у части.',
         okTitle: 'Даты проверены', okText: 'Короткий срок оказался только у пары коробок — их вернули, остальное приняли. Задержка — {seconds} секунд.',
         badTitle: 'Срок короткий у всех', badText: 'Все коробки с коротким сроком — время ушло, а партию всё равно пришлось принять.',
@@ -485,19 +505,19 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс пропустить ошибку',
     options: [
       {
-        id: 'noCount', label: 'Принять без пересчёта', seconds: 0, risk: 'high', busyLabel: 'Принимает без пересчёта',
+        id: 'noCount', label: 'Принять без пересчёта', seconds: 0, level: 'risky', stat: 'accuracy', busyLabel: 'Принимает без пересчёта',
         description: '{picker} подпишет накладную не считая. Водитель доволен — если в поставке всё сходится.',
         okTitle: 'Всё сошлось', okText: 'Позже пересчитали — поставка совпала с накладной.',
         badTitle: 'Не сошлось', badText: 'В поставке оказалось меньше, чем в накладной, а подпись уже стоит.',
       },
       {
-        id: 'askWait', label: 'Попросить подождать', seconds: 20, risk: 'low', busyLabel: 'Пересчитывает поставку',
+        id: 'askWait', label: 'Попросить подождать', seconds: 20, level: 'normal', stat: 'friendly', busyLabel: 'Пересчитывает поставку',
         description: '{picker} попросит водителя подождать и пересчитает всё как положено.',
         okTitle: 'Пересчитали', okText: 'Водитель поворчал, но подождал. Поставка принята верно. Задержка — {seconds} секунд.',
         badTitle: 'Торопились и сбились', badText: 'Водитель стоял над душой — {picker} сбился при пересчёте.',
       },
       {
-        id: 'countFast', label: 'Пересчитать бегом', seconds: 8, risk: 'medium', requires: { stat: 'speed', min: 7 }, busyLabel: 'Пересчитывает бегом',
+        id: 'countFast', label: 'Пересчитать бегом', seconds: 8, level: 'normal', stat: 'speed', requires: { stat: 'speed', min: 7 }, busyLabel: 'Пересчитывает бегом',
         description: '{picker} быстрый: пересчитает всё бегом, пока водитель заполняет бумаги.',
         okTitle: 'Успел', okText: '{picker} пересчитал поставку, пока водитель возился с бумагами. Задержка — {seconds} секунд.',
         badTitle: 'Поспешил', badText: 'В спешке {picker} пропустил одну коробку.',
@@ -511,13 +531,13 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс ошибки в учёте',
     options: [
       {
-        id: 'accept', label: 'Принять', seconds: 0, risk: 'high', busyLabel: 'Принимает лишнюю коробку',
+        id: 'accept', label: 'Принять', seconds: 0, level: 'risky', stat: 'accuracy', busyLabel: 'Принимает лишнюю коробку',
         description: '{picker} примет коробку вместе со всем. Может, это досыл — а может, чужой товар.',
         okTitle: 'Это был досыл', okText: 'Поставщик подтвердил: коробку досылали к прошлому заказу.',
         badTitle: 'Чужой товар', badText: 'Коробка ехала на другой склад. Теперь её придётся возвращать.',
       },
       {
-        id: 'returnDriver', label: 'Вернуть водителю', seconds: 10, risk: 'low', busyLabel: 'Возвращает коробку',
+        id: 'returnDriver', label: 'Вернуть водителю', seconds: 10, level: 'normal', stat: 'friendly', busyLabel: 'Возвращает коробку',
         description: '{picker} отдаст лишнюю коробку водителю — пусть везёт по адресу.',
         okTitle: 'Коробку вернули', okText: 'Водитель забрал лишнюю коробку. Задержка — {seconds} секунд.',
         badTitle: 'Вернули своё', badText: 'Оказалось, это был досыл для нас — пришлось ждать новую поставку.',
@@ -533,22 +553,28 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс ошибки в адресе',
     options: [
       {
-        id: 'neighbor', label: 'На соседнюю свободную', seconds: 5, risk: 'medium', busyLabel: 'Кладёт на соседнюю полку',
+        id: 'neighbor', label: 'На соседнюю свободную', seconds: 5, level: 'risky', stat: 'memory', busyLabel: 'Кладёт на соседнюю полку',
         description: '{picker} положит {product} на соседнюю полку и поправит адрес в ТСД. Если забудет — товар потеряется.',
         okTitle: 'Адрес поправлен', okText: '{picker} выложил {product} рядом и поправил адрес. Задержка — {seconds} секунд.',
         badTitle: 'Адрес не поправил', badText: '{product} лежит рядом, но в ТСД остался старый адрес.',
       },
       {
-        id: 'clear', label: 'Освободить полку', seconds: 20, risk: 'low', busyLabel: 'Освобождает полку',
+        id: 'clear', label: 'Освободить полку', seconds: 20, level: 'normal', stat: 'strength', busyLabel: 'Освобождает полку',
         description: '{picker} переложит чужой товар туда, где ему место, и выложит {product} по адресу.',
         okTitle: 'Полка свободна', okText: '{picker} навёл порядок и выложил {product} куда надо. Задержка — {seconds} секунд.',
         badTitle: 'Перепутал при перекладке', badText: 'Перекладывая чужой товар, {picker} поставил его не на ту полку.',
       },
       {
-        id: 'stack', label: 'Поставить сверху', seconds: 0, risk: 'high', busyLabel: 'Ставит сверху',
+        id: 'stack', label: 'Поставить сверху', seconds: 0, level: 'risky', stat: 'strength', busyLabel: 'Ставит сверху',
         description: '{picker} поставит {product} прямо поверх чужого товара. Быстро, но потом его будет не найти.',
         okTitle: 'Обошлось', okText: '{product} стоит сверху, и его всё равно видно.',
         badTitle: 'Всё перемешалось', badText: 'Товары на полке перемешались — сборщики будут путать.',
+      },
+      {
+        id: 'rememberBack', label: 'Запомнить адрес и вернуться', seconds: 15, level: 'normal', stat: 'memory', busyLabel: 'Выкладывает остальное',
+        description: '{picker} сначала выложит остальное, а к {address} вернётся, когда полку освободят.',
+        okTitle: 'Вернулся и выложил', okText: 'Полку освободили, {picker} вернулся и выложил {product}. Задержка — {seconds} секунд.',
+        badTitle: 'Забыл вернуться', badText: '{picker} закрутился и забыл про {product} — он так и стоит в тележке.',
       },
     ],
   },
@@ -559,19 +585,19 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс помять товар',
     options: [
       {
-        id: 'split', label: 'Разделить на две полки', seconds: 15, risk: 'low', busyLabel: 'Делит на две полки',
+        id: 'split', label: 'Разделить на две полки', seconds: 15, level: 'normal', stat: 'memory', busyLabel: 'Делит на две полки',
         description: '{picker} положит сколько влезет, остальное — на свободную полку рядом.',
         okTitle: 'Разложил', okText: '{picker} разложил {product} на две полки. Задержка — {seconds} секунд.',
         badTitle: 'Запутался в адресах', badText: '{picker} разложил товар, но отметил в ТСД не ту вторую полку.',
       },
       {
-        id: 'squeeze', label: 'Впихнуть', seconds: 0, risk: 'high', busyLabel: 'Впихивает товар',
+        id: 'squeeze', label: 'Впихнуть', seconds: 0, level: 'risky', stat: 'strength', busyLabel: 'Впихивает товар',
         description: '{picker} утрамбует всё на одну полку. Быстро — если ничего не помнёт.',
         okTitle: 'Влезло', okText: 'Плотно, но {product} поместился целиком.',
         badTitle: 'Помял', badText: 'Пока впихивал, {picker} помял пару упаковок.',
       },
       {
-        id: 'returnRest', label: 'Остаток вернуть на приёмку', seconds: 5, risk: 'medium', busyLabel: 'Отвозит остаток',
+        id: 'returnRest', label: 'Остаток вернуть на приёмку', seconds: 5, level: 'safe', busyLabel: 'Отвозит остаток',
         description: '{picker} выложит сколько влезет, а остаток отвезёт обратно на приёмку.',
         okTitle: 'Остаток на приёмке', okText: 'Лишнее вернулось на приёмку, его выложат позже. Задержка — {seconds} секунд.',
         badTitle: 'Остаток потерялся', badText: 'Остаток оставили на приёмке, но не отметили — про него забыли.',
@@ -595,13 +621,13 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс, что старое залежится',
     options: [
       {
-        id: 'front', label: 'Поставить новую спереди', seconds: 0, risk: 'medium', busyLabel: 'Ставит новую партию',
+        id: 'front', label: 'Поставить новую спереди', seconds: 0, level: 'risky', stat: 'memory', busyLabel: 'Ставит новую партию',
         description: '{picker} просто поставит новую партию спереди. Быстро, но старая может так и остаться в глубине.',
         okTitle: 'Старую скоро разберут', okText: 'Старой партии было немного — её разберут и так.',
         badTitle: 'Старое залежалось', badText: 'Старая партия «{product}» так и стоит в глубине — скоро в списание.',
       },
       {
-        id: 'rearrange', label: 'Переставить: старое вперёд', seconds: 25, risk: 'low', busyLabel: 'Переставляет партии',
+        id: 'rearrange', label: 'Переставить: старое вперёд', seconds: 25, level: 'normal', stat: 'strength', busyLabel: 'Переставляет партии',
         description: '{picker} вытащит старую партию вперёд, а новую поставит за ней — как положено.',
         okTitle: 'Переставил', okText: 'Старая партия «{product}» спереди, новая — за ней. Задержка — {seconds} секунд.',
         badTitle: 'Перепутал партии', badText: 'Переставляя, {picker} перепутал коробки — старая опять оказалась сзади.',
@@ -625,13 +651,13 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс перепутать товар',
     options: [
       {
-        id: 'noScan', label: 'Положить без скана', seconds: 0, risk: 'medium', busyLabel: 'Кладёт без скана',
+        id: 'noScan', label: 'Положить без скана', seconds: 0, level: 'risky', stat: 'accuracy', busyLabel: 'Кладёт без скана',
         description: '{picker} выложит {product} на {address}, не сканируя. Если это другой товар — в учёте будет путаница.',
         okTitle: 'Всё верно', okText: 'Это действительно {product} — лежит на своём месте.',
         badTitle: 'Перепутал товар', badText: 'На полку лёг похожий товар, а не {product}.',
       },
       {
-        id: 'byInvoice', label: 'Ввести код по накладной', seconds: 15, risk: 'low', busyLabel: 'Вводит код вручную',
+        id: 'byInvoice', label: 'Ввести код по накладной', seconds: 15, level: 'normal', stat: 'accuracy', busyLabel: 'Вводит код вручную',
         description: '{picker} найдёт код в накладной и введёт его вручную.',
         okTitle: 'Код введён', okText: '{picker} ввёл код вручную и выложил {product}. Задержка — {seconds} секунд.',
         badTitle: 'Ошибся в цифре', badText: '{picker} ошибся в одной цифре — товар записан неверно.',
@@ -645,25 +671,25 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс уронить',
     options: [
       {
-        id: 'alone', label: 'Поднять одному', seconds: 0, risk: 'high', busyLabel: 'Поднимает на верхнюю полку',
+        id: 'alone', label: 'Поднять одному', seconds: 0, level: 'risky', stat: 'strength', busyLabel: 'Поднимает на верхнюю полку',
         description: '{picker} попробует поднять сам. Быстро — если не уронит.',
         okTitle: 'Поднял', okText: '{picker} закинул {product} на верхнюю полку без происшествий.',
         badTitle: 'Уронил', badText: '{product} выскользнул и упал — часть упаковок повреждена.',
       },
       {
-        id: 'ladder', label: 'Взять стремянку', seconds: 20, risk: 'low', busyLabel: 'Ходит за стремянкой',
+        id: 'ladder', label: 'Взять стремянку', seconds: 20, level: 'normal', stat: 'speed', busyLabel: 'Ходит за стремянкой',
         description: '{picker} сходит за стремянкой и поставит всё аккуратно.',
         okTitle: 'Со стремянкой надёжно', okText: '{picker} поставил {product} со стремянки. Задержка — {seconds} секунд.',
         badTitle: 'Стремянка шатается', badText: 'Даже со стремянки одна упаковка сорвалась вниз.',
       },
       {
-        id: 'byOne', label: 'Поднимать по одной', seconds: 30, risk: 'low', busyLabel: 'Поднимает по одной',
+        id: 'byOne', label: 'Поднимать по одной', seconds: 30, level: 'safe', busyLabel: 'Поднимает по одной',
         description: '{picker} разберёт упаковку и поднимет по одной штуке. Долго, но безопасно.',
         okTitle: 'По одной — надёжно', okText: '{picker} поднял всё по одной штуке. Задержка — {seconds} секунд.',
         badTitle: 'Устал и уронил', badText: 'Под конец {picker} устал и уронил одну штуку.',
       },
       {
-        id: 'ladderRun', label: 'Стремянка бегом', seconds: 10, risk: 'low', requires: { stat: 'speed', min: 7 }, busyLabel: 'Бежит за стремянкой',
+        id: 'ladderRun', label: 'Стремянка бегом', seconds: 10, level: 'normal', stat: 'speed', requires: { stat: 'speed', min: 7 }, busyLabel: 'Бежит за стремянкой',
         description: '{picker} быстрый: сбегает за стремянкой в два счёта.',
         okTitle: 'Быстро и надёжно', okText: '{picker} мигом принёс стремянку и поставил {product}. Задержка — {seconds} секунд.',
         badTitle: 'Спешил', badText: 'В спешке {picker} неудачно поставил стремянку и уронил упаковку.',
@@ -677,28 +703,34 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс зацепить кого-то',
     options: [
       {
-        id: 'wait', label: 'Подождать', seconds: 15, risk: 'low', busyLabel: 'Ждёт, пока освободится проход',
+        id: 'wait', label: 'Подождать', seconds: 15, level: 'safe', busyLabel: 'Ждёт, пока освободится проход',
         description: '{picker} подождёт, пока проход освободится.',
         okTitle: 'Проход освободился', okText: '{picker} дождался и проехал к полке. Задержка — {seconds} секунд.',
         badTitle: 'Ждал долго', badText: 'Проход так и не освободился вовремя — {picker} задел соседа, протискиваясь.',
       },
       {
-        id: 'around', label: 'Объехать по соседней аллее', seconds: 25, risk: 'low', busyLabel: 'Объезжает',
+        id: 'around', label: 'Объехать по соседней аллее', seconds: 25, level: 'normal', stat: 'memory', busyLabel: 'Объезжает',
         description: '{picker} объедет по соседней аллее. Дольше, но спокойно.',
         okTitle: 'Объехал', okText: '{picker} объехал пробку и добрался до {address}. Задержка — {seconds} секунд.',
         badTitle: 'И там пробка', badText: 'На соседней аллее тоже было тесно — {picker} зацепил чужую тележку.',
       },
       {
-        id: 'squeeze', label: 'Протиснуться', seconds: 0, risk: 'high', busyLabel: 'Протискивается с тележкой',
+        id: 'squeeze', label: 'Протиснуться', seconds: 0, level: 'risky', stat: 'speed', busyLabel: 'Протискивается с тележкой',
         description: '{picker} попробует протиснуться с тележкой. Быстро — если никого не зацепит.',
         okTitle: 'Проскочил', okText: '{picker} аккуратно протиснулся между тележками.',
         badTitle: 'Зацепил тележку', badText: '{picker} зацепил чужую тележку — пара товаров упала на пол.',
       },
       {
-        id: 'slip', label: 'Проскочить ловко', seconds: 5, risk: 'medium', requires: { stat: 'speed', min: 7 }, busyLabel: 'Проскакивает',
+        id: 'slip', label: 'Проскочить ловко', seconds: 5, level: 'normal', stat: 'speed', requires: { stat: 'speed', min: 7 }, busyLabel: 'Проскакивает',
         description: '{picker} шустрый: проскочит в просвет, пока тот не закрылся.',
         okTitle: 'Ловко', okText: '{picker} проскочил в просвет. Задержка — {seconds} секунд.',
         badTitle: 'Не рассчитал', badText: 'Просвет закрылся раньше — {picker} задел стеллаж.',
+      },
+      {
+        id: 'askMove', label: 'Попросить убрать тележку', seconds: 8, level: 'normal', stat: 'friendly', busyLabel: 'Просит пропустить',
+        description: '{picker} вежливо попросит коллегу откатить тележку в сторону.',
+        okTitle: 'Пропустили', okText: 'Коллега откатил тележку, {picker} проехал к {address}. Задержка — {seconds} секунд.',
+        badTitle: 'Поругались', badText: 'Коллега заупрямился, {picker} спорил, а потом всё равно зацепил тележку.',
       },
     ],
   },
@@ -711,19 +743,19 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс ошибиться партией',
     options: [
       {
-        id: 'both', label: 'Снять обе', seconds: 5, risk: 'medium', busyLabel: 'Снимает обе партии',
+        id: 'both', label: 'Снять обе', seconds: 5, level: 'safe', busyLabel: 'Снимает обе партии',
         description: '{picker} снимет обе партии — просрочка точно уйдёт, но годный товар может отправиться в брак.',
         okTitle: 'Годного было немного', okText: 'Вторая партия почти закончилась — в брак ушло совсем немного годного.',
         badTitle: 'Списали годное', badText: 'Вместе с просрочкой в брак ушла целая годная партия «{product}».',
       },
       {
-        id: 'check', label: 'Проверить даты', seconds: 15, risk: 'low', busyLabel: 'Проверяет даты',
+        id: 'check', label: 'Проверить даты', seconds: 15, level: 'normal', stat: 'accuracy', busyLabel: 'Проверяет даты',
         description: '{picker} прочитает даты на каждой упаковке и снимет только просрочку.',
         okTitle: 'Даты проверены', okText: '{picker} снял только просроченную партию. Задержка — {seconds} секунд.',
         badTitle: 'Даты слишком похожи', badText: 'Даже вблизи даты почти не различить — {picker} снял не ту партию.',
       },
       {
-        id: 'top', label: 'Снять верхнюю', seconds: 0, risk: 'high', busyLabel: 'Снимает верхнюю партию',
+        id: 'top', label: 'Снять верхнюю', seconds: 0, level: 'risky', stat: 'accuracy', busyLabel: 'Снимает верхнюю партию',
         description: '{picker} снимет ту партию, что стоит сверху. Быстро — если угадает.',
         okTitle: 'Угадал', okText: 'Сверху стояла как раз просрочка.',
         badTitle: 'Не та партия', badText: 'Сверху был годный товар — а просрочка осталась на полке.',
@@ -746,16 +778,22 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс, что просрочка останется',
     options: [
       {
-        id: 'search', label: 'Поискать рядом', seconds: 15, risk: 'medium', busyLabel: 'Ищет партию',
+        id: 'search', label: 'Поискать рядом', seconds: 15, level: 'normal', stat: 'accuracy', busyLabel: 'Ищет партию',
         description: '{picker} проверит соседние полки — партию могли переставить.',
         okTitle: 'Нашлась', okText: 'Партия стояла на соседней полке — {picker} её снял. Задержка — {seconds} секунд.',
         badTitle: 'Не нашлась', badText: '{picker} обошёл полки рядом, но партию так и не нашёл.',
       },
       {
-        id: 'asFound', label: 'Списать, сколько нашлось', seconds: 0, risk: 'low', cap: 'withErrors', busyLabel: 'Списывает найденное',
+        id: 'asFound', label: 'Списать, сколько нашлось', seconds: 0, level: 'safe', cap: 'withErrors', busyLabel: 'Списывает найденное',
         description: '{picker} спишет то, что нашёл, и отметит остальное. Быстро, но исход не выше «неплохо».',
         okTitle: 'Списал найденное', okText: '{picker} списал то, что нашёл, и отметил недостачу.',
         badTitle: 'Отметка с ошибкой', badText: '{picker} списал найденное, но в отметке перепутал количество.',
+      },
+      {
+        id: 'recall', label: 'Вспомнить, куда переложили', seconds: 5, level: 'normal', stat: 'memory', busyLabel: 'Вспоминает адрес',
+        description: '{picker} вспомнит, куда на днях перекладывали {product}, и снимет просрочку там.',
+        okTitle: 'Вспомнил', okText: 'Просрочка нашлась на соседней полке — {picker} снял всё. Задержка — {seconds} секунд.',
+        badTitle: 'Память подвела', badText: 'На той полке просрочки не было — часть так и осталась на складе.',
       },
     ],
   },
@@ -767,13 +805,13 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс списать не то',
     options: [
       {
-        id: 'noScan', label: 'Списать без скана', seconds: 0, risk: 'medium', busyLabel: 'Списывает без скана',
+        id: 'noScan', label: 'Списать без скана', seconds: 0, level: 'risky', stat: 'accuracy', busyLabel: 'Списывает без скана',
         description: '{picker} спишет по названию. Если рядом похожий товар — можно перепутать.',
         okTitle: 'Списал верно', okText: 'По названию {picker} списал именно «{product}».',
         badTitle: 'Списал не то', badText: 'В учёте списан похожий товар, а не «{product}».',
       },
       {
-        id: 'manual', label: 'Ввести код вручную', seconds: 15, risk: 'low', busyLabel: 'Вводит код вручную',
+        id: 'manual', label: 'Ввести код вручную', seconds: 15, level: 'normal', stat: 'accuracy', busyLabel: 'Вводит код вручную',
         description: '{picker} введёт код с другой упаковки той же партии.',
         okTitle: 'Код введён', okText: '{picker} ввёл код вручную и списал «{product}». Задержка — {seconds} секунд.',
         badTitle: 'Ошибся в цифре', badText: '{picker} ошибся в одной цифре — списан не тот товар.',
@@ -797,13 +835,13 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс уронить',
     options: [
       {
-        id: 'unpack', label: 'Разобрать передние', seconds: 25, risk: 'low', busyLabel: 'Разбирает полку',
+        id: 'unpack', label: 'Разобрать передние', seconds: 25, level: 'normal', stat: 'strength', busyLabel: 'Разбирает полку',
         description: '{picker} снимет передние коробки и достанет просрочку аккуратно.',
         okTitle: 'Достал', okText: '{picker} разобрал полку и достал просрочку. Задержка — {seconds} секунд.',
         badTitle: 'Поставил обратно не так', badText: 'Просрочку достали, но передние коробки встали обратно вперемешку.',
       },
       {
-        id: 'reach', label: 'Дотянуться', seconds: 0, risk: 'high', busyLabel: 'Тянется вглубь полки',
+        id: 'reach', label: 'Дотянуться', seconds: 0, level: 'risky', stat: 'speed', busyLabel: 'Тянется вглубь полки',
         description: '{picker} попробует дотянуться, не разбирая полку. Быстро — если ничего не уронит.',
         okTitle: 'Дотянулся', okText: '{picker} ловко достал просрочку из глубины.',
         badTitle: 'Уронил', badText: 'Пока тянулся, {picker} уронил пару годных упаковок.',
@@ -827,16 +865,22 @@ export const SITUATIONS: Situation[] = [
     riskLabel: 'Шанс устроить завал',
     options: [
       {
-        id: 'nearby', label: 'Поставить рядом', seconds: 0, risk: 'medium', busyLabel: 'Ставит рядом',
+        id: 'nearby', label: 'Поставить рядом', seconds: 0, level: 'risky', stat: 'memory', busyLabel: 'Ставит рядом',
         description: '{picker} поставит коробку рядом с зоной брака. Быстро, но её могут принять за годную.',
         okTitle: 'Всё в порядке', okText: 'Коробку рядом заметили и унесли в брак.',
         badTitle: 'Перепутали', badText: 'Коробку у зоны брака приняли за годную и вернули на полку.',
       },
       {
-        id: 'clear', label: 'Расчистить место', seconds: 20, risk: 'low', busyLabel: 'Расчищает зону брака',
+        id: 'clear', label: 'Расчистить место', seconds: 20, level: 'normal', stat: 'strength', busyLabel: 'Расчищает зону брака',
         description: '{picker} утрамбует коробки в зоне брака и поставит свою как положено.',
         okTitle: 'Место есть', okText: '{picker} навёл порядок в зоне брака. Задержка — {seconds} секунд.',
         badTitle: 'Завал', badText: 'Пока {picker} двигал коробки, стопка в зоне брака развалилась.',
+      },
+      {
+        id: 'callMate', label: 'Позвать коллегу', seconds: 10, level: 'normal', stat: 'friendly', busyLabel: 'Зовёт коллегу',
+        description: '{picker} позовёт коллегу — вдвоём быстро освободят место в зоне брака.',
+        okTitle: 'Помогли', okText: 'Вдвоём разобрали завал за минуту — «{product}» на своём месте. Задержка — {seconds} секунд.',
+        badTitle: 'Никто не пришёл', badText: 'Все заняты, {picker} поставил коробку куда попало.',
       },
     ],
   },
@@ -866,5 +910,3 @@ export const RESULT_SHARE: Record<Outcome, { money: number; rating: number }> = 
  */
 export const WITH_ERRORS_MONEY_BY_TYPE: Partial<Record<TaskType, number>> = { receiving: 0.4, putaway: 0.4 };
 
-/** Опыт за задание — пока только строка в чеке (прогрессия сборщиков — M8). */
-export const RESULT_XP = 1;

@@ -612,17 +612,9 @@ svg.i.sm { width: 18px; height: 18px; }
 .fork-option-row b.tsd-yours { color: #9BE05A; }
 /* без описаний карточки ниже: строки прижаты к низу */
 .fork-option > .fork-option-line { margin-top: auto; }
-.fork-risk { display: flex; align-items: center; gap: 6px; }
-.fork-risk span { display: flex; gap: 3px; }
-.fork-risk .fork-risk-bar { display: block; width: 46px; height: 9px; background: var(--divider); border-radius: 3px; overflow: hidden; }
-.fork-risk .fork-risk-bar i { display: block; height: 100%; width: auto; }
-.fork-risk.risk-low .fork-risk-bar i { background: #3F7A22; }
-.fork-risk.risk-medium .fork-risk-bar i { background: #E8892A; }
-.fork-risk.risk-high .fork-risk-bar i { background: #C83A2E; }
-.fork-risk i { width: 9px; height: 13px; background: var(--divider); }
-.fork-risk.risk-low b { color: #2F6418; }  .fork-risk.risk-low i.on { background: #3F7A22; }
-.fork-risk.risk-medium b { color: #9A5300; } .fork-risk.risk-medium i.on { background: #E8892A; }
-.fork-risk.risk-high b { color: #A8281E; }  .fork-risk.risk-high i.on { background: #C83A2E; }
+.fork-chances { display: flex; align-items: center; gap: 6px; }
+.fork-chances-bar { display: flex; width: 54px; height: 9px; background: var(--divider); border-radius: 3px; overflow: hidden; }
+.fork-chances-bar i { display: block; height: 100%; }
 .fork-foot { display: flex; align-items: center; gap: 16px; }
 .fork-foot-text { flex: 1; font-size: 12px; line-height: 1.4; color: var(--text-mute); }
 .fork-foot-timer { flex: none; width: 300px; display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-mute); }

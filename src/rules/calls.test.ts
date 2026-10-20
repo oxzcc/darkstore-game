@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GameState } from '../model/game';
 import type { CallAnswer } from '../model/call';
 import { WAREHOUSE_LAYOUT } from '../config/warehouse';
-import { CALLS, SITUATION_BY_ID } from '../config/calls';
+import { CALLS, SITUATION_BY_ID, type CallOption } from '../config/calls';
 import { buildWarehouseMap } from './warehouse';
 import { createInitialGame } from './game';
 import { openOrders } from './tasks/generator';
@@ -10,7 +10,7 @@ import { dispatchTask } from './tasks/lifecycle';
 import { advanceWorld } from './advance';
 import { pickerActivity } from './jobs';
 import { createRng, type Rng } from './random';
-import { answerCall, applyCalls, callText, complicationChance, optionsFor, planCall, raiseRisk, revealCalls } from './calls';
+import { answerCall, autoChoice, callText, optionChances, optionsFor, planCall, revealCalls } from './calls';
 
 const map = buildWarehouseMap(WAREHOUSE_LAYOUT);
 
@@ -87,7 +87,9 @@ describe('развилки: ответ', () => {
     const at = runUntil(s, (x) => x.calls.length > 0);
     const a = answerCall(at, at.calls[0].id, 'search');
     expect(a.calls).toHaveLength(0);
-    expect(a.tasks[taskId].callLog).toEqual([{ situationId: 'missing', lineIndex: 0, optionId: 'search', risk: 'medium', auto: false }]);
+    // шансы — те, что были на карточке: «Поискать рядом» — обычно, Нюх; у Лаки Нюх 5 → 60 / 30 / 10
+    expect(a.tasks[taskId].callLog).toEqual([{ situationId: 'missing', lineIndex: 0, optionId: 'search', auto: false,
+      chances: CALLS.levels.normal, check: { stat: 'accuracy', value: 5 } }]);
     const job = a.pickers.lucky.job!;
     expect(job.steps[job.stepIndex]).toMatchObject({ kind: 'delay', seconds: 15 });
     expect(pickerActivity(a, 'lucky').kind).toBe('busy');
@@ -102,7 +104,7 @@ describe('развилки: ответ', () => {
     expect(answerCall(queued, queued.calls[0].id, 'search')).toBe(queued);
   });
 
-  it('не ответил — сборщик решает сам, риск на ступень выше; событие говорит, что он выбрал', () => {
+  it('не ответил — сборщик решает сам, характеристика −2; событие говорит, что он выбрал', () => {
     const { s, taskId } = sentWithCall();
     const at = runUntil(s, (x) => x.calls.length > 0);
     let after = at;
@@ -115,8 +117,9 @@ describe('развилки: ответ', () => {
     const log = after.tasks[taskId].callLog!;
     expect(log).toHaveLength(1);
     expect(log[0].auto).toBe(true);
-    const base = SITUATION_BY_ID.missing.options.find((o) => o.id === log[0].optionId)!.risk;
-    expect(log[0].risk).toBe(raiseRisk(base));
+    const option = SITUATION_BY_ID.missing.options.find((o) => o.id === log[0].optionId)!;
+    expect(log[0].chances).toEqual(optionChances(option, after.pickers.lucky, CALLS.autoPenalty));
+    expect(log[0].chances!.perfect).toBeLessThan(optionChances(option, after.pickers.lucky).perfect);
     expect(answered).toEqual([log[0].optionId]);
     // выбрал ровно то, что окно обещало заранее («Лаки выберет вариант …»)
     expect(log[0].optionId).toBe(at.calls[0].autoOptionId);
@@ -132,54 +135,87 @@ describe('развилки: ответ', () => {
   });
 });
 
-describe('развилки: влияние на исход', () => {
-  const ans = (optionId: string, risk: CallAnswer['risk']): CallAnswer => ({ situationId: 'missing', lineIndex: 0, optionId, risk, auto: false });
+describe('шансы варианта (docs/10, раздел 14.6)', () => {
+  const g = createInitialGame(map, 1);
+  const opt = (sit: string, id: string) => SITUATION_BY_ID[sit].options.find((o) => o.id === id)!;
+  const pct = (o: CallOption, pickerId: string, penalty = 0) => {
+    const c = optionChances(o, g.pickers[pickerId], penalty);
+    return [Math.round(c.perfect * 100), Math.round(c.withErrors * 100), Math.round(c.failed * 100)];
+  };
 
-  it('осложнение ухудшает исход на ступень, без осложнения исход тот же', () => {
-    expect(applyCalls('perfect', [ans('search', 'medium')], fixed(0.1))).toBe('withErrors'); // 0,1 < 0,35
-    expect(applyCalls('perfect', [ans('search', 'medium')], fixed(0.9))).toBe('perfect');
-    expect(applyCalls('failed', [ans('search', 'high')], fixed(0))).toBe('failed');
-    expect(applyCalls('perfect', undefined, fixed(0))).toBe('perfect');
+  it('пример «Пробка в аллее»: протиснуться — Лапы, попросить — Дружелюбие, подождать — надёжно', () => {
+    expect(pct(opt('jam', 'squeeze'), 'korzh')).toEqual([58, 26, 16]); // Лапы 8
+    expect(pct(opt('jam', 'squeeze'), 'buran')).toEqual([28, 41, 31]); // Лапы 3
+    expect(pct(opt('jam', 'askMove'), 'korzh')).toEqual([66, 27, 7]);  // Дружелюбие 6
+    expect(pct(opt('jam', 'askMove'), 'buran')).toEqual([42, 39, 19]); // Дружелюбие 2
+    for (const id of ['lucky', 'korzh', 'buran']) expect(pct(opt('jam', 'wait'), id)).toEqual([80, 17, 3]);
   });
 
-  it('«пропустить позицию» — исход не выше «с ошибками»', () => {
-    expect(applyCalls('perfect', [ans('skip', 'low')], fixed(0.9))).toBe('withErrors');
+  it('вариант с потолком: «Идеально» не выпадает — 0 / 97 / 3', () => {
+    expect(pct(opt('missing', 'skip'), 'lucky')).toEqual([0, 97, 3]);
   });
 
-  it('риск на ступень выше не выходит за «высокий»', () => {
-    expect(raiseRisk('low')).toBe('medium');
-    expect(raiseRisk('high')).toBe('high');
+  it('усталость и «решил сам» снижают характеристику; шансы в границах и в сумме 1', () => {
+    const korzh = g.pickers.korzh;
+    const tired = { ...korzh, stats: { ...korzh.stats, fatigue: 100 } };
+    const o = opt('jam', 'squeeze');
+    expect(optionChances(o, tired).perfect).toBeLessThan(optionChances(o, korzh).perfect);
+    expect(pct(o, 'korzh', CALLS.autoPenalty)).toEqual([46, 32, 22]); // Лапы 8 − 2
+    const best = { ...korzh, stats: { ...korzh.stats, speed: 10, accuracy: 10, strength: 10, memory: 10, friendly: 10 } };
+    for (const s of Object.values(SITUATION_BY_ID)) for (const x of s.options) {
+      for (const p of [best, { ...korzh, stats: { ...korzh.stats, speed: 1, accuracy: 1, strength: 1, memory: 1, friendly: 1 } }]) {
+        const c = optionChances(x, p, 2);
+        for (const v of [c.perfect, c.withErrors, c.failed]) { expect(v).toBeGreaterThanOrEqual(0); expect(v).toBeLessThanOrEqual(1); }
+        expect(c.perfect + c.withErrors + c.failed).toBeCloseTo(1, 9);
+      }
+    }
   });
 
-  it('раскрытие: что выпало по каждой развилке и каким стал исход', () => {
-    const r = revealCalls('perfect', [ans('search', 'medium'), ans('skip', 'low')], fixed(0.1, 0.9));
-    expect(r.calls.map((c) => [c.complication, c.capped, c.after])).toEqual([[true, false, 'withErrors'], [false, false, 'withErrors']]);
+  it('сам сборщик выбирает лучший для себя вариант (с характеристикой −2)', () => {
+    // Коржик в пробке: Дружелюбие 6 − 2 = 4 → «попросить» 54%, а «подождать» — 80% у всех
+    expect(autoChoice(optionsFor(SITUATION_BY_ID.jam, g.pickers.korzh), g.pickers.korzh).id).toBe('wait');
+  });
+
+  it('у каждого варианта, кроме «надёжно», есть характеристика', () => {
+    for (const s of Object.values(SITUATION_BY_ID)) for (const o of s.options) {
+      if (o.level !== 'safe') expect(o.stat).toBeDefined();
+    }
+  });
+});
+
+describe('развилки: один бросок в конце задания', () => {
+  const ans = (optionId: string, chances = CALLS.levels.normal): CallAnswer => ({ situationId: 'missing', lineIndex: 0, optionId, auto: false, chances });
+
+  it('исход — бросок по шансам варианта; маркер — куда упало', () => {
+    expect(revealCalls([ans('search')], fixed(0.3), 0, 'off')!.final).toBe('perfect');    // < 0,6
+    expect(revealCalls([ans('search')], fixed(0.7), 0, 'off')!.final).toBe('withErrors'); // 0,6…0,9
+    const r = revealCalls([ans('search')], fixed(0.95), 0, 'off')!;
+    expect(r).toMatchObject({ final: 'failed', roll: 0.95, chances: CALLS.levels.normal });
+    expect(r.calls[0]).toMatchObject({ after: 'failed', capped: false });
+    expect(revealCalls(undefined, fixed(0))).toBe(null);
+  });
+
+  it('подпорки работают и тут: маленький провал не выпадает, у потолка подарка нет', () => {
+    const tiny = { perfect: 0.6, withErrors: 0.36, failed: 0.04 }; // провал 4%
+    expect(revealCalls([ans('search', tiny)], fixed(0.99), 0, 'on')!.final).toBe('withErrors');
+    const capped = { perfect: 0, withErrors: 0.97, failed: 0.03 };
+    const r = revealCalls([ans('skip', capped)], fixed(0.01), 0, 'on')!;
     expect(r.final).toBe('withErrors');
-    expect(r.calls[0].chance).toBe(CALLS.complication.medium);
+    expect(r.calls[0].capped).toBe(true);
   });
 });
 
 describe('развилка заменяет бросок по характеристикам (решение автора 14.10)', () => {
-  it('риск ответа зависит от точности: точный реже ошибается, неточный чаще, в границах', () => {
-    const { ref, min, max } = CALLS.riskByAccuracy;
-    expect(complicationChance('low', ref)).toBeCloseTo(CALLS.complication.low);
-    expect(complicationChance('low', 10)).toBeLessThan(CALLS.complication.low);
-    expect(complicationChance('low', 1)).toBeGreaterThan(CALLS.complication.low);
-    expect(complicationChance('high', 100)).toBeCloseTo(CALLS.complication.high * min);
-    expect(complicationChance('high', -100)).toBeCloseTo(CALLS.complication.high * max);
-  });
-
-  it('заказ с развилкой: исход только от неё — без осложнения всегда «идеально»', () => {
-    // много разных зёрен: если бы бросок по характеристикам остался, часть заказов вышла бы хуже «идеально»
+  it('заказ с развилкой: исход — от броска по шансам ответа', () => {
     for (let seed = 1; seed <= 12; seed++) {
       const { s, taskId } = sentWithCall('lucky', 'missing', createInitialGame(map, seed));
       const at = runUntil(s, (x) => x.calls.length > 0);
       let x = answerCall(at, at.calls[0].id, 'search');
       for (let i = 0; i < 5000 && x.tasks[taskId].status !== 'done'; i++) x = advanceWorld(x, map, 0.1).state;
       const done = x.shiftLog.find((e) => e.kind === 'taskDone' && e.taskId === taskId);
-      expect(done && done.kind === 'taskDone' && done.reveal?.base).toBe('perfect');
-      const call = done && done.kind === 'taskDone' ? done.reveal!.calls[0] : null;
-      expect(x.tasks[taskId].outcome).toBe(call!.complication ? 'withErrors' : 'perfect');
+      const reveal = done && done.kind === 'taskDone' ? done.reveal! : null;
+      expect(reveal!.chances).toEqual(x.tasks[taskId].callLog![0].chances);
+      expect(x.tasks[taskId].outcome).toBe(reveal!.calls[0].after);
     }
   });
 });
