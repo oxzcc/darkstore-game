@@ -919,3 +919,106 @@ svg.i.sm { width: 18px; height: 18px; }
 .phone .toasts { top: 74px; width: calc(100vw - 24px); }
 .pf-rest { margin: 0 12px 12px; min-height: 44px; }
 .phone .picker-card .seg i { flex: 1 1 0; width: auto; height: 6px; }
+
+/* ---------- R2: окна на телефоне — листом снизу (макет R0) ---------- */
+@keyframes sheet-up { from { transform: translateY(100%); } }
+/* общий вид листа: углы скруглены только сверху, без тени, во всю ширину */
+.phone .ac-window > .vx-edge, .phone .fork > .vx-edge, .phone .summary > .vx-edge { border-radius: 22px 22px 0 0; box-shadow: none; padding-bottom: 0; }
+.phone .ac-window > .vx-edge > .vx-body, .phone .fork > .vx-edge > .vx-body, .phone .summary > .vx-edge > .vx-body { border-radius: 19px 19px 0 0; }
+.phone .call-close { width: 44px; height: 44px; font-size: 20px; }
+
+/* «Кого отправить?» и профиль: лист от ~120 px сверху до низа */
+.phone .ac-veil { padding: 0; place-items: end stretch; }
+.phone .ac-wrap, .phone .pf-wrap { width: 100%; height: calc(100% - 110px); max-height: none; animation: sheet-up 0.25s ease-out; }
+.phone .ac-window { height: 100%; }
+.phone .ac-window > .vx-edge { height: 100%; }
+.phone .ac-inner { flex: 1 1 auto; height: 100%; padding: 14px 16px calc(18px + env(safe-area-inset-bottom)); gap: 10px; }
+.phone .ac-title { font-size: 19px; }
+.ac-plaques { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 6px; }
+.ac-plaques > span { min-width: 0; display: flex; flex-direction: column; padding: 6px 8px; background: #fff; border: 2px solid var(--line-in); border-radius: 10px; }
+.ac-plaques small { font-size: 10px; color: var(--text-mute); }
+.ac-plaques b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ac-plaques .warn b { color: var(--failed); }
+.phone .ac-lines { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; max-height: 120px; padding: 10px; background: #fff; border: 2px solid var(--line-in); border-radius: 12px; font-size: 13px; }
+.phone .ac-line { min-width: 0; white-space: nowrap; }
+/* сборщики — строками с аватаром слева, делят высоту до низа */
+.phone .ac-cards { flex: 1 1 auto; min-height: 0; grid-template-columns: 1fr; grid-auto-rows: minmax(0, 1fr); gap: 10px; padding-bottom: 4px; }
+.phone .ac-pick { display: flex; min-height: 0; }
+.phone .ac-pick:hover:not(.busy) { transform: none; }
+.phone .ac-card { flex: 1 1 auto; }
+.phone .ac-card > .vx-edge > .vx-body { flex-direction: row; }
+.phone .ac-portrait { width: 132px; height: auto; flex: none; border-bottom: 0; border-right: 3px solid var(--edge-color); }
+.phone .ac-flag { font-size: 13px; padding: 2px 12px 2px 8px; top: 8px; }
+.phone .ac-body { min-width: 0; justify-content: center; padding: 10px 12px; gap: 10px; }
+.phone .ac-rank { font-size: 14px; }
+.phone .ac-bar { height: 24px; border-width: 2px; }
+.phone .ac-bar > b { font-size: 11px; }
+.phone .ac-q { width: 32px; height: 32px; }
+.phone .ac-time { font-size: 13px; }
+.phone .ac-tired, .phone .ac-busy { font-size: 11px; padding: 2px 6px; right: 6px; bottom: 6px; }
+
+/* профиль: одной колонкой */
+.phone .pf-inner { grid-template-columns: 1fr; padding: 14px 16px calc(18px + env(safe-area-inset-bottom)); gap: 14px; }
+.phone .pf-portrait { height: 170px; }
+.phone .pf-stat { grid-template-columns: 18px 70px 1fr; }
+
+/* развилка: лист по высоте содержимого, прижат к низу; портрет рядом с репликой, варианты столбиком */
+.phone .call-center.call-sheet { left: 0; right: 0; top: auto; bottom: 0; transform: none; }
+.phone .fork-wrap { padding-top: 0; animation: sheet-up 0.25s ease-out; }
+.phone .fork { width: 100vw; }
+.phone .fork > .vx-edge { padding: 3px 3px 0; }
+.phone .fork > .vx-edge > .vx-body { padding: 12px 16px calc(20px + env(safe-area-inset-bottom)); gap: 10px; }
+.phone .fork-top { gap: 12px; align-items: flex-end; }
+.phone .fork-top .fork-portrait { position: relative; left: auto; top: auto; flex: none; width: 112px; height: 124px; border: 3px solid var(--pc); border-radius: 14px; }
+.phone .fork-talk { padding-top: 0; }
+.phone .fork-tab { margin-left: 0; font-size: 13px; padding: 4px 10px; }
+.phone .fork-tab-row { align-items: center; margin-bottom: 8px; }
+.phone .fork-tab-row .call-close { margin-bottom: 0; }
+.phone .fork-bubble { padding: 10px 12px; font-size: 15px; }
+.phone .fork-bubble::before { bottom: 18px; }
+.phone .fork-options { grid-template-columns: 1fr; gap: 10px; }
+.phone .fork-option { padding: 12px 14px; gap: 8px; }
+.phone .fork-option-head { font-size: 17px; }
+.phone .call-key { display: none; } /* клавиш 1–3 на телефоне нет */
+
+/* итог: три кадра стопкой по центру экрана, стрелок между кадрами нет */
+.phone .rw { grid-template-columns: 1fr; width: 100vw; max-height: 100vh; padding: 24px 14px calc(20px + env(safe-area-inset-bottom)); row-gap: 22px; align-content: center; }
+.phone .rw-join { display: none; }
+.phone .rw-panel { padding: 24px 12px 12px; gap: 10px; }
+.phone .rw-p1 { flex-direction: row; flex-wrap: wrap; align-items: center; padding-bottom: 14px; }
+.phone .rw-p1 .rw-plate { flex-basis: 100%; }
+.phone .rw-face { order: 1; margin-top: 0; width: 92px; height: 92px; border-radius: 20px; flex: none; }
+.phone .rw-name { font-size: 12px; bottom: -12px; }
+.phone .rw-bubble { order: 2; flex: 1 1 0; min-width: 0; margin: 0 0 0 14px; font-size: 14px; padding: 10px 12px; }
+.phone .rw-bubble::before { left: -14px; top: 50%; bottom: auto; margin: -12px 0 0; border-right: 0; border-bottom: 4px solid var(--ink); border-left: 4px solid var(--ink); }
+.phone .rw-art { height: 150px; }
+.phone .rw-shout { font-size: 20px; min-height: 26px; }
+.phone .rw-title { font-size: 17px; }
+.phone .rw-go { min-height: 52px; }
+
+/* итоги смены и подсказки обучения */
+.phone .summary-back .call-center { left: 0; right: 0; top: auto; bottom: 0; transform: none; }
+.phone .summary { width: 100vw; max-width: none; animation: sheet-up 0.25s ease-out; }
+.phone .summary-body { max-height: calc(100vh - 170px); overflow-y: auto; padding: 14px 16px 8px; }
+.phone .summary-outcomes { flex-wrap: wrap; gap: 8px 14px; font-size: 14px; }
+.phone .summary > .vx-edge > .vx-body > .buttons { padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+.phone .hint { width: calc(100vw - 24px); }
+.phone .btn.primary { min-height: 52px; }
+.phone .ac-veil:has(> .rw) { place-items: center stretch; } /* итог — по центру, а не листом */
+
+/* R2, правка после проверки на телефоне (20.10): итог не влезал по высоте — верх и «Дальше» уходили за экран.
+   Стопка выравнивается по центру только если влезает (safe), иначе — от верха с прокруткой; средний кадр — в две колонки, барабан мельче. */
+.phone .rw { align-content: safe center; row-gap: 18px; padding-top: 20px; }
+.phone .rw-p2 { display: grid; grid-template-columns: minmax(0, 1fr) 128px; column-gap: 12px; row-gap: 8px; align-content: start; }
+.phone .rw-p2 > :not(.rr-reel):not(.rw-tab) { grid-column: 1; }
+.phone .rw-p2 > .rr-reel { grid-column: 2; grid-row: 1 / span 4; align-self: center; width: 232px; zoom: 0.55; }
+.phone .rw-p2 > .rw-art { grid-column: 1 / -1; height: 140px; }
+.phone .rw-p2 .rw-shout { align-self: end; text-align: left; font-size: 18px; }
+.phone .rw-sticker { padding: 8px 10px; border-width: 3px; }
+.phone .rw-sticker b { font-size: 14px; }
+.phone .rw-check { width: 26px; height: 26px; }
+.phone .rw-odds { font-size: 12px; }
+.phone .rw-whyc { font-size: 12px; }
+.phone .rw-p3 { gap: 8px; }
+.phone .rw-ribbon { margin: 0 24px 2px; padding: 6px 14px; font-size: 21px; }
+.phone .rw-text { font-size: 13px; }

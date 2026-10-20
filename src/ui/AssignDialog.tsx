@@ -6,13 +6,14 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Picker } from '../model/picker';
 import type { Task, TaskType } from '../model/task';
 import { useGameStore } from '../store/gameStore';
-import { activityOf, addressText, assignCardView, clockText, groupedLines, money, pickerList, taskSummary, type AssignCardView, type ChancePart } from '../store/selectors';
+import { activityOf, addressText, assignCardView, clockText, groupedLines, money, pickerList, takeTimer, taskSummary, type AssignCardView, type ChancePart } from '../store/selectors';
 import { SPEC_RANKS, TIRED_BADGE_FROM } from '../config/pickers';
 import { activityLine } from './activityText';
 import { EXP_NAME, OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK, TASK_TYPE_LOOK, taskTitle } from './labels';
 import { Avatar, Pips } from './PickerBits';
 import Vx from './Vx';
 import Icon from './icons';
+import { usePhone } from '../app/usePhone';
 
 const pct = (v: number) => Math.round(v * 100);
 const signed = (v: number) => {
@@ -132,6 +133,43 @@ function TaskHead({ task }: { task: Task }) {
   const game = useGameStore((s) => s.game);
   const closeAssign = useGameStore((s) => s.closeAssign);
   const look = TASK_TYPE_LOOK[task.type];
+  const phone = usePhone();
+  const lines = (
+    <div className="ac-lines">
+      {task.type === 'order' && task.payload.lines.map((l) => (
+        <span key={`${l.productId}-${addressText(l.address)}`} className="ac-line">
+          <span className="tag">{addressText(l.address)}</span>
+          {game.products[l.productId]?.name ?? l.productId} ×{l.qty}
+        </span>
+      ))}
+      {/* у списания одна позиция, и она уже написана строкой выше — не повторяем (прогон 18.10) */}
+      {task.type !== 'order' && task.type !== 'writeoff' && groupedLines(game, task).map((g) => (
+        <span key={g.productId} className="ac-line">
+          {g.name} ×{g.qty}
+          {g.places.length > 0 && <span className="places">{g.places.join(', ')}</span>}
+        </span>
+      ))}
+    </div>
+  );
+  // телефон (R2, макет R0): название и ×, три плашки «Награда / Взять до / Что внутри», позиции в две колонки
+  if (phone) {
+    const timer = takeTimer(game, task);
+    return (
+      <div className="ac-head">
+        <div className="ac-head-row">
+          <Vx className="task-icon" style={{ '--tint': look.tint } as CSSProperties}><Icon name={look.icon} /></Vx>
+          <div className="ac-title grow">{taskTitle(task)}</div>
+          <button className="call-close" onClick={closeAssign} aria-label="Закрыть">×</button>
+        </div>
+        <div className="ac-plaques">
+          <span><small>Награда</small><b>{task.overdue ? 'нет' : `+${money(task.reward.money)}`}</b></span>
+          <span className={timer?.warn ? 'warn' : ''}><small>Взять до</small><b>{timer ? clockText(timer.secondsLeft) : task.overdue ? 'просрочено' : '—'}</b></span>
+          <span><small>Что внутри</small><b>{taskSummary(game, task)}</b></span>
+        </div>
+        {lines}
+      </div>
+    );
+  }
   return (
     <div className="ac-head">
       <div className="ac-head-row">
@@ -143,21 +181,7 @@ function TaskHead({ task }: { task: Task }) {
         <div className="reward">{task.overdue ? 'без награды' : `+${money(task.reward.money)}`}</div>
         <button className="call-close" onClick={closeAssign} aria-label="Закрыть">×</button>
       </div>
-      <div className="ac-lines">
-        {task.type === 'order' && task.payload.lines.map((l) => (
-          <span key={`${l.productId}-${addressText(l.address)}`} className="ac-line">
-            <span className="tag">{addressText(l.address)}</span>
-            {game.products[l.productId]?.name ?? l.productId} ×{l.qty}
-          </span>
-        ))}
-        {/* у списания одна позиция, и она уже написана строкой выше — не повторяем (прогон 18.10) */}
-        {task.type !== 'order' && task.type !== 'writeoff' && groupedLines(game, task).map((g) => (
-          <span key={g.productId} className="ac-line">
-            {g.name} ×{g.qty}
-            {g.places.length > 0 && <span className="places">{g.places.join(', ')}</span>}
-          </span>
-        ))}
-      </div>
+      {lines}
     </div>
   );
 }
