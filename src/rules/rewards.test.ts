@@ -3,7 +3,8 @@ import type { GameState } from '../model/game';
 import type { OrderTask } from '../model/task';
 import type { OutcomeReveal } from '../model/call';
 import { WAREHOUSE_LAYOUT } from '../config/warehouse';
-import { RATING_RANGE } from '../config/balance';
+import { RATING } from '../config/balance';
+import { ratingOf } from './rating';
 import { RESULT_SHARE } from '../config/calls';
 import { buildWarehouseMap } from './warehouse';
 import { createInitialGame } from './game';
@@ -35,16 +36,18 @@ describe('награда за задание (M6)', () => {
     const before = onShelves(g, t);
     const s = applyTaskResult(g, t.id, 'perfect');
     expect(s.money).toBe(g.money + t.reward.money);
-    expect(s.rating).toBeCloseTo(Math.min(RATING_RANGE.max, g.rating + t.reward.rating));
+    expect(s.rating).toBeCloseTo(ratingOf([...RATING.start.slice(1), RATING.scores.perfect])); // X4: среднее последних оценок
     // если две позиции на одной полке — не бывает: в заказе товары разные, а на полке один товар
     expect(onShelves(s, t)).toEqual(before.map((q, i) => q - t.payload.lines[i].qty));
   });
 
-  it('рейтинг не выходит за границы', () => {
+  it('рейтинг — среднее оценок: не выше 5 и не ниже 1', () => {
     const g = createInitialGame(map, 1);
     const t = firstOrder(g);
-    expect(applyTaskResult({ ...g, rating: RATING_RANGE.max }, t.id, 'perfect').rating).toBe(RATING_RANGE.max);
-    expect(applyTaskResult({ ...g, rating: RATING_RANGE.min }, t.id, 'failed').rating).toBe(RATING_RANGE.min);
+    const top = { ...g, ratingScores: Array(RATING.window).fill(5), rating: 5 };
+    expect(applyTaskResult(top, t.id, 'perfect').rating).toBe(5);
+    const bottom = { ...g, ratingScores: Array(RATING.window).fill(1), rating: 1 };
+    expect(applyTaskResult(bottom, t.id, 'withErrors').rating).toBeGreaterThan(1);
   });
 
   it('ошибка с количеством: снимается столько, сколько собрано', () => {

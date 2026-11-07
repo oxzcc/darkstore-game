@@ -23,6 +23,7 @@ export type ShiftEvent =
       /** Развилки не было — бросок по характеристикам: шансы и куда выпало (0…1). Его показывает барабан (P3). */
       roll?: { chances: Record<Outcome, number>; value: number };
       cell?: Cell;            // где стоял сборщик, закончив (у заказа — у какого стола фасовал; W8a: туда встаёт пакет)
+      rating?: number;        // на сколько изменился рейтинг (X4: среднее оценок), ставит advanceWorld после applyTaskResult
     }
   | {
       kind: 'taskExpired';    // срок взять задание вышел (M8b): штраф; kept — задание осталось (выкладка, списание)
@@ -60,6 +61,8 @@ export type GameState = {
   clock: GameClock;
   money: number;     // пока не меняется: деньги и рейтинг от исходов — M6
   rating: number;
+  /** Последние оценки заданий (X4): рейтинг — их среднее (rules/rating.ts). */
+  ratingScores?: number[];
 
   products: Record<string, Product>;
   stock: Stock;

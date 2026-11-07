@@ -80,7 +80,7 @@ describe('тексты', () => {
     const t = putaways(s)[0];
     for (const sit of SITUATIONS.filter((x) => x.taskType === 'receiving' || x.taskType === 'putaway')) {
       const ctx = { ...lineContext(s, sit.taskType === 'receiving' ? r.id : t.id, 0, 'lucky'), seconds: 10 };
-      const texts = [sit.speech, ...sit.options.flatMap((o) => [o.description, o.okTitle, o.okText, o.badTitle, o.badText])];
+      const texts = [sit.speech, ...sit.options.flatMap((o) => [o.description, o.okTitle, o.okText, o.midTitle, o.midText, o.badTitle, o.badText])];
       for (const text of texts) {
         const filled = fillText(text, ctx);
         expect(filled.includes('{')).toBe(false);
@@ -188,7 +188,7 @@ describe('развилки списания (M7e2)', () => {
     expect(sits).toHaveLength(5);
     for (const sit of sits) {
       const ctx = { ...lineContext(s, t.id, 0, 'lucky'), seconds: 10 };
-      const texts = [sit.speech, ...sit.options.flatMap((o) => [o.description, o.okTitle, o.okText, o.badTitle, o.badText])];
+      const texts = [sit.speech, ...sit.options.flatMap((o) => [o.description, o.okTitle, o.okText, o.midTitle, o.midText, o.badTitle, o.badText])];
       if (sit.tsdText) texts.push(sit.tsdText.label, sit.tsdText.description, ...Object.values(sit.tsdText.results).flatMap((r) => [r.title, r.text]));
       for (const text of texts) expect(fillText(text, ctx).includes('{')).toBe(false);
     }

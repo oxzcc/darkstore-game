@@ -208,7 +208,9 @@ export function advanceWorld(state: GameState, map: WarehouseMap, dt: number): {
   // закрытые задания: деньги, рейтинг, собранный товар уходит с полок (M6)
   for (const e of events) {
     if (e.kind !== 'taskDone') continue;
+    const ratingBefore = next.rating;
     next = applyTaskResult(next, e.taskId, e.outcome, e.reveal);
+    e.rating = next.rating - ratingBefore; // для всплывашки и окна итога (X4): рейтинг — среднее, прибавку заранее не знаем
     // приёмка закрыта — на каждую принятую паллету появляется «Выкладка» (M7c)
     const done = next.tasks[e.taskId];
     if (done.type === 'receiving') next = createPutawayTasks(next, map, done.payload.deliveryId);

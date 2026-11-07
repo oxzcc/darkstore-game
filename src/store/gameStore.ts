@@ -258,7 +258,7 @@ export const useGameStore = create<Store>()(persist((set) => ({
         }
         // начисленное за задание — всплывашка у денег и рейтинга (те же числа, что прибавил applyTaskResult)
         if (e.kind === 'taskDone') {
-          const gain = { id: nextToastId++, ...rewardFor(state.tasks[e.taskId], e.outcome, isTutorial(state)) };
+          const gain = { id: nextToastId++, money: rewardFor(state.tasks[e.taskId], e.outcome, isTutorial(state)).money, rating: e.rating ?? 0 };
           // без развилки — барабан по центру; деньги всплывут, когда он закроется (P3)
           if (ROLL_REEL.enabled && e.roll && !e.reveal) {
             const t = state.tasks[e.taskId];
