@@ -6,11 +6,11 @@ import type { GameState, ShiftEvent } from '../model/game';
 import type { Picker } from '../model/picker';
 import type { Task } from '../model/task';
 import type { WarehouseMap } from '../model/warehouse';
-import { DEADLINE, TIMING } from '../config/balance';
+import { DEADLINE, RATING, TIMING } from '../config/balance';
 import { buildJob } from './jobs';
 import { findPath, zoneAccess } from './warehouse';
 import { secondsPerCell } from './time';
-import { clampRating } from './rewards';
+import { addRatingScore } from './rating';
 import { isTutorial, shiftPlan } from './shiftPlan';
 
 /** Эталонный сборщик (скорость 5), стоит у зоны, откуда задание начинается: заказ — у фасовки, остальное — у приёмки. */
@@ -61,9 +61,9 @@ export function secondsToTake(state: GameState, task: Task): number | null {
   return Math.max(0, task.deadline - state.clock.time);
 }
 
-/** Штраф за просрочку: доля награды задания (DEADLINE.penalty). Положительные числа — сколько отнимаем. */
-export function penaltyFor(task: Task): { money: number; rating: number } {
-  return { money: Math.round(task.reward.money * DEADLINE.penalty.money), rating: task.reward.rating * DEADLINE.penalty.rating };
+/** Штраф деньгами за просрочку: доля награды задания (DEADLINE.penalty). Рейтинг — оценкой RATING.scores.expired (X4). */
+export function penaltyFor(task: Task): { money: number } {
+  return { money: Math.round(task.reward.money * DEADLINE.penalty.money) };
 }
 
 /**
@@ -76,7 +76,8 @@ export function expireTasks(state: GameState): { state: GameState; events: Shift
   const events: ShiftEvent[] = [];
   for (const t of Object.values(state.tasks)) {
     if (t.status !== 'new' || t.overdue || t.deadline === null || now < t.deadline) continue;
-    const pen = isTutorial(s) ? { money: 0, rating: 0 } : penaltyFor(t); // обучающая смена — без штрафов (M8d)
+    const tutorial = isTutorial(s);
+    const pen = tutorial ? { money: 0 } : penaltyFor(t); // обучающая смена — без штрафов (M8d)
     const money = Math.min(s.money, pen.money); // деньги не уходят ниже 0
     const kept = t.type === 'putaway' || t.type === 'writeoff';
     const tasks = { ...s.tasks, [t.id]: kept ? { ...t, overdue: true } : { ...t, status: 'expired' as const } } as GameState['tasks'];
@@ -91,8 +92,10 @@ export function expireTasks(state: GameState): { state: GameState; events: Shift
         delete deliveries[d.id];
       }
     }
-    s = { ...s, tasks, deliveries, pallets, money: s.money - money, rating: clampRating(s.rating - pen.rating) };
-    events.push({ kind: 'taskExpired', taskId: t.id, at: now, money, rating: pen.rating, kept });
+    const before = s.rating;
+    s = { ...s, tasks, deliveries, pallets, money: s.money - money };
+    if (!tutorial) s = addRatingScore(s, RATING.scores.expired); // рейтинг — оценка «1» в историю (X4)
+    events.push({ kind: 'taskExpired', taskId: t.id, at: now, money, rating: Math.max(0, before - s.rating), kept });
   }
   return { state: s, events };
 }

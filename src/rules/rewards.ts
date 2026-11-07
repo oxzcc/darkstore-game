@@ -6,7 +6,8 @@ import type { OutcomeReveal } from '../model/call';
 import type { Address } from '../model/address';
 import type { Stock } from '../model/stock';
 import type { OrderTask, Outcome, Task } from '../model/task';
-import { RATING_RANGE } from '../config/balance';
+import { RATING, RATING_RANGE } from '../config/balance';
+import { addRatingScore } from './rating';
 import { RESULT_SHARE, SITUATION_BY_ID, WITH_ERRORS_MONEY_BY_TYPE } from '../config/calls';
 import { acceptDelivery } from './deliveries';
 import { completePutaway } from './putaway';
@@ -16,7 +17,8 @@ import { sameAddress } from './address';
 import { isExpiring, removeStock } from './stock';
 
 /**
- * Сколько денег и рейтинга даёт исход: доля от базовой награды задания (RESULT_SHARE).
+ * Сколько денег даёт исход: доля от базовой награды задания (RESULT_SHARE). Поле rating — старое, рейтинг теперь
+ * считается оценками (X4, rules/rating.ts); насколько он изменился, пишет событие taskDone.rating.
  * У приёмки и выкладки «неплохо» даёт меньше денег (WITH_ERRORS_MONEY_BY_TYPE, решение автора 14.10).
  */
 export function rewardFor(task: Task, outcome: Outcome, noPenalty = false): { money: number; rating: number } {
@@ -94,12 +96,10 @@ export function applyTaskResult(state: GameState, taskId: string, outcome: Outco
     const picked = pickedQty(task, reveal);
     task.payload.lines.forEach((l, i) => { stock = takeFromShelf(stock, l.productId, l.address, picked[i], state.campaign.shift); });
   }
-  const next: GameState = {
-    ...state,
-    money: state.money + reward.money,
-    rating: clampRating(state.rating + reward.rating),
-    stock,
-  };
+  let next: GameState = { ...state, money: state.money + reward.money, stock };
+  // рейтинг (X4): оценка за исход в историю; просроченное уже получило свою оценку, в обучении провал оценку не ставит
+  const tutorialMiss = isTutorial(state) && outcome === 'failed';
+  if (!task.overdue && !tutorialMiss) next = addRatingScore(next, RATING.scores[outcome]);
   // приёмка: паллеты приняты при любом исходе, грузовик уезжает; выкладка: товар на полках (10, раздел 11.6).
   // Задания «Выкладка» на принятые паллеты создаёт advanceWorld — ему нужна карта склада.
   if (task.type === 'receiving') return acceptDelivery(next, task.payload.deliveryId);

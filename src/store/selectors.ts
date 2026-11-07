@@ -1,7 +1,7 @@
 // Готовые выборки для интерфейса и сцены (09, раздел 8). Интерфейс сам ничего не считает:
 // шансы и проверки берутся отсюда, а здесь — из rules.
 import type { GameState } from '../model/game';
-import type { OutcomeChances, Task } from '../model/task';
+import type { Outcome, OutcomeChances, Task } from '../model/task';
 import { STAT_KEYS, type Picker, type PickerActivity, type StatBlock } from '../model/picker';
 import { requirementReasons, taskRequirements } from '../rules/requirements';
 import { outcomeBreakdown, outcomeChances, type OutcomeBreakdown } from '../rules/outcome';
@@ -79,6 +79,13 @@ export function assignCardView(game: GameState, pickerId: string, taskId: string
     eta: check.ok ? etaToTask(WAREHOUSE_MAP, picker, task) : null,
     total: check.ok ? jobSecondsEstimate(WAREHOUSE_MAP, picker, task) : null,
   };
+}
+
+/** Тексты итога варианта по исходу (X4): «Идеально» — ok, «Неплохо» — mid, «Провал» — bad. */
+function optionText(o: CallOption, outcome: Outcome): { title: string; text: string } {
+  if (outcome === 'perfect') return { title: o.okTitle, text: o.okText };
+  if (outcome === 'withErrors') return { title: o.midTitle, text: o.midText };
+  return { title: o.badTitle, text: o.badText };
 }
 
 /** Откуда требования задания — для шапки окна назначения (X3). */
@@ -281,7 +288,7 @@ function optionViews(game: GameState, call: Call): CallOptionView[] {
     const busy = game.tsdGame !== null || game.minigame !== null;
     views.push({
       id: TSD_OPTION_ID, label: t.label, description: t.description, seconds: 0, level: 'safe', busyLabel: '',
-      okTitle: '', okText: '', badTitle: '', badText: '',
+      okTitle: '', okText: '', midTitle: '', midText: '', badTitle: '', badText: '',
       tsd: true, chances: null, statValue: null, locked: busy, number: busy ? null : ++n,
       text: busy ? 'ТСД сейчас занят другой игрой.' : fillText(t.description, ctx),
     });
@@ -424,11 +431,11 @@ export function resultView(game: GameState, card: ResultCard) {
     worked,
     /** Подпись итога решения: «Сработало» / «Не сработало», для игры на ТСД — её исход. */
     verdict: c?.tsd ? c.tsd : worked ? 'Сработало' : 'Не сработало',
-    title: tsdText ? tsdText.title : option ? fillText(worked ? option.okTitle : option.badTitle, ctx) : '',
-    text: tsdText ? fillText(tsdText.text, ctx) : option ? fillText(worked ? option.okText : option.badText, ctx) : '',
+    title: tsdText ? tsdText.title : option ? fillText(optionText(option, reveal.final).title, ctx) : '',
+    text: tsdText ? fillText(tsdText.text, ctx) : option ? fillText(optionText(option, reveal.final).text, ctx) : '',
     lines,
     money: { got: reward.money, of: task.reward.money },
-    rating: { got: reward.rating, of: task.reward.rating },
+    rating: { got: card.gain?.rating ?? 0, of: task.reward.rating }, // X4: насколько изменился рейтинг-среднее
     xp: PICKER_GROWTH.xp[reveal.final],
     outcome: reveal.final,
     /** Для сценки-иллюстрации итога (config/vignettes.ts): какая развилка, какой вариант, сработал ли, какой товар. */

@@ -1,7 +1,7 @@
 // Новая игра: стартовое состояние из данных config.
 import type { GameState } from '../model/game';
 import type { WarehouseMap } from '../model/warehouse';
-import { DELIVERY, GAME_STATE_VERSION, START_MONEY, START_RATING, WRITEOFF } from '../config/balance';
+import { DELIVERY, GAME_STATE_VERSION, RATING, START_MONEY, START_RATING, WRITEOFF } from '../config/balance';
 import { PRODUCTS } from '../config/products';
 import { CAMPAIGN_START_SHIFT, EXPIRING_STOCK, INITIAL_STOCK } from '../config/initialStock';
 import { STARTING_PICKERS } from '../config/pickers';
@@ -36,6 +36,7 @@ export function createInitialGame(map: WarehouseMap, seed: number): GameState {
     clock: { time: 0, paused: false, playerSpeed: 1 },
     money: START_MONEY,
     rating: START_RATING,
+    ratingScores: [...RATING.start],
     products: PRODUCTS,
     stock: withExpiring(buildInitialStock(INITIAL_STOCK, PRODUCTS, map, CAMPAIGN_START_SHIFT)),
     tasks: {},

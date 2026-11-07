@@ -19,7 +19,7 @@ function GainPop({ gain, kind }: { gain: Gain; kind: 'money' | 'rating' }) {
     return () => clearTimeout(t);
   }, [gain.id, dismiss, kind]);
   const value = kind === 'money' ? gain.money : gain.rating;
-  if (value === 0) return null;
+  if (kind === 'money' ? value === 0 : Math.abs(value) < 0.005) return null; // рейтинг-среднее (X4) мог почти не сдвинуться
   const text = kind === 'money' ? `${value > 0 ? '+' : '−'}${money(Math.abs(value))}` : signedRating(value);
   return <div className={`gain ${value > 0 ? 'up' : 'down'}`} style={{ '--ms': `${GAIN_MS}ms` } as CSSProperties}>{text}</div>;
 }
