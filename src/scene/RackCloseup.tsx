@@ -52,7 +52,7 @@ export default function RackCloseup({ map, stock }: { map: WarehouseMap; stock: 
     if (!rack) return [];
     return goodsOnShelves(stock)
       .filter(({ address }) => address.aisle === rack.aisle && address.rack === rack.rack)
-      .map(({ address, contents }) => ({ address, layout: shelfLayout(rack, address.shelf, contents) }));
+      .map(({ address, contents }) => ({ address, layout: shelfLayout(rack, address, contents) }));
   }, [rack, stock]);
 
   // ушли от стеллажа — сбросить наведение и курсор

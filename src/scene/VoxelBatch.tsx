@@ -5,10 +5,11 @@
 // по цвету и размеру (с шагом WAREHOUSE_VIEW.softCubes.sizeStep) — одна геометрия ровно нужного размера на группу.
 // Бруски могут стоять под наклоном (VoxelPart.rot).
 import { useLayoutEffect, useMemo, useRef } from 'react';
-import { BoxGeometry, Euler, Matrix4, Quaternion, Vector3, type BufferGeometry, type InstancedMesh } from 'three';
+import { BoxGeometry, CylinderGeometry, Euler, Matrix4, Quaternion, Vector3, type BufferGeometry, type InstancedMesh } from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import type { VoxelPart } from './models/ProductItem';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
+import { ROUND_SEGMENTS } from './models/productShapes';
 import { textureForColor } from './textures';
 import { DECOR } from '../config/decor';
 
@@ -58,6 +59,20 @@ function roundedGeometry(size: [number, number, number], soft: Softness): Buffer
   return g;
 }
 
+/** Цилиндры единичного размера (G1a: бутылки, стаканчики, банки) — растягиваются под каждую деталь, как острые кубики.
+ *  Повёрнуты так, что одна грань смотрит прямо на +z (на лицо товара ложится наклейка). */
+const cylinderCache = new Map<string, BufferGeometry>();
+function cylinderGeometry(top: number, bottom: number): BufferGeometry {
+  const key = `${top}|${bottom}`;
+  let g = cylinderCache.get(key);
+  if (!g) {
+    g = new CylinderGeometry(0.5 * top, 0.5 * bottom, 1, ROUND_SEGMENTS);
+    g.rotateY(Math.PI / ROUND_SEGMENTS);
+    cylinderCache.set(key, g);
+  }
+  return g;
+}
+
 const isSoft = (p: VoxelPart, soft: Softness) => Math.min(...p.size) >= SOFT[soft].minSize;
 const step = (v: number) => Math.max(SOFT.sizeStep, Math.round(v / SOFT.sizeStep) * SOFT.sizeStep);
 
@@ -98,6 +113,18 @@ export default function VoxelBatch({ parts, soft = 'light', wind = false }: { pa
   const groups = useMemo(() => {
     const map = new Map<string, Group>();
     for (const p of parts) {
+      if (p.cyl) {
+        const top = Math.round(p.cyl.top * 100) / 100;
+        const bottom = Math.round(p.cyl.bottom * 100) / 100;
+        const key = `${p.color}|cyl|${top}|${bottom}`;
+        let g = map.get(key);
+        if (!g) {
+          g = { key, color: p.color, parts: [], geometry: cylinderGeometry(top, bottom), stretch: true };
+          map.set(key, g);
+        }
+        g.parts.push(p);
+        continue;
+      }
       let key: string, size: [number, number, number] | null = null;
       if (isSoft(p, soft)) {
         size = [step(p.size[0]), step(p.size[1]), step(p.size[2])];

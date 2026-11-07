@@ -14,6 +14,11 @@ export type VoxelPart = {
   size: [number, number, number];
   color: string;
   rot?: [number, number, number];
+  /**
+   * Круглая деталь (G1a): цилиндр вместо бруска, `size` — его габарит (ширина, высота, глубина).
+   * `top` / `bottom` — радиус сверху и снизу как доля половины ширины (1 — во всю ширину): так бывает конус.
+   */
+  cyl?: { top: number; bottom: number };
 };
 
 /**
