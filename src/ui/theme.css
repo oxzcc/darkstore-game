@@ -117,18 +117,9 @@ button { font-family: inherit; }
 
 /* ---------- окно назначения по центру (решение автора 18.10, прототип «Сборщики: назначение и барабан») ---------- */
 .ac-veil { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(40, 34, 24, 0.35); }
-.ac-wrap { width: min(980px, 100%); max-height: 100%; display: flex; flex-direction: column; animation: pop 0.2s ease-out; }
 .ac-window { --cut: 12px; min-height: 0; display: flex; flex-direction: column; }
 .ac-window > .vx-edge { height: auto; min-height: 0; display: flex; flex-direction: column; }
 .ac-window > .vx-edge > .vx-body { height: auto; min-height: 0; display: flex; flex-direction: column; }
-.ac-inner { min-height: 0; overflow-y: auto; padding: 16px 18px 20px; display: flex; flex-direction: column; gap: 14px; }
-.ac-head { display: flex; flex-direction: column; gap: 8px; }
-.ac-head-row { display: flex; align-items: center; gap: 12px; }
-.ac-title { font-weight: 700; font-size: 22px; text-transform: uppercase; letter-spacing: 0.03em; }
-.ac-lines { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; max-height: 64px; overflow-y: auto; }
-.ac-line { display: inline-flex; align-items: center; gap: 6px; }
-.ac-line .places { color: var(--text-mute); font-size: 13px; font-variant-numeric: tabular-nums; }
-.ac-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding-bottom: 6px; }
 .ac-card { --cut: 10px; min-width: 0; }
 .ac-card > .vx-edge { background: var(--edge-color); box-shadow: var(--shadow); }
 .ac-card > .vx-edge > .vx-body { background: var(--card); display: flex; flex-direction: column; }
@@ -138,30 +129,15 @@ button { font-family: inherit; }
 .ac-flag { position: absolute; left: 0; top: 10px; padding: 4px 22px 4px 12px; background: var(--pc); color: #fff; font-weight: 700; font-size: 18px;
   text-transform: uppercase; letter-spacing: 0.03em; clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 0 100%);
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25); }
-.ac-busy { position: absolute; right: 8px; bottom: 8px; max-width: calc(100% - 16px); padding: 3px 8px; background: var(--tag); color: #fff;
-  font-size: 12px; border-radius: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ac-body { padding: 12px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
 .ac-mute { font-size: 12px; color: var(--text-mute); }
 .pips { display: inline-flex; gap: 3px; }
 .pips i { width: 11px; height: 11px; transform: rotate(45deg); border: 2px solid var(--text); border-radius: 2px; background: #fff; }
 .pips i.on { background: var(--pc, var(--primary)); }
 .pips i.half { background: linear-gradient(90deg, var(--pc, var(--primary)) 50%, #fff 50%); }
-.ac-pick { min-width: 0; cursor: pointer; border-radius: 16px; outline: none; transition: transform 0.12s; }
-.ac-pick:hover:not(.busy), .ac-pick:focus-visible { transform: translateY(-3px); }
-.ac-pick:hover:not(.busy) .ac-card > .vx-edge, .ac-pick:focus-visible .ac-card > .vx-edge { background: var(--pc); }
-.ac-pick.busy { cursor: not-allowed; filter: grayscale(0.8); opacity: 0.75; }
-.ac-tired { position: absolute; right: 8px; bottom: 8px; padding: 3px 8px; background: var(--failed); color: #fff; font-size: 13px; font-weight: 700; border-radius: 6px; }
-.ac-rank { display: flex; align-items: center; gap: 8px; font-size: 16px; }
-.ac-chance { display: flex; align-items: center; gap: 8px; }
 .ac-bar { flex: 1; min-width: 0; display: flex; height: 28px; border: 3px solid var(--edge-color); border-radius: 8px; overflow: hidden; background: #fff; }
 .ac-bar > b { display: grid; place-items: center; height: 100%; color: #fff; font-size: 14px; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3); overflow: hidden; white-space: nowrap; }
 .ac-bar > b + b { border-left: 2px solid var(--edge-color); }
 .ac-bar svg.i.sm { width: 14px; height: 14px; }
-.ac-q { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line-in); background: #fff; color: var(--text-mute);
-  font-family: inherit; font-weight: 700; font-size: 15px; cursor: pointer; }
-.ac-q:hover, .ac-q.on { border-color: var(--text); color: var(--text); }
-.ac-time { font-size: 15px; color: var(--text-mute); }
-.ac-time b { color: var(--text); font-variant-numeric: tabular-nums; }
 /* ---------- профиль сборщика (P2) ---------- */
 .pf-wrap { width: min(860px, 100%); max-height: 100%; display: flex; flex-direction: column; animation: pop 0.2s ease-out; }
 .pf-inner { min-height: 0; overflow-y: auto; padding: 18px; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 20px; }
@@ -343,21 +319,6 @@ button { font-family: inherit; }
 }
 @media (prefers-reduced-motion: reduce) {
   .rw, .rw *, .rw *::before, .rw *::after { animation: none !important; transition: none !important; }
-}
-.ac-pop { position: fixed; z-index: 31; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: #fff; border: 3px solid var(--edge-color);
-  border-radius: 12px; box-shadow: var(--shadow); font-size: 13px; animation: pop 0.15s ease-out; }
-.ac-pop::before { content: ''; position: absolute; top: calc(var(--arrow-y) - 8px); width: 12px; height: 12px; background: #fff;
-  border: 3px solid var(--edge-color); transform: rotate(45deg); }
-.ac-pop.to-right::before { left: -9px; border-top: 0; border-right: 0; }
-.ac-pop.to-left::before { right: -9px; border-bottom: 0; border-left: 0; }
-.ac-pop .row { display: flex; justify-content: space-between; gap: 8px; font-variant-numeric: tabular-nums; }
-.ac-pop .row.total { border-top: 2px dashed var(--divider); padding-top: 4px; margin-top: 2px; font-weight: 700; }
-.ac-pop .plus { color: var(--primary); font-weight: 700; }
-.ac-pop .minus { color: var(--failed); font-weight: 700; }
-.ac-pop .zero { color: var(--text-mute); }
-@media (max-width: 760px) {
-  .ac-cards { grid-template-columns: repeat(3, 78%); overflow-x: auto; scroll-snap-type: x mandatory; }
-  .ac-pick { scroll-snap-align: center; }
 }
 .tag { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: 6px; background: var(--tag); color: #fff;
   font-size: 14px; font-weight: 700; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
@@ -930,33 +891,15 @@ svg.i.sm { width: 18px; height: 18px; }
 
 /* «Кого отправить?» и профиль: лист от ~120 px сверху до низа */
 .phone .ac-veil { padding: 0; place-items: end stretch; }
-.phone .ac-wrap, .phone .pf-wrap { width: 100%; height: calc(100% - 110px); max-height: none; animation: sheet-up 0.25s ease-out; }
+.phone .pf-wrap { width: 100%; height: calc(100% - 110px); max-height: none; animation: sheet-up 0.25s ease-out; }
 .phone .ac-window { height: 100%; }
 .phone .ac-window > .vx-edge { height: 100%; }
-.phone .ac-inner { flex: 1 1 auto; height: 100%; padding: 14px 16px calc(18px + env(safe-area-inset-bottom)); gap: 10px; }
-.phone .ac-title { font-size: 19px; }
-.ac-plaques { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 6px; }
-.ac-plaques > span { min-width: 0; display: flex; flex-direction: column; padding: 6px 8px; background: #fff; border: 2px solid var(--line-in); border-radius: 10px; }
-.ac-plaques small { font-size: 10px; color: var(--text-mute); }
-.ac-plaques b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ac-plaques .warn b { color: var(--failed); }
-.phone .ac-lines { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; max-height: 120px; padding: 10px; background: #fff; border: 2px solid var(--line-in); border-radius: 12px; font-size: 13px; }
-.phone .ac-line { min-width: 0; white-space: nowrap; }
-/* сборщики — строками с аватаром слева, делят высоту до низа */
-.phone .ac-cards { flex: 1 1 auto; min-height: 0; grid-template-columns: 1fr; grid-auto-rows: minmax(0, 1fr); gap: 10px; padding-bottom: 4px; }
-.phone .ac-pick { display: flex; min-height: 0; }
-.phone .ac-pick:hover:not(.busy) { transform: none; }
 .phone .ac-card { flex: 1 1 auto; }
 .phone .ac-card > .vx-edge > .vx-body { flex-direction: row; }
 .phone .ac-portrait { width: 132px; height: auto; flex: none; border-bottom: 0; border-right: 3px solid var(--edge-color); }
 .phone .ac-flag { font-size: 13px; padding: 2px 12px 2px 8px; top: 8px; }
-.phone .ac-body { min-width: 0; justify-content: center; padding: 10px 12px; gap: 10px; }
-.phone .ac-rank { font-size: 14px; }
 .phone .ac-bar { height: 24px; border-width: 2px; }
 .phone .ac-bar > b { font-size: 11px; }
-.phone .ac-q { width: 32px; height: 32px; }
-.phone .ac-time { font-size: 13px; }
-.phone .ac-tired, .phone .ac-busy { font-size: 11px; padding: 2px 6px; right: 6px; bottom: 6px; }
 
 /* профиль: одной колонкой */
 .phone .pf-inner { grid-template-columns: 1fr; padding: 14px 16px calc(18px + env(safe-area-inset-bottom)); gap: 14px; }
@@ -1131,10 +1074,6 @@ svg.i.sm { width: 18px; height: 18px; }
 .pent-label.flash text { fill: #2F8F2F; animation: pent-flash 0.6s ease-out; }
 @keyframes pent-flash { from { font-size: 12px; } to { font-size: 8px; } }
 
-.ac-needs { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 2px 0 10px; font-size: 13px; color: var(--text-mute); }
-.ac-needs b { color: var(--text); }
-.ac-pent { display: flex; justify-content: center; margin: 2px 0 4px; }
-.ac-legend { margin-top: 8px; font-size: 12px; color: var(--text-mute); text-align: center; }
 
 .pf-pent { display: flex; align-items: center; gap: 16px; }
 .pf-glossary { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-mute); }
@@ -1150,3 +1089,85 @@ svg.i.sm { width: 18px; height: 18px; }
 
 html.phone .pf-pent { flex-direction: column; }
 html.phone .summary-picker { flex-wrap: wrap; }
+
+/* ---------- A1: окно назначения с пятиугольником (макеты ui_13_assign_pentagon / ui_14_assign_phone, решения автора 21.10–07.11) ---------- */
+.as-veil { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; padding: 28px 16px 16px; overflow-y: auto; background: rgba(40, 34, 24, 0.35); }
+.as-wrap { width: min(640px, 100%); display: flex; flex-direction: column; align-items: center; gap: 28px; animation: pop 0.2s ease-out; }
+.as-window { --cut: 14px; position: relative; width: 100%; }
+.as-inner { padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+.as-close { position: absolute; z-index: 2; right: -18px; top: -18px; width: 48px; height: 48px; border-radius: 50%; border: 3px solid var(--edge-color);
+  background: var(--card); box-shadow: var(--shadow); color: var(--text); font-family: inherit; font-weight: 700; font-size: 24px; line-height: 1; cursor: pointer; }
+.as-close:hover { background: #fff; }
+/* плашка задания: название и «взять до», ниже товары с адресами */
+.as-head { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px 14px; background: #fff; border: 3px solid var(--edge-color); border-radius: 16px; }
+.as-head-row { display: flex; align-items: center; gap: 12px; }
+.as-title { min-width: 0; font-weight: 700; font-size: 26px; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1.1; }
+.as-timer { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; background: #FDF1D6; border: 3px solid var(--edge-color); border-radius: 10px;
+  font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.as-timer.warn { color: var(--failed); }
+.as-lines { display: flex; flex-wrap: wrap; gap: 6px; font-size: 15px; max-height: 96px; overflow-y: auto; }
+.as-line { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px 2px 2px; background: var(--card); border: 2px solid var(--edge-color); border-radius: 9px; white-space: nowrap; }
+.as-line .tag { height: 22px; padding: 0 6px; font-weight: 700; }
+/* большой пятиугольник: пунктир — что нужно, заливка — выбранный сборщик, красное — не хватает */
+.as-graph { display: flex; justify-content: center; padding: 2px 0; background: #fff; border: 3px solid var(--edge-color); border-radius: 16px; }
+.as-graph .pent { width: 100%; max-width: max(240px, min(380px, calc((100vh - 540px) * 0.93))); height: auto; } /* окно и квадраты влезают по высоте */
+.btn.as-send { flex: none; width: 100%; height: 64px; --cut: 12px; }
+/* пока открыто окно назначения, нижние карточки и кнопки камеры прячутся — их место занимают квадраты сборщиков */
+.hud:has(.as-veil) .picker-bar, .hud:has(.as-veil) .cam-controls { visibility: hidden; }
+.as-send > .vx > .vx-edge > .vx-body { display: flex; gap: 14px; justify-content: center; align-items: center; font-size: 22px; letter-spacing: 0.02em; text-transform: none; }
+.as-reward { padding: 2px 10px; background: #fff; color: var(--primary-lo); border: 2px solid var(--edge-color); border-radius: 9px; font-size: 18px; }
+/* сборщики — квадраты отдельным рядом под окном; статус — тегом внутри портрета */
+.as-squares { display: flex; justify-content: center; gap: 20px; }
+.as-sq { position: relative; width: 160px; height: 160px; flex: none; padding: 0; overflow: hidden; cursor: pointer; font-family: inherit; color: var(--text);
+  background: color-mix(in srgb, var(--pc) 22%, var(--card)); border: 4px solid var(--edge-color); border-radius: 18px; box-shadow: var(--shadow);
+  transition: transform 0.12s, box-shadow 0.12s; }
+.as-sq:hover:not(:disabled), .as-sq:focus-visible { transform: translateY(-4px); outline: none; }
+.as-sq.on { border-color: var(--pc); transform: translateY(-10px); box-shadow: 0 0 0 4px var(--card), 0 0 0 7px var(--pc), 0 12px 0 var(--shadow-c); }
+.as-sq.busy { cursor: not-allowed; filter: grayscale(0.85) brightness(0.92); }
+.as-sq-face { position: absolute; inset: 0; display: grid; place-items: center; }
+.as-sq-face > canvas, .as-sq-face > div:not(.avatar) { width: 100% !important; height: 100% !important; }
+.as-flag { position: absolute; left: 0; top: 10px; padding: 3px 18px 3px 10px; background: var(--pc); color: #fff; font-weight: 700; font-size: 17px;
+  text-transform: uppercase; letter-spacing: 0.03em; clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 0 100%);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25); }
+.as-sq.busy .as-flag { background: #8C8378; }
+.as-check { position: absolute; right: 8px; top: 8px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%;
+  background: var(--pc); color: #fff; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--edge-color); }
+.as-tags { position: absolute; left: 8px; right: 8px; bottom: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.as-tag { max-width: 100%; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: var(--card); border: 2px solid var(--edge-color);
+  border-radius: 9px; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.as-tag.dark { background: var(--tag); color: #fff; }
+.as-tag.tired { background: var(--failed); color: #fff; }
+.as-tag svg.i.sm { width: 13px; height: 13px; flex: none; }
+/* пятиугольник окна назначения: подписи «есть / нужно» */
+.pent-need { fill: #F2D9A8; fill-opacity: 0.9; }
+.pent-dot { fill: #fff; stroke: var(--pc); stroke-width: 0.9; }
+.pent.detail .pent-label { color: #3A342A; }
+.pent.detail .pent-label text { text-anchor: middle; font-weight: 400; }
+.pent.detail .pent-label .name { font-size: 4.2px; fill: #7A6E60; }
+.pent.detail .pent-label .val { font-size: 5.4px; font-weight: 700; fill: #3A342A; }
+.pent.detail .pent-label.ok .val { fill: #3E8A10; }
+.pent.detail .pent-label.short .val { fill: #D2382C; }
+.pent.detail .pent-label.free .val { fill: #A9A196; }
+
+/* телефон: окно сверху, квадраты у нижнего края (макет ui_14) */
+.phone .as-veil { padding: calc(64px + env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom)); place-items: stretch; }
+.phone .as-wrap { width: 100%; min-height: 100%; justify-content: space-between; gap: 18px; }
+.phone .as-window { --cut: 12px; }
+.phone .as-inner { padding: 12px 12px 14px; gap: 10px; }
+.phone .as-close { right: -6px; top: -20px; width: 44px; height: 44px; font-size: 22px; }
+.phone .as-head { padding: 10px; gap: 8px; }
+.phone .as-title { font-size: 21px; }
+.phone .as-timer { font-size: 15px; padding: 3px 8px; border-width: 2px; }
+.phone .as-lines { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; font-size: 13px; max-height: 110px; }
+.phone .as-line { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.phone .as-graph .pent { max-width: 340px; }
+.phone .btn.as-send { height: 56px; }
+.phone .as-send > .vx > .vx-edge > .vx-body { font-size: 19px; gap: 10px; }
+.phone .as-reward { font-size: 16px; }
+.phone .as-squares { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.phone .as-sq { width: auto; height: auto; aspect-ratio: 1; border-width: 3px; border-radius: 15px; }
+.phone .as-sq.on { transform: translateY(-6px); box-shadow: 0 0 0 3px var(--card), 0 0 0 6px var(--pc), 0 8px 0 var(--shadow-c); }
+.phone .as-flag { top: 7px; font-size: 13px; padding: 2px 13px 2px 7px; }
+.phone .as-check { right: 6px; top: 6px; width: 24px; height: 24px; border-width: 2px; }
+.phone .as-tags { left: 6px; right: 6px; bottom: 6px; gap: 3px; }
+.phone .as-tag { font-size: 11px; padding: 1px 6px; border-radius: 7px; }

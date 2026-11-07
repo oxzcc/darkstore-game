@@ -3,7 +3,7 @@
 import type { GameState } from '../model/game';
 import type { Outcome, OutcomeChances, Task } from '../model/task';
 import { STAT_KEYS, type Picker, type PickerActivity, type StatBlock } from '../model/picker';
-import { requirementReasons, taskRequirements } from '../rules/requirements';
+import { taskRequirements } from '../rules/requirements';
 import { outcomeBreakdown, outcomeChances, type OutcomeBreakdown } from '../rules/outcome';
 export type { StatNeed } from '../rules/outcome';
 import { canAssign } from '../rules/tasks/lifecycle';
@@ -81,16 +81,30 @@ export function assignCardView(game: GameState, pickerId: string, taskId: string
   };
 }
 
+/**
+ * Кого подставить при открытии окна назначения (решение автора 07.11, вариант «б»):
+ * свободного сборщика, у которого меньше всего нехватки по требованиям; при равенстве — с большим шансом «идеально», потом — кто быстрее.
+ * Свободных нет — null.
+ */
+export function bestPickerFor(game: GameState, taskId: string): string | null {
+  let best: { id: string; short: number; perfect: number; total: number } | null = null;
+  for (const p of pickerList(game.pickers)) {
+    const v = assignCardView(game, p.id, taskId);
+    if (!v || !v.check.ok) continue;
+    const short = STAT_KEYS.reduce((sum, k) => sum + Math.max(0, v.req[k] - v.stats[k]), 0);
+    const cand = { id: p.id, short, perfect: v.breakdown.chances.perfect, total: v.total ?? Infinity };
+    if (!best || cand.short < best.short - 1e-9
+      || (Math.abs(cand.short - best.short) < 1e-9 && (cand.perfect > best.perfect + 1e-9
+        || (Math.abs(cand.perfect - best.perfect) < 1e-9 && cand.total < best.total)))) best = cand;
+  }
+  return best?.id ?? null;
+}
+
 /** Тексты итога варианта по исходу (X4): «Идеально» — ok, «Неплохо» — mid, «Провал» — bad. */
 function optionText(o: CallOption, outcome: Outcome): { title: string; text: string } {
   if (outcome === 'perfect') return { title: o.okTitle, text: o.okText };
   if (outcome === 'withErrors') return { title: o.midTitle, text: o.midText };
   return { title: o.badTitle, text: o.badText };
-}
-
-/** Откуда требования задания — для шапки окна назначения (X3). */
-export function taskNeeds(task: Task) {
-  return { req: taskRequirements(task), reasons: requirementReasons(task) };
 }
 
 /** Можно ли отправить сборщика; если нет — причина. */
