@@ -8,7 +8,8 @@ import { useEffect, type CSSProperties, type ReactNode } from 'react';
 import type { Picker } from '../model/picker';
 import { useGameStore } from '../store/gameStore';
 import { callsView, flashView, plural, type CallOptionView } from '../store/selectors';
-import { LEVEL_NAME, OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK, taskTitle } from './labels';
+import { LEVEL_NAME, OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK, nameForm, taskTitle } from './labels';
+import Icon from './icons';
 import type { TaskType } from '../model/task';
 import Vx from './Vx';
 import { usePhone } from '../app/usePhone';
@@ -35,26 +36,40 @@ type CardProps = {
   portrait?: ReactNode;
 };
 
-/** Шансы варианта у этого сборщика (X2): тонкая полоса трёх исходов и «Идеально» процентом — ровно по ним потом бросок. */
+/** Шансы варианта у этого сборщика (X2, X3 — макет StatsFork): полоса трёх исходов с процентами — ровно по ним потом бросок. */
 function Chances({ o }: { o: CallOptionView }) {
   const c = o.chances;
   if (!c) return null;
   return (
     <span className="fork-chances" title={`Идеально ${pct(c.perfect)}% · Неплохо ${pct(c.withErrors)}% · Провал ${pct(c.failed)}%`}>
-      <span className="fork-chances-bar">
-        {OUTCOMES_ORDER.map((k) => <i key={k} style={{ width: `${c[k] * 100}%`, background: OUTCOME_LOOK[k].color }} />)}
-      </span>
-      <b>{pct(c.perfect)}%</b>
+      {OUTCOMES_ORDER.map((k) => c[k] > 0 && (
+        <i key={k} style={{ width: `${c[k] * 100}%`, background: OUTCOME_LOOK[k].color }}>{c[k] >= 0.14 ? `${pct(c[k])}%` : ''}</i>
+      ))}
     </span>
   );
 }
 
 const pct = (x: number) => Math.round(x * 100);
 
-/** Что проверяет вариант: «Нюх 5 · обычно» или «надёжно». */
-function checkText(o: CallOptionView): string {
-  if (o.level === 'safe' || !o.stat) return LEVEL_NAME.safe;
-  return `${STAT_LOOK[o.stat].name} ${o.statValue ?? ''} · ${LEVEL_NAME[o.level]}`;
+/** Что проверяет вариант: значок, «Нюх 5 · обычно» или «надёжно». */
+function CheckText({ o }: { o: CallOptionView }) {
+  if (o.level === 'safe' || !o.stat) return <span className="fork-check">{LEVEL_NAME.safe}</span>;
+  return (
+    <span className="fork-check"><Icon name={STAT_LOOK[o.stat].icon} small /> {STAT_LOOK[o.stat].name} {fmtStat(o.statValue)} · {LEVEL_NAME[o.level]}</span>
+  );
+}
+
+const fmtStat = (v: number | null) => (v === null ? '' : Number.isInteger(v) ? String(v) : v.toFixed(1).replace('.', ','));
+
+/** «Шансы Коржика · Лапы 8, Дружба 6, Память 5» — характеристики, которые проверяют варианты этой развилки. */
+function checkedStats(p: CardProps): string {
+  const seen: string[] = [];
+  for (const o of p.options) {
+    if (o.tsd || o.level === 'safe' || !o.stat) continue;
+    const t = `${STAT_LOOK[o.stat].name} ${fmtStat(o.statValue)}`;
+    if (!seen.includes(t)) seen.push(t);
+  }
+  return seen.join(', ');
 }
 
 /** Подпись строки времени на карточке варианта — по типу задания (у приёмки не «сборка»). */
@@ -94,7 +109,10 @@ function ForkCard(p: CardProps) {
       <div className="fork-hint">
         {decided
           ? (p.auto ? `${p.picker.name} решил сам: ${chosen?.label ?? ''}` : `Ваше решение: ${chosen?.label ?? ''}`)
-          : phone ? 'Выберите вариант' : 'Выберите вариант — кликом или клавишами 1–' + p.options.filter((o) => !o.locked).length}
+          : <>
+              {phone ? 'Выберите вариант' : 'Выберите вариант — кликом или клавишами 1–' + p.options.filter((o) => !o.locked).length}
+              {checkedStats(p) && <span className="fork-hint-stats"> · Шансы {nameForm(p.picker.name)}: {checkedStats(p)}</span>}
+            </>}
       </div>
 
       {/* варианты в один ряд, «Взять ТСД» — последним, тёмной карточкой (решение автора 14.10); описаний на карточках нет */}
@@ -122,7 +140,8 @@ function ForkCard(p: CardProps) {
               ) : (
                 <>
                   <div className="fork-option-row"><span>{WORK_TIME_LABEL[p.taskType]}</span><b className={o.seconds > 0 ? 'slow' : ''}>{secondsText(o.seconds)}</b></div>
-                  <div className="fork-option-row"><span>{checkText(o)}</span><Chances o={o} /></div>
+                  <div className="fork-option-row"><CheckText o={o} /></div>
+                  <Chances o={o} />
                 </>
               )}
             </button>

@@ -5,7 +5,7 @@ import { WAREHOUSE_LAYOUT } from '../config/warehouse';
 import { REQUIREMENTS } from '../config/balance';
 import { buildWarehouseMap } from './warehouse';
 import { createInitialGame } from './game';
-import { taskRequirements } from './requirements';
+import { requirementReasons, taskRequirements } from './requirements';
 
 const g = createInitialGame(buildWarehouseMap(WAREHOUSE_LAYOUT), 1);
 const base = Object.values(g.tasks).find((t) => t.type === 'order')!;
@@ -31,5 +31,21 @@ describe('требования задания', () => {
     const hard = taskRequirements(order(['eggs', 'milk'], 3));
     expect(hard.speed).toBeGreaterThan(5);
     for (const v of Object.values(taskRequirements(order(['water', 'eggs', 'milk', 'chips', 'bread'], 3)))) expect(v).toBeLessThanOrEqual(REQUIREMENTS.max);
+  });
+});
+
+describe('откуда требования (X3)', () => {
+  it('заказ на 4 позиции с водой: память за позиции, сила за воду, база', () => {
+    const r = requirementReasons(order(['water', 'eggs', 'milk', 'chips']));
+    expect(r).toEqual([
+      { kind: 'lines', count: 4, adds: { memory: 4 } },
+      { kind: 'heavy', productId: 'water', adds: { strength: REQUIREMENTS.order.heavyStrength } },
+      { kind: 'base', adds: REQUIREMENTS.order.base },
+    ]);
+  });
+
+  it('короткий лёгкий заказ — только база; сложность — отдельной строкой', () => {
+    expect(requirementReasons(order(['eggs', 'milk']))).toEqual([{ kind: 'base', adds: REQUIREMENTS.order.base }]);
+    expect(requirementReasons(order(['eggs', 'milk'], 2)).at(-1)).toMatchObject({ kind: 'difficulty', level: 2 });
   });
 });

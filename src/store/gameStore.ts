@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { persistOptions } from './persist';
 import type { GameState } from '../model/game';
+import type { StatKey } from '../model/picker';
 import type { Outcome, TaskType } from '../model/task';
 import { WAREHOUSE_LAYOUT, WAREHOUSE_VIEW } from '../config/warehouse';
 import { ROLL_REEL } from '../config/balance';
@@ -20,7 +21,7 @@ import { advanceWorld } from '../rules/advance';
 import { rewardFor } from '../rules/rewards';
 import { outcomeBreakdown, type OutcomeBreakdown } from '../rules/outcome';
 import { worldDt } from '../rules/time';
-import { finishCampaign, startNextShift } from '../rules/shift';
+import { finishCampaign, spendPointInSummary, startNextShift } from '../rules/shift';
 import { endRest, sendToRest } from '../rules/rest';
 import { isTutorial } from '../rules/shiftPlan';
 import { currentHint, markHintSeen } from '../rules/tutorial';
@@ -127,6 +128,8 @@ type Store = {
   nextShift: () => void;
   finishCampaign: () => void;
   restartCampaign: () => void;
+  /** Итоги смены: вложить очко сборщика в характеристику (X3). */
+  spendPoint: (pickerId: string, stat: StatKey) => void;
   setPlayerSpeed: (speed: 1 | 2) => void;
   /** Камера (W1): поворот на четверть круга (кнопки ⟲ ⟳), перетаскивание, зум (колесо, + −), исходный вид. */
   turnCamera: (dir: 1 | -1) => void;
@@ -302,6 +305,7 @@ export const useGameStore = create<Store>()(persist((set) => ({
   nextShift: () => set((s) => ({ game: startNextShift(s.game, WAREHOUSE_MAP), ui: clearWindows(s.ui) })),
   finishCampaign: () => set((s) => ({ game: finishCampaign(s.game) })),
   restartCampaign: () => set((s) => ({ game: createInitialGame(WAREHOUSE_MAP, newSeed()), ui: clearWindows(s.ui) })),
+  spendPoint: (pickerId, stat) => set((s) => ({ game: spendPointInSummary(s.game, pickerId, stat) })),
 
   togglePause: () =>
     set((s) => ({ game: { ...s.game, clock: { ...s.game.clock, paused: !s.game.clock.paused } } })),

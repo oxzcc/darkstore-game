@@ -1,15 +1,15 @@
 // Профиль сборщика (P2, решение автора 18.10): окно по центру, мир на паузе.
 // Открывается кликом по нижней карточке сборщика или по собаке на складе. Перерыв — только на нижней карточке.
-// Слева портрет и что делает сейчас; справа Лапы / Нюх / Бодрость с пояснениями, опыт по типам заданий и итоги за смену / кампанию.
+// Слева портрет и что делает сейчас; справа пятиугольник характеристик с числами (X3, макет StatsProfile), бодрость, уровень и итоги за смену / кампанию.
 // Все числа — из selectors (а те — из rules); окно само ничего не считает.
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Picker, PickerTally } from '../model/picker';
 import { useGameStore } from '../store/gameStore';
 import { pickerProfileView, restAllowed } from '../store/selectors';
-import { STAT_SCALE } from '../config/pickers';
 import { activityLine } from './activityText';
 import { OUTCOME_LOOK, OUTCOMES_ORDER, STAT_LOOK } from './labels';
-import { Avatar, Pips } from './PickerBits';
+import { Avatar } from './PickerBits';
+import StatPentagon from './StatPentagon';
 import Vx from './Vx';
 import Icon from './icons';
 import { usePhone } from '../app/usePhone';
@@ -68,12 +68,20 @@ export default function PickerProfile({ renderPortrait }: { renderPortrait?: (pi
 
               <section className="pf-sect">
                 <h3>Характеристики</h3>
-                {/* пять характеристик (docs/10, раздел 14.3); пятиугольник — в X3 */}
-                {v.stats.map((st) => (
-                  <Stat key={st.key} icon={STAT_LOOK[st.key].icon} name={STAT_LOOK[st.key].name} hint={STAT_LOOK[st.key].hint}>
-                    <Pips value={st.base * 5 / STAT_SCALE.max} /><b>{st.base} из {STAT_SCALE.max}</b>
-                  </Stat>
-                ))}
+                {/* пять характеристик (docs/10, разделы 14.3, 14.9): большой пятиугольник с числами, серый контур — без усталости */}
+                <div className="pf-pent">
+                  <StatPentagon stats={v.block} base={v.baseBlock} color={p.color} size={phone ? 180 : 210} numbers />
+                  <div className="pf-glossary">
+                    {v.stats.map((st) => (
+                      <span key={st.key}>
+                        <Icon name={STAT_LOOK[st.key].icon} small /><b>{STAT_LOOK[st.key].name}</b> — {STAT_LOOK[st.key].hint}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                {v.fatigueMinus > 0 && (
+                  <div className="pf-tired">Устал {100 - v.energy}% — все характеристики −{fmtMinus(v.fatigueMinus)} (серый контур — без усталости)</div>
+                )}
                 <Stat icon={STAT_LOOK.energy.icon} name={STAT_LOOK.energy.name} hint="Падает после каждого задания и снижает скорость и шансы. Восстанавливается на перерыве.">
                   <span className="pf-bar"><b className={v.energy < 40 ? 'low' : v.energy < 65 ? 'mid' : ''} style={{ width: `${v.energy}%` }} /></span>
                   <b>{v.energy}%</b>
@@ -108,6 +116,12 @@ export default function PickerProfile({ renderPortrait }: { renderPortrait?: (pi
       </div>
     </div>
   );
+}
+
+/** −1 или −1,5. */
+function fmtMinus(v: number): string {
+  const r = Math.round(v * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1).replace('.', ',');
 }
 
 function Stat({ icon, name, hint, children }: { icon: Parameters<typeof Icon>[0]['name']; name: string; hint: string; children: ReactNode }) {

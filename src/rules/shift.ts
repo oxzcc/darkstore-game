@@ -13,7 +13,8 @@ import { shiftPlan } from './shiftPlan';
 import { tickDeliveries } from './deliveries';
 import { createPutawayTasks } from './putaway';
 import { assignDeadlines } from './deadline';
-import { levelsOf, restBetweenShifts } from './pickerStats';
+import { levelsOf, restBetweenShifts, spendPoint } from './pickerStats';
+import type { StatKey } from '../model/picker';
 import type { Picker } from '../model/picker';
 import { PICKER_GROWTH } from '../config/balance';
 
@@ -149,4 +150,16 @@ export function startNextShift(state: GameState, map: WarehouseMap): GameState {
 export function finishCampaign(state: GameState): GameState {
   if (state.campaign.phase !== 'summary' || (!isLastShift(state) && !state.campaign.lost)) return state;
   return { ...state, campaign: { ...state.campaign, phase: 'over' } };
+}
+
+/**
+ * Вложить очко сборщика в характеристику (X3, docs/10 раздел 14.8): только на экране итогов смены.
+ * Нет очков, потолок 10 или смена ещё идёт — состояние не меняется.
+ */
+export function spendPointInSummary(state: GameState, pickerId: string, stat: StatKey): GameState {
+  if (state.campaign.phase !== 'summary') return state;
+  const picker = state.pickers[pickerId];
+  if (!picker) return state;
+  const next = spendPoint(picker, stat);
+  return next === picker ? state : { ...state, pickers: { ...state.pickers, [pickerId]: next } };
 }

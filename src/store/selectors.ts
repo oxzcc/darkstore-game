@@ -2,7 +2,8 @@
 // шансы и проверки берутся отсюда, а здесь — из rules.
 import type { GameState } from '../model/game';
 import type { OutcomeChances, Task } from '../model/task';
-import { STAT_KEYS, type Picker, type PickerActivity } from '../model/picker';
+import { STAT_KEYS, type Picker, type PickerActivity, type StatBlock } from '../model/picker';
+import { requirementReasons, taskRequirements } from '../rules/requirements';
 import { outcomeBreakdown, outcomeChances, type OutcomeBreakdown } from '../rules/outcome';
 export type { StatNeed } from '../rules/outcome';
 import { canAssign } from '../rules/tasks/lifecycle';
@@ -28,7 +29,7 @@ import { WAREHOUSE_MAP, hintWaits, type UiState } from './gameStore';
 import { isLastShift, shiftSecondsLeft } from '../rules/shift';
 import { secondsToTake } from '../rules/deadline';
 import { canRest } from '../rules/rest';
-import { EMPTY_TALLY, effectiveStat, effectiveStats, shiftTally, xpToNext } from '../rules/pickerStats';
+import { EMPTY_TALLY, effectiveStat, effectiveStats, fatiguePenalty, shiftTally, xpToNext } from '../rules/pickerStats';
 import { isTutorial } from '../rules/shiftPlan';
 import { currentHint } from '../rules/tutorial';
 import { HINTS } from '../config/tutorial';
@@ -58,6 +59,9 @@ export type AssignCardView = {
   picker: Picker;
   check: { ok: boolean; reason?: string };
   breakdown: OutcomeBreakdown;
+  /** Для пятиугольника (X3): рабочие характеристики (с усталостью) и требования задания. */
+  stats: StatBlock;
+  req: StatBlock;
   eta: number | null;
   total: number | null;
 };
@@ -70,9 +74,16 @@ export function assignCardView(game: GameState, pickerId: string, taskId: string
     picker,
     check,
     breakdown: outcomeBreakdown(picker, task),
+    stats: effectiveStats(picker),
+    req: taskRequirements(task),
     eta: check.ok ? etaToTask(WAREHOUSE_MAP, picker, task) : null,
     total: check.ok ? jobSecondsEstimate(WAREHOUSE_MAP, picker, task) : null,
   };
+}
+
+/** Откуда требования задания — для шапки окна назначения (X3). */
+export function taskNeeds(task: Task) {
+  return { req: taskRequirements(task), reasons: requirementReasons(task) };
 }
 
 /** Можно ли отправить сборщика; если нет — причина. */
@@ -712,6 +723,10 @@ export function pickerProfileView(game: GameState, pickerId: string) {
     energy: Math.round(100 - picker.stats.fatigue),
     /** Пять характеристик: своя и рабочая (с усталостью) — docs/10, раздел 14.3. */
     stats: STAT_KEYS.map((k) => ({ key: k, base: picker.stats[k], value: effectiveStats(picker)[k] })),
+    /** Для пятиугольника (X3): рабочие и свои (без усталости) характеристики, на сколько усталость их снижает. */
+    block: effectiveStats(picker),
+    baseBlock: Object.fromEntries(STAT_KEYS.map((k) => [k, picker.stats[k]])) as StatBlock,
+    fatigueMinus: fatiguePenalty(picker),
     level: picker.level,
     xp: picker.xp,
     xpNeed: xpToNext(picker.level),

@@ -54,7 +54,7 @@ export const STAT_LOOK = {
   accuracy: { name: 'Нюх', icon: 'nose', hint: 'заметить: сроки, похожие упаковки, сверка' },
   strength: { name: 'Сила', icon: 'strength', hint: 'тяжёлое, коробки, разбор полки' },
   memory: { name: 'Память', icon: 'memory', hint: 'адреса и маршрут: не забыть, не перепутать' },
-  friendly: { name: 'Дружелюбие', icon: 'friendly', hint: 'водитель, клиент, коллеги' },
+  friendly: { name: 'Дружба', icon: 'friendly', hint: 'водитель, клиент, коллеги' }, // «Дружба» — коротко, влезает у осей (решение автора 21.10)
   energy: { name: 'Бодрость', icon: 'energy', hint: 'падает после каждого задания, растёт на перерыве' },
 } as const satisfies Record<string, { name: string; icon: IconName; hint: string }>;
 
