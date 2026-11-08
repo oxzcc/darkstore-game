@@ -1,16 +1,21 @@
-// Товар на полках: воксельные заглушки там, где по ФАКТУ что-то лежит (M5d).
-// Сцена показывает остатки склада как есть; считает их rules (shelfContents).
-// Крупно, по концепт-рендеру (решение автора 16.10): до 2 штук в ширину полки, на половину глубины (shelfLayout).
+// Товар на полках: штуки там, где по ФАКТУ что-то лежит (M5d). Сцена показывает остатки склада как есть; считает их rules (shelfContents).
+// G1a (решение автора 07.11, вариант «а»): каждая штука отдельно, сколько лежит — столько видно (до 10),
+// в настоящих пропорциях своей формы (та же таблица, что у моделей игр на ТСД — models/productShapes.ts), увеличенная в shelfItems.scale раз.
+// Где стоит каждая штука и как повёрнута — shelfLayout. Все товары склада — один VoxelBatch (instancing).
 import { useMemo } from 'react';
 import type { Stock } from '../model/stock';
 import type { WarehouseMap } from '../model/warehouse';
 import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { useGameStore } from '../store/gameStore';
 import { goodsOnShelves } from '../store/selectors';
-import { productParts, type VoxelPart } from './models/ProductItem';
-import { rackLocalToWorld } from './rackGeometry';
+import type { VoxelPart } from './models/ProductItem';
+import { productShapeParts } from './models/productShapes';
+import { rackLocalToWorld, rackRotY } from './rackGeometry';
 import { shelfLayout } from './shelfLayout';
 import VoxelBatch from './VoxelBatch';
+
+/** Товар стоит на 2 мм выше доски: его дно не совпадает с верхом полки (иначе грани «дерутся»). */
+const LIFT = 0.002;
 
 type Props = { map: WarehouseMap; stock: Stock };
 
@@ -20,24 +25,35 @@ export default function ShelfGoods({ map, stock }: Props) {
   const parts = useMemo(() => {
     // Простой поиск стеллажа по номеру аллеи и стеллажа — это данные карты, не правило игры.
     const racks = new Map(map.racks.map((r) => [`${r.aisle}.${r.rack}`, r]));
+    const shapes = new Map<string, VoxelPart[]>(); // детали одной штуки — один раз на товар
     const out: VoxelPart[] = [];
     for (const { address, contents } of goodsOnShelves(stock)) {
       const rack = racks.get(`${address.aisle}.${address.rack}`);
       if (!rack) continue;
-      const layout = shelfLayout(rack, address.shelf, contents);
-      const across = rack.axis === 'z'; // стеллаж повёрнут на 90°: размеры по x и z меняются местами
+      const layout = shelfLayout(rack, address, contents);
+      const rackTurn = rackRotY(rack);
+      const facing = layout.front > 0 ? 0 : Math.PI; // лицом товар смотрит туда же, куда лицо стеллажа
       for (const g of layout.groups) {
         const look = products[g.productId]?.look;
         if (!look) continue;
-        // крупная штука: на всё место по ширине, на половину глубины полки, выше обычной модели
-        const item = productParts(look, layout.slotWidth * 0.92, layout.itemDepth / 1.2, WAREHOUSE_VIEW.shelfItems.heightScale);
+        let item = shapes.get(g.productId);
+        if (!item) {
+          item = productShapeParts(look, WAREHOUSE_VIEW.shelfItems.scale);
+          shapes.set(g.productId, item);
+        }
         g.xs.forEach((x, k) => {
+          const a = facing + g.turns[k];
+          const cos = Math.cos(a);
+          const sin = Math.sin(a);
           for (const p of item) {
-            const local: [number, number, number] = [x + p.pos[0], layout.y + p.pos[1], g.zs[k] + layout.front * p.pos[2]];
+            // деталь поворачивается вместе со штукой вокруг её центра (как Three.js вокруг оси y)
+            const dx = p.pos[0] * cos + p.pos[2] * sin;
+            const dz = -p.pos[0] * sin + p.pos[2] * cos;
+            const r = p.rot ?? [0, 0, 0];
             out.push({
-              pos: rackLocalToWorld(rack, local),
-              size: across ? [p.size[2], p.size[1], p.size[0]] : p.size,
-              color: p.color,
+              ...p,
+              pos: rackLocalToWorld(rack, [x + dx, layout.y + LIFT + p.pos[1], g.zs[k] + dz]),
+              rot: [r[0], r[1] + rackTurn + a, r[2]],
             });
           }
         });

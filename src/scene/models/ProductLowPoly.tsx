@@ -5,72 +5,11 @@
 // Заглушка до настоящих ассетов (M9): детализацию товаров автор решает позже.
 import { useMemo } from 'react';
 import { CanvasTexture, SRGBColorSpace } from 'three';
-import type { ProductLook, ProductShape } from '../../model/product';
+import type { ProductLook } from '../../model/product';
 
-type Part =
-  | { kind: 'box'; pos: [number, number, number]; size: [number, number, number]; color: 'c' | 'a' }
-  | { kind: 'cyl'; pos: [number, number, number]; r: number; r2?: number; h: number; color: 'c' | 'a' };
+import { SHAPES, type ShapeModel } from './productShapes';
 
-/** Модель формы: детали, габарит (ширина x, высота y, глубина z), круглая ли (тогда стороны — грани восьмиугольника),
- *  на какой высоте верх для наклейки и какого размера там место. */
-type ShapeModel = { parts: Part[]; w: number; h: number; d: number; round: boolean; topY: number; topSize: number };
-
-const SHAPES: Record<ProductShape, ShapeModel> = {
-  carton: { w: 0.08, h: 0.2, d: 0.08, round: false, topY: 0.2, topSize: 0.06, parts: [
-    { kind: 'box', pos: [0, 0.1, 0], size: [0.08, 0.2, 0.08], color: 'c' },
-    { kind: 'box', pos: [0, 0.05, 0], size: [0.0805, 0.012, 0.0805], color: 'a' },
-  ] },
-  bottle: { w: 0.07, h: 0.215, d: 0.07, round: true, topY: 0.215, topSize: 0.034, parts: [
-    { kind: 'cyl', pos: [0, 0.075, 0], r: 0.035, h: 0.15, color: 'c' },
-    { kind: 'cyl', pos: [0, 0.035, 0], r: 0.0355, h: 0.03, color: 'a' },
-    { kind: 'cyl', pos: [0, 0.165, 0], r: 0.018, r2: 0.035, h: 0.03, color: 'c' },
-    { kind: 'cyl', pos: [0, 0.19, 0], r: 0.016, h: 0.02, color: 'c' },
-    { kind: 'cyl', pos: [0, 0.2075, 0], r: 0.02, h: 0.015, color: 'a' },
-  ] },
-  loaf: { w: 0.16, h: 0.085, d: 0.09, round: false, topY: 0.085, topSize: 0.06, parts: [
-    { kind: 'box', pos: [0, 0.035, 0], size: [0.16, 0.07, 0.09], color: 'c' },
-    { kind: 'box', pos: [0, 0.0775, 0], size: [0.13, 0.015, 0.07], color: 'a' },
-  ] },
-  bunch: { w: 0.13, h: 0.14, d: 0.045, round: false, topY: 0.14, topSize: 0.035, parts: [
-    { kind: 'box', pos: [-0.042, 0.06, 0], size: [0.038, 0.12, 0.04], color: 'c' },
-    // средний банан вровень с боковыми: раньше он выступал вперёд и закрывал наклейку со штрихкодом (баг, найден автором 14.10)
-    { kind: 'box', pos: [0, 0.065, 0], size: [0.04, 0.13, 0.04], color: 'c' },
-    { kind: 'box', pos: [0.042, 0.06, 0], size: [0.038, 0.12, 0.04], color: 'c' },
-    { kind: 'box', pos: [0, 0.135, 0], size: [0.02, 0.012, 0.02], color: 'a' },
-  ] },
-  cup: { w: 0.086, h: 0.092, d: 0.086, round: true, topY: 0.092, topSize: 0.06, parts: [
-    { kind: 'cyl', pos: [0, 0.04, 0], r: 0.043, r2: 0.036, h: 0.08, color: 'c' },
-    { kind: 'cyl', pos: [0, 0.086, 0], r: 0.045, h: 0.012, color: 'a' },
-  ] },
-  tray: { w: 0.12, h: 0.07, d: 0.09, round: false, topY: 0.07, topSize: 0.06, parts: [
-    { kind: 'box', pos: [0, 0.025, 0], size: [0.12, 0.05, 0.09], color: 'c' },
-    { kind: 'box', pos: [-0.03, 0.06, -0.022], size: [0.03, 0.02, 0.03], color: 'a' },
-    { kind: 'box', pos: [0.03, 0.06, -0.022], size: [0.03, 0.02, 0.03], color: 'a' },
-    { kind: 'box', pos: [-0.03, 0.06, 0.022], size: [0.03, 0.02, 0.03], color: 'a' },
-    { kind: 'box', pos: [0.03, 0.06, 0.022], size: [0.03, 0.02, 0.03], color: 'a' },
-  ] },
-  wedge: { w: 0.1, h: 0.08, d: 0.09, round: false, topY: 0.08, topSize: 0.06, parts: [
-    { kind: 'box', pos: [0, 0.008, 0], size: [0.1, 0.016, 0.09], color: 'a' },
-    { kind: 'box', pos: [0, 0.048, 0], size: [0.1, 0.064, 0.09], color: 'c' },
-  ] },
-  pack: { w: 0.12, h: 0.17, d: 0.05, round: false, topY: 0.17, topSize: 0.04, parts: [
-    { kind: 'box', pos: [0, 0.085, 0], size: [0.12, 0.17, 0.05], color: 'c' },
-  ] },
-  bag: { w: 0.11, h: 0.175, d: 0.05, round: false, topY: 0.175, topSize: 0.035, parts: [
-    { kind: 'box', pos: [0, 0.08, 0], size: [0.11, 0.16, 0.05], color: 'c' },
-    { kind: 'box', pos: [0, 0.1675, 0], size: [0.115, 0.015, 0.035], color: 'a' },
-  ] },
-  jar: { w: 0.094, h: 0.12, d: 0.094, round: true, topY: 0.12, topSize: 0.07, parts: [
-    { kind: 'cyl', pos: [0, 0.05, 0], r: 0.045, h: 0.1, color: 'c' },
-    { kind: 'cyl', pos: [0, 0.11, 0], r: 0.047, h: 0.02, color: 'a' },
-  ] },
-};
-
-/** Габарит модели — для расстановки в лотке. */
-export function lowPolySize(shape: ProductShape): { w: number; h: number; d: number } {
-  const m = SHAPES[shape];
-  return { w: m.w, h: m.h, d: m.d };
-}
+export { lowPolySize } from './productShapes';
 
 // ---------- надписи: рисуются на холсте и становятся текстурой (одна на текст, переиспользуется) ----------
 
