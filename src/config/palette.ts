@@ -34,6 +34,9 @@ export const PALETTE = {
   slab: '#C9CBCC',      // бетонные плиты площадок и парковки
   parkingLine: '#45474C',
   bikeFrame: '#F2F2EE',
+  bikeLamp: '#FFF1A8',      // стекло фары велосипеда (G3)
+  bikeReflector: '#F2A23A', // оранжевые катафоты на педалях (G3)
+  bikeBoxTop: '#9AD85B',    // светлая крышка кофра, как на референсе (G3)
   closeupFog: '#F3EFE4', // дымка вдали в виде стеллажа вблизи (светлая и тёплая) и фон за ней
   // грузовик по art/reference/world_transport_truck.png (M7b)
   truckCab: '#76BE34',   // зелёная кабина
