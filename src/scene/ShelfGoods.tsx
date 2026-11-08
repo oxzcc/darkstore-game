@@ -9,7 +9,7 @@ import { WAREHOUSE_VIEW } from '../config/warehouse';
 import { useGameStore } from '../store/gameStore';
 import { goodsOnShelves } from '../store/selectors';
 import type { VoxelPart } from './models/ProductItem';
-import { productShapeParts } from './models/productShapes';
+import { lowPolySize, productShapeParts } from './models/productShapes';
 import { rackLocalToWorld, rackRotY } from './rackGeometry';
 import { shelfLayout } from './shelfLayout';
 import VoxelBatch from './VoxelBatch';
@@ -38,7 +38,9 @@ export default function ShelfGoods({ map, stock }: Props) {
         if (!look) continue;
         let item = shapes.get(g.productId);
         if (!item) {
-          item = productShapeParts(look, WAREHOUSE_VIEW.shelfItems.scale);
+          // широкий товар (хлеб) уменьшается, чтобы штуки не сливались в одну полосу: не шире 90% своего места
+          const fit = (layout.slotWidth * 0.9) / lowPolySize(look.shape).w;
+          item = productShapeParts(look, Math.min(WAREHOUSE_VIEW.shelfItems.scale, fit));
           shapes.set(g.productId, item);
         }
         g.xs.forEach((x, k) => {
